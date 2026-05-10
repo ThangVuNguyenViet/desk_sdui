@@ -121,6 +121,17 @@ IrNode _foldChildren(IrNode node) {
         }
       }
       return StringInterpNode(newParts);
+    case MethodCallNode():
+      return MethodCallNode(
+        receiver: constFold(node.receiver),
+        name: node.name,
+        args: node.args.map(constFold).toList(),
+      );
+    case ValueCtorNode():
+      return ValueCtorNode(
+        name: node.name,
+        args: node.args.map(constFold).toList(),
+      );
     case LiteralNode():
     case ConstNode():
     case RefNode():
@@ -152,6 +163,8 @@ bool _isPureLiteral(IrNode node) {
     case LengthOfNode():
     case IsNullCheckNode():
     case StringInterpNode():
+    case MethodCallNode():
+    case ValueCtorNode():
       return false;
     case RefNode():
     case EventNode():

@@ -156,6 +156,17 @@ IrNode inferKeys(IrNode node, {TypeLookup? lookupType}) {
       }
       return StringInterpNode(newParts);
 
+    case MethodCallNode():
+      return MethodCallNode(
+        receiver: inferKeys(node.receiver, lookupType: lookupType),
+        name: node.name,
+        args: node.args.map((a) => inferKeys(a, lookupType: lookupType)).toList(),
+      );
+    case ValueCtorNode():
+      return ValueCtorNode(
+        name: node.name,
+        args: node.args.map((a) => inferKeys(a, lookupType: lookupType)).toList(),
+      );
     case LiteralNode():
     case ConstNode():
     case RefNode():

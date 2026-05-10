@@ -109,6 +109,17 @@ IrNode _demoteAllConst(IrNode node) {
       return StringInterpNode(
         node.parts.map((p) => p is IrNode ? _demoteAllConst(p) : p).toList(),
       );
+    case MethodCallNode():
+      return MethodCallNode(
+        receiver: _demoteAllConst(node.receiver),
+        name: node.name,
+        args: node.args.map(_demoteAllConst).toList(),
+      );
+    case ValueCtorNode():
+      return ValueCtorNode(
+        name: node.name,
+        args: node.args.map(_demoteAllConst).toList(),
+      );
     case RefNode():
     case LiteralNode():
     case EventNode():

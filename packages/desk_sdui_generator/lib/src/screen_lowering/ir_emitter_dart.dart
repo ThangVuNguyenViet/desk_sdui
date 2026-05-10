@@ -97,6 +97,12 @@ String _emitNode(IrNode node) {
         return p.toString();
       }).join(', ');
       return 'StringInterpNode([$parts])';
+    case MethodCallNode():
+      final args = node.args.map(_emitNode).join(', ');
+      return 'MethodCallNode(receiver: ${_emitNode(node.receiver)}, name: ${_dartString(node.name)}, args: [$args])';
+    case ValueCtorNode():
+      final args = node.args.map(_emitNode).join(', ');
+      return 'ValueCtorNode(name: ${_dartString(node.name)}, args: [$args])';
   }
 }
 

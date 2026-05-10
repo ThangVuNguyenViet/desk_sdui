@@ -532,6 +532,61 @@ final class StringInterpNode extends ExpressionNode {
   String toString() => 'StringInterpNode(${parts.length} parts)';
 }
 
+/// Method invocation: `receiver.name(args)`. Resolved at runtime via
+/// Runtime.invokeMethod(name, receiver, args).
+final class MethodCallNode extends IrNode {
+  const MethodCallNode({
+    required this.receiver,
+    required this.name,
+    required this.args,
+  });
+
+  final IrNode receiver;
+
+  /// Receiver-type-keyed handler name, e.g. `'String.toUpperCase'`.
+  final String name;
+  final List<IrNode> args;
+
+  @override
+  bool operator ==(Object other) =>
+      other is MethodCallNode &&
+      other.receiver == receiver &&
+      other.name == name &&
+      _listEquals(other.args, args);
+
+  @override
+  int get hashCode => Object.hash(receiver, name, Object.hashAll(args));
+
+  @override
+  String toString() => 'MethodCallNode($receiver.$name(${args.length} args))';
+}
+
+/// Value-type constructor invocation: `name(args)`. Resolved at runtime via
+/// Runtime.invokeValueBuilder(name, args). Used for non-Widget value classes
+/// like EdgeInsets, BoxDecoration, Color when not const-folded.
+final class ValueCtorNode extends IrNode {
+  const ValueCtorNode({
+    required this.name,
+    required this.args,
+  });
+
+  /// Qualified constructor name, e.g. `'EdgeInsets.all'`, `'BoxDecoration'`.
+  final String name;
+  final List<IrNode> args;
+
+  @override
+  bool operator ==(Object other) =>
+      other is ValueCtorNode &&
+      other.name == name &&
+      _listEquals(other.args, args);
+
+  @override
+  int get hashCode => Object.hash(name, Object.hashAll(args));
+
+  @override
+  String toString() => 'ValueCtorNode($name(${args.length} args))';
+}
+
 // ───────────────────────────── helpers ─────────────────────────────
 
 bool _listEquals<T>(List<T>? a, List<T>? b) {

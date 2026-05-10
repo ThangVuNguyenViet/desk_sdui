@@ -170,6 +170,15 @@ void _collectRefs(
           _collectRefs(part, widgetRefs, methodRefs, fnRefs);
         }
       }
+    case MethodCallNode():
+      _collectRefs(node.receiver, widgetRefs, methodRefs, fnRefs);
+      for (final arg in node.args) {
+        _collectRefs(arg, widgetRefs, methodRefs, fnRefs);
+      }
+    case ValueCtorNode():
+      for (final arg in node.args) {
+        _collectRefs(arg, widgetRefs, methodRefs, fnRefs);
+      }
     case LiteralNode():
     case ConstNode():
     case RefNode():

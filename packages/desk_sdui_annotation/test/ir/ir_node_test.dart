@@ -2,6 +2,59 @@ import 'package:desk_sdui_annotation/desk_sdui_annotation.dart';
 import 'package:test/test.dart';
 
 void main() {
+  const codec = JsonIrCodec();
+
+  group('MethodCallNode', () {
+    test('round-trips through JSON codec', () {
+      final node = MethodCallNode(
+        receiver: const RefNode(['data', 'title']),
+        name: 'String.toUpperCase',
+        args: const [],
+      );
+      final encoded = codec.encode(node);
+      final decoded = codec.decode(encoded);
+      expect(decoded, isA<MethodCallNode>());
+      expect((decoded as MethodCallNode).name, 'String.toUpperCase');
+      expect(decoded.receiver, isA<RefNode>());
+      expect(decoded.args, isEmpty);
+    });
+
+    test('round-trips with args through JSON codec', () {
+      final node = MethodCallNode(
+        receiver: const RefNode(['data', 'items']),
+        name: 'List.join',
+        args: const [LiteralNode(', ')],
+      );
+      final encoded = codec.encode(node);
+      final decoded = codec.decode(encoded);
+      expect(decoded, isA<MethodCallNode>());
+      expect((decoded as MethodCallNode).args, hasLength(1));
+    });
+  });
+
+  group('ValueCtorNode', () {
+    test('round-trips through JSON codec', () {
+      final node = ValueCtorNode(
+        name: 'EdgeInsets.all',
+        args: const [LiteralNode(8.0)],
+      );
+      final encoded = codec.encode(node);
+      final decoded = codec.decode(encoded);
+      expect(decoded, isA<ValueCtorNode>());
+      expect((decoded as ValueCtorNode).name, 'EdgeInsets.all');
+      expect(decoded.args, hasLength(1));
+    });
+
+    test('round-trips with no args through JSON codec', () {
+      final node = ValueCtorNode(name: 'BoxDecoration', args: const []);
+      final encoded = codec.encode(node);
+      final decoded = codec.decode(encoded);
+      expect(decoded, isA<ValueCtorNode>());
+      expect((decoded as ValueCtorNode).args, isEmpty);
+    });
+  });
+
+
   group('LiteralNode', () {
     test('equality by value', () {
       expect(const LiteralNode(42), const LiteralNode(42));

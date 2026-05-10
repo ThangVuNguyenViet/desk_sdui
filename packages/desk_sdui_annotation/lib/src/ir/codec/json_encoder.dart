@@ -132,6 +132,17 @@ class JsonIrEncoder {
               )
               .toList(),
         },
+      MethodCallNode() => {
+          r'$type': 'MethodCall',
+          'receiver': _encodeNode(node.receiver),
+          'name': node.name,
+          'args': node.args.map(_encodeNode).toList(),
+        },
+      ValueCtorNode() => {
+          r'$type': 'ValueCtor',
+          'name': node.name,
+          'args': node.args.map(_encodeNode).toList(),
+        },
     };
   }
 

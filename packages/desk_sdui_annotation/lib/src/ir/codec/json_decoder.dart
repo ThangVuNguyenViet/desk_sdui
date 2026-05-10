@@ -111,6 +111,19 @@ class JsonIrDecoder {
             return _decodeNode(p! as Map<String, Object?>);
           }).toList(),
         ),
+      'MethodCall' => MethodCallNode(
+          receiver: _decodeNode(map['receiver']! as Map<String, Object?>),
+          name: map['name']! as String,
+          args: ((map['args']! as List).cast<Map<String, Object?>>())
+              .map(_decodeNode)
+              .toList(),
+        ),
+      'ValueCtor' => ValueCtorNode(
+          name: map['name']! as String,
+          args: ((map['args']! as List).cast<Map<String, Object?>>())
+              .map(_decodeNode)
+              .toList(),
+        ),
       _ => throw FormatException('Unknown IR node type: $type'),
     };
   }

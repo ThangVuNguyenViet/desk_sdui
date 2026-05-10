@@ -195,6 +195,31 @@ IrNode reactiveHoist(IrNode node) {
       }
       return (node, <String>{});
 
+    case MethodCallNode():
+      final (receiver, receiverPaths) = _hoist(node.receiver);
+      final allArgPaths = <String>{};
+      final newArgs = <IrNode>[];
+      for (final arg in node.args) {
+        final (hoisted, paths) = _hoist(arg);
+        newArgs.add(hoisted);
+        allArgPaths.addAll(paths);
+      }
+      return (
+        MethodCallNode(receiver: receiver, name: node.name, args: newArgs),
+        {...receiverPaths, ...allArgPaths},
+      );
+    case ValueCtorNode():
+      final allArgPaths = <String>{};
+      final newArgs = <IrNode>[];
+      for (final arg in node.args) {
+        final (hoisted, paths) = _hoist(arg);
+        newArgs.add(hoisted);
+        allArgPaths.addAll(paths);
+      }
+      return (
+        ValueCtorNode(name: node.name, args: newArgs),
+        allArgPaths,
+      );
     case LiteralNode():
     case ConstNode():
     case EventNode():

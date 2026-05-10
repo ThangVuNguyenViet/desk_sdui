@@ -1,0 +1,25 @@
+name: desk_sdui
+
+packages:
+  - packages/*
+
+command:
+  bootstrap:
+    runPubGetInParallel: true
+
+scripts:
+  analyze:
+    description: Run dart analyze on all packages
+    run: melos exec --concurrency=1 -- dart analyze --fatal-infos --fatal-warnings
+
+  format:
+    description: Verify all Dart files are formatted
+    run: melos exec --concurrency=1 -- dart format --output=none --set-exit-if-changed .
+
+  format:apply:
+    description: Apply dart format to all packages
+    run: melos exec --concurrency=1 -- dart format .
+
+  test:
+    description: Run tests in every package that has a test/ dir
+    run: melos exec --concurrency=1 --dir-exists=test -- dart test

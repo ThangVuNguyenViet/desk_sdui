@@ -5,6 +5,5 @@ late final Runtime sduiRuntime;
 
 void initSdui() {
   sduiRuntime = Runtime();
-  registerBuiltinWidgets(sduiRuntime);
   registerAllScreens(sduiRuntime);
 }

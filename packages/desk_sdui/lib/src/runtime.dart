@@ -87,7 +87,7 @@ class Runtime {
 
   final Map<String, ScreenBinding> _screens = {};
   // Legacy widget map — keyed by name, builder receives (BuildContext, args).
-  // Still used by resolve.dart._buildWidget and all existing builtin_widgets.
+  // Still used by resolve.dart._buildWidget; populated via registerWidget shim.
   final Map<String, WidgetBuilderFn> _widgets = {};
   final Map<String, Function> _fns = {};
   final Map<String, IrTree> _cache = {};
@@ -107,8 +107,7 @@ class Runtime {
   }
 
   /// Registers a widget builder using the legacy [WidgetBuilderFn] signature
-  /// (receives [BuildContext] + args map). Used by [registerBuiltinWidgets] and
-  /// the existing resolve pipeline.
+  /// (receives [BuildContext] + args map). Used by the existing resolve pipeline.
   void registerWidgetWithContext(String name, WidgetBuilderFn builder) {
     _widgets[name] = builder;
   }

@@ -6,7 +6,7 @@ void main() {
   testWidgets('SduiScreen mounts and resolves a registered screen',
       (tester) async {
     final rt = Runtime();
-    registerBuiltinWidgets(rt);
+    rt.registerWidget('Text', (args) => Text(args['data']! as String));
     rt.registerScreen(
       const ScreenBinding(
         name: 'hello',
@@ -40,7 +40,7 @@ void main() {
 
   testWidgets('SduiScreen passes inputs to resolved tree', (tester) async {
     final rt = Runtime();
-    registerBuiltinWidgets(rt);
+    rt.registerWidget('Text', (args) => Text(args['data']! as String));
     rt.registerScreen(
       const ScreenBinding(
         name: 'greet',
@@ -89,7 +89,7 @@ void main() {
         textDirection: TextDirection.ltr,
       ),
     );
-    registerBuiltinWidgets(rt);
+    rt.registerWidget('Text', (args) => Text(args['data']! as String));
     rt.registerScreen(
       const ScreenBinding(
         name: 'slow',

@@ -46,12 +46,15 @@ Widget resolveNode(
       ):
       final cond = evalExpression(condition, input);
       if (cond == true) {
-        return resolveNode(context, thenBranch, input, runtime);
+        return _resolveBranch(context, thenBranch, input, runtime);
       }
       if (elseBranch != null) {
-        return resolveNode(context, elseBranch, input, runtime);
+        return _resolveBranch(context, elseBranch, input, runtime);
       }
       return const SizedBox.shrink();
+
+    case SpreadNode(:final source):
+      return _resolveBranch(context, source, input, runtime);
 
     case LiteralNode(:final value):
       if (value is Widget) return value;
@@ -77,7 +80,7 @@ Object? _resolveArg(
     case ConstNode(:final value):
       return value;
     case RefNode(:final path):
-      return resolveRef(path, input);
+      return resolveFlutterRef(path, input);
 
     case ListNode(:final children):
       final out = <Object?>[];
@@ -123,8 +126,16 @@ Object? _resolveArg(
     case ForNode():
       return _expandFor(context, node, input, runtime);
 
-    case WidgetNode():
-    case BuiltinWidgetNode():
+    case WidgetNode(:final name, :final args):
+    case BuiltinWidgetNode(:final name, :final args):
+      final fn = runtime.fnFor(name);
+      if (fn != null) {
+        final fnArgs = <String, Object?>{};
+        args.forEach((k, v) {
+          fnArgs[k] = _resolveArg(context, v, input, runtime);
+        });
+        return Function.apply(fn, [fnArgs]);
+      }
       return resolveNode(context, node, input, runtime);
 
     case EventNode():
@@ -133,6 +144,28 @@ Object? _resolveArg(
     default:
       return evalExpression(node, input);
   }
+}
+
+/// Resolves a branch (then/else/spread) which may be a single widget or a list.
+Widget _resolveBranch(
+  BuildContext context,
+  IrNode node,
+  Map<String, Object?> input,
+  Runtime runtime,
+) {
+  if (node is ListNode) {
+    if (node.children.isEmpty) return const SizedBox.shrink();
+    if (node.children.length == 1) {
+      return resolveNode(context, node.children.first, input, runtime);
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: node.children
+          .map((c) => resolveNode(context, c, input, runtime))
+          .toList(),
+    );
+  }
+  return resolveNode(context, node, input, runtime);
 }
 
 List<Object?> _expandFor(
@@ -170,19 +203,30 @@ Object? _bindEvent(
   Map<String, Object?> input,
   Runtime runtime,
 ) {
+  // Check if it's a registered function first (e.g., BorderRadius.circular)
+  final fnName = node.target.last;
+  final fn = runtime.fnFor(fnName);
+  if (fn != null) {
+    final fnArgs = <String, Object?>{};
+    node.args.forEach((k, v) {
+      fnArgs[k] = evalExpression(v, input);
+    });
+    return Function.apply(fn, [fnArgs]);
+  }
+
   final methods = input['__methods__'];
   if (methods is Map) {
     final key = node.target.join('.');
-    final fn = methods[key];
-    if (fn is Function) {
-      if (node.args.isEmpty) return fn;
+    final methodFn = methods[key];
+    if (methodFn is Function) {
+      if (node.args.isEmpty) return methodFn;
       final positional = <Object?>[];
       for (var i = 0;; i++) {
         final argKey = 'arg$i';
         if (!node.args.containsKey(argKey)) break;
         positional.add(evalExpression(node.args[argKey]!, input));
       }
-      return () => Function.apply(fn, positional);
+      return () => Function.apply(methodFn, positional);
     }
   }
   throw StateError(

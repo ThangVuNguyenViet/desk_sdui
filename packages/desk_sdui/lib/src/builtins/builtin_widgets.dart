@@ -43,6 +43,7 @@ void registerBuiltinWidgets(Runtime rt) {
         crossAxisAlignment:
             args['crossAxisAlignment'] as CrossAxisAlignment? ??
                 CrossAxisAlignment.center,
+        textBaseline: args['textBaseline'] as TextBaseline?,
         mainAxisSize:
             args['mainAxisSize'] as MainAxisSize? ?? MainAxisSize.max,
         children:
@@ -173,7 +174,7 @@ void registerBuiltinWidgets(Runtime rt) {
         bottom: (args['bottom'] as num?)?.toDouble(),
         width: (args['width'] as num?)?.toDouble(),
         height: (args['height'] as num?)?.toDouble(),
-        child: args['child'] as Widget?,
+        child: args['child']! as Widget,
       ),);
 
   rt.registerWidget('SafeArea', (ctx, args) => SafeArea(
@@ -193,4 +194,51 @@ void registerBuiltinWidgets(Runtime rt) {
         height: (args['height'] as num?)?.toDouble(),
         fit: args['fit'] as BoxFit?,
       ),);
+
+  rt.registerFn('TextStyle', (Map<String, Object?> args) => TextStyle(
+        fontSize: (args['fontSize'] as num?)?.toDouble(),
+        color: args['color'] as Color?,
+        fontStyle: args['fontStyle'] as FontStyle?,
+        fontWeight: args['fontWeight'] as FontWeight?,
+        letterSpacing: (args['letterSpacing'] as num?)?.toDouble(),
+        height: (args['height'] as num?)?.toDouble(),
+      ));
+
+  rt.registerFn('Color', (Map<String, Object?> args) => Color(
+        (args['arg0'] as num).toInt(),
+      ));
+
+  rt.registerFn('only', (Map<String, Object?> args) => EdgeInsets.only(
+        left: (args['left'] as num?)?.toDouble() ?? 0,
+        top: (args['top'] as num?)?.toDouble() ?? 0,
+        right: (args['right'] as num?)?.toDouble() ?? 0,
+        bottom: (args['bottom'] as num?)?.toDouble() ?? 0,
+      ));
+
+  rt.registerFn('fromLTRB', (Map<String, Object?> args) => EdgeInsets.fromLTRB(
+        (args['arg0'] as num?)?.toDouble() ?? 0,
+        (args['arg1'] as num?)?.toDouble() ?? 0,
+        (args['arg2'] as num?)?.toDouble() ?? 0,
+        (args['arg3'] as num?)?.toDouble() ?? 0,
+      ));
+
+  rt.registerFn('all', (Map<String, Object?> args) => EdgeInsets.all(
+        (args['arg0'] as num?)?.toDouble() ?? 0,
+      ));
+
+  rt.registerFn('symmetric', (Map<String, Object?> args) => EdgeInsets.symmetric(
+        horizontal: (args['horizontal'] as num?)?.toDouble() ?? 0,
+        vertical: (args['vertical'] as num?)?.toDouble() ?? 0,
+      ));
+
+  rt.registerFn('circular', (Map<String, Object?> args) => BorderRadius.circular(
+        (args['arg0'] as num?)?.toDouble() ?? 0,
+      ));
+
+  rt.registerFn('BoxDecoration', (Map<String, Object?> args) => BoxDecoration(
+        color: args['color'] as Color?,
+        shape: args['shape'] == 'circle' ? BoxShape.circle : BoxShape.rectangle,
+        borderRadius: args['borderRadius'] as BorderRadiusGeometry?,
+        border: args['border'] as Border?,
+      ));
 }

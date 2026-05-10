@@ -39,14 +39,14 @@ String _emitNode(IrNode node) {
           : ', args: {${node.args.entries.map((e) => '${_dartString(e.key)}: ${_emitNode(e.value)}').join(', ')}}';
       return 'EventNode($target$args)';
     case WidgetNode():
-      final args = '{${node.args.entries.map((e) => '${e.key}: ${_emitNode(e.value)}').join(', ')}}';
+      final args = '{${node.args.entries.map((e) => '${_dartString(e.key)}: ${_emitNode(e.value)}').join(', ')}}';
       final key = node.key != null ? ', key: ${_emitNode(node.key!)}' : '';
       final listenablePaths = node.listenablePaths.isEmpty
           ? ''
           : ', listenablePaths: {${node.listenablePaths.map(_dartString).join(', ')}}';
       return 'WidgetNode(name: ${_dartString(node.name)}, args: $args$key$listenablePaths)';
     case BuiltinWidgetNode():
-      final args = '{${node.args.entries.map((e) => '${e.key}: ${_emitNode(e.value)}').join(', ')}}';
+      final args = '{${node.args.entries.map((e) => '${_dartString(e.key)}: ${_emitNode(e.value)}').join(', ')}}';
       final key = node.key != null ? ', key: ${_emitNode(node.key!)}' : '';
       return 'BuiltinWidgetNode(name: ${_dartString(node.name)}, args: $args$key)';
     case ListNode():
@@ -59,7 +59,7 @@ String _emitNode(IrNode node) {
     case RecordNode():
       final pos = node.positional.map(_emitNode).join(', ');
       final named = node.named.entries
-          .map((e) => '${e.key}: ${_emitNode(e.value)}')
+          .map((e) => '${_dartString(e.key)}: ${_emitNode(e.value)}')
           .join(', ');
       return 'RecordNode(positional: [$pos], named: {$named})';
     case ConditionalNode():

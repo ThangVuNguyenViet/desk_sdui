@@ -1,4 +1,5 @@
 import 'package:desk_sdui_annotation/desk_sdui_annotation.dart';
+import 'package:flutter/material.dart';
 import 'ref_resolver.dart';
 
 Object? evalExpression(IrNode node, Map<String, Object?> input) {
@@ -8,7 +9,7 @@ Object? evalExpression(IrNode node, Map<String, Object?> input) {
     case ConstNode(:final value):
       return value;
     case RefNode(:final path):
-      return resolveRef(path, input);
+      return resolveFlutterRef(path, input);
 
     case CompareOpNode(:final op, :final left, :final right):
       final l = evalExpression(left, input);
@@ -57,6 +58,10 @@ Object? evalExpression(IrNode node, Map<String, Object?> input) {
       final k = evalExpression(key, input);
       if (t is List) return t[k! as int];
       if (t is Map) return t[k];
+      // Handle MaterialColor indexing (e.g., Colors.grey[300])
+      if (t is MaterialColor && k is int) {
+        return t[k];
+      }
       throw StateError('IndexAccess on ${t.runtimeType}');
 
     case LengthOfNode(:final target):

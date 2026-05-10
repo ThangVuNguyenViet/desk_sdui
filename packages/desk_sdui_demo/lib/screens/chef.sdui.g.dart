@@ -8,60 +8,60 @@ ScreenBinding get chefBinding => ScreenBinding(
     root: WidgetNode(
       name: 'Stack',
       args: {
-        children: ListNode([
+        'children': ListNode([
           WidgetNode(
             name: 'SingleChildScrollView',
             args: {
-              padding: WidgetNode(
+              'padding': WidgetNode(
                 name: 'only',
-                args: {top: ConstNode(102), bottom: ConstNode(130)},
+                args: {'top': ConstNode(102), 'bottom': ConstNode(130)},
               ),
-              child: WidgetNode(
+              'child': WidgetNode(
                 name: 'Column',
                 args: {
-                  crossAxisAlignment: RefNode([
+                  'crossAxisAlignment': RefNode([
                     'CrossAxisAlignment',
                     'stretch',
                   ]),
-                  children: ListNode([
+                  'children': ListNode([
                     WidgetNode(
                       name: 'Padding',
                       args: {
-                        padding: WidgetNode(
+                        'padding': WidgetNode(
                           name: 'fromLTRB',
                           args: {
-                            arg0: ConstNode(24),
-                            arg1: ConstNode(10),
-                            arg2: ConstNode(24),
-                            arg3: ConstNode(22),
+                            'arg0': ConstNode(24),
+                            'arg1': ConstNode(10),
+                            'arg2': ConstNode(24),
+                            'arg3': ConstNode(22),
                           },
                         ),
-                        child: WidgetNode(
+                        'child': WidgetNode(
                           name: 'Column',
                           args: {
-                            crossAxisAlignment: RefNode([
+                            'crossAxisAlignment': RefNode([
                               'CrossAxisAlignment',
                               'start',
                             ]),
-                            children: ListNode([
+                            'children': ListNode([
                               WidgetNode(
                                 name: 'Text',
                                 args: {
-                                  data: RefNode(['data', 'headline']),
-                                  style: WidgetNode(
+                                  'data': RefNode(['data', 'headline']),
+                                  'style': WidgetNode(
                                     name: 'TextStyle',
                                     args: {
-                                      fontSize: ConstNode(40),
-                                      height: ConstNode(1.02),
-                                      fontStyle: RefNode([
+                                      'fontSize': ConstNode(40),
+                                      'height': ConstNode(1.02),
+                                      'fontStyle': RefNode([
                                         'FontStyle',
                                         'italic',
                                       ]),
-                                      fontWeight: RefNode([
+                                      'fontWeight': RefNode([
                                         'FontWeight',
                                         'w500',
                                       ]),
-                                      letterSpacing: ArithOpNode(
+                                      'letterSpacing': ArithOpNode(
                                         op: ArithOp.sub,
                                         left: ConstNode(0),
                                         right: ConstNode(0.6),
@@ -72,21 +72,21 @@ ScreenBinding get chefBinding => ScreenBinding(
                               ),
                               WidgetNode(
                                 name: 'SizedBox',
-                                args: {height: ConstNode(16)},
+                                args: {'height': ConstNode(16)},
                               ),
                               WidgetNode(
                                 name: 'Text',
                                 args: {
-                                  data: RefNode(['data', 'bio']),
-                                  style: WidgetNode(
+                                  'data': RefNode(['data', 'bio']),
+                                  'style': WidgetNode(
                                     name: 'TextStyle',
                                     args: {
-                                      fontSize: ConstNode(13.5),
-                                      color: WidgetNode(
+                                      'fontSize': ConstNode(13.5),
+                                      'color': WidgetNode(
                                         name: 'Color',
-                                        args: {arg0: ConstNode(4285229931)},
+                                        args: {'arg0': ConstNode(4285229931)},
                                       ),
-                                      height: ConstNode(1.55),
+                                      'height': ConstNode(1.55),
                                     },
                                   ),
                                 },
@@ -99,59 +99,61 @@ ScreenBinding get chefBinding => ScreenBinding(
                     WidgetNode(
                       name: 'Container',
                       args: {
-                        margin: WidgetNode(
+                        'margin': WidgetNode(
                           name: 'fromLTRB',
                           args: {
-                            arg0: ConstNode(20),
-                            arg1: ConstNode(0),
-                            arg2: ConstNode(20),
-                            arg3: ConstNode(26),
+                            'arg0': ConstNode(20),
+                            'arg1': ConstNode(0),
+                            'arg2': ConstNode(20),
+                            'arg3': ConstNode(26),
                           },
                         ),
-                        color: WidgetNode(
+                        'color': WidgetNode(
                           name: 'Color',
-                          args: {arg0: ConstNode(4281163565)},
+                          args: {'arg0': ConstNode(4281163565)},
                         ),
-                        child: WidgetNode(
+                        'child': WidgetNode(
                           name: 'Padding',
                           args: {
-                            padding: WidgetNode(
+                            'padding': WidgetNode(
                               name: 'fromLTRB',
                               args: {
-                                arg0: ConstNode(24),
-                                arg1: ConstNode(28),
-                                arg2: ConstNode(24),
-                                arg3: ConstNode(24),
+                                'arg0': ConstNode(24),
+                                'arg1': ConstNode(28),
+                                'arg2': ConstNode(24),
+                                'arg3': ConstNode(24),
                               },
                             ),
-                            child: WidgetNode(
+                            'child': WidgetNode(
                               name: 'Column',
                               args: {
-                                crossAxisAlignment: RefNode([
+                                'crossAxisAlignment': RefNode([
                                   'CrossAxisAlignment',
                                   'start',
                                 ]),
-                                children: ListNode([
+                                'children': ListNode([
                                   WidgetNode(
                                     name: 'Text',
                                     args: {
-                                      data: ConstNode(
+                                      'data': ConstNode(
                                         'Cooking is about patience, passion, and the pursuit of flavor that lingers in memory.',
                                       ),
-                                      style: WidgetNode(
+                                      'style': WidgetNode(
                                         name: 'TextStyle',
                                         args: {
-                                          fontSize: ConstNode(22),
-                                          height: ConstNode(1.28),
-                                          fontStyle: RefNode([
+                                          'fontSize': ConstNode(22),
+                                          'height': ConstNode(1.28),
+                                          'fontStyle': RefNode([
                                             'FontStyle',
                                             'italic',
                                           ]),
-                                          color: WidgetNode(
+                                          'color': WidgetNode(
                                             name: 'Color',
-                                            args: {arg0: ConstNode(4293454056)},
+                                            args: {
+                                              'arg0': ConstNode(4293454056),
+                                            },
                                           ),
-                                          letterSpacing: ArithOpNode(
+                                          'letterSpacing': ArithOpNode(
                                             op: ArithOp.sub,
                                             left: ConstNode(0),
                                             right: ConstNode(0.3),
@@ -162,49 +164,49 @@ ScreenBinding get chefBinding => ScreenBinding(
                                   ),
                                   WidgetNode(
                                     name: 'SizedBox',
-                                    args: {height: ConstNode(20)},
+                                    args: {'height': ConstNode(20)},
                                   ),
                                   WidgetNode(
                                     name: 'Divider',
                                     args: {
-                                      color: WidgetNode(
+                                      'color': WidgetNode(
                                         name: 'Color',
-                                        args: {arg0: ConstNode(654311423)},
+                                        args: {'arg0': ConstNode(654311423)},
                                       ),
-                                      height: ConstNode(1),
+                                      'height': ConstNode(1),
                                     },
                                   ),
                                   WidgetNode(
                                     name: 'SizedBox',
-                                    args: {height: ConstNode(20)},
+                                    args: {'height': ConstNode(20)},
                                   ),
                                   WidgetNode(
                                     name: 'Row',
                                     args: {
-                                      children: ListNode([
+                                      'children': ListNode([
                                         WidgetNode(
                                           name: 'ClipRRect',
                                           args: {
-                                            borderRadius: EventNode(
+                                            'borderRadius': EventNode(
                                               ['BorderRadius', 'circular'],
                                               args: {'arg0': LiteralNode(26)},
                                             ),
-                                            child: WidgetNode(
+                                            'child': WidgetNode(
                                               name: 'SizedBox',
                                               args: {
-                                                width: ConstNode(52),
-                                                height: ConstNode(52),
-                                                child: WidgetNode(
+                                                'width': ConstNode(52),
+                                                'height': ConstNode(52),
+                                                'child': WidgetNode(
                                                   name: 'Center',
                                                   args: {
-                                                    child: WidgetNode(
+                                                    'child': WidgetNode(
                                                       name: 'Icon',
                                                       args: {
-                                                        icon: RefNode([
+                                                        'icon': RefNode([
                                                           'Icons',
                                                           'person',
                                                         ]),
-                                                        size: ConstNode(32),
+                                                        'size': ConstNode(32),
                                                       },
                                                     ),
                                                   },
@@ -215,40 +217,40 @@ ScreenBinding get chefBinding => ScreenBinding(
                                         ),
                                         WidgetNode(
                                           name: 'SizedBox',
-                                          args: {width: ConstNode(12)},
+                                          args: {'width': ConstNode(12)},
                                         ),
                                         WidgetNode(
                                           name: 'Expanded',
                                           args: {
-                                            child: WidgetNode(
+                                            'child': WidgetNode(
                                               name: 'Column',
                                               args: {
-                                                crossAxisAlignment: RefNode([
+                                                'crossAxisAlignment': RefNode([
                                                   'CrossAxisAlignment',
                                                   'start',
                                                 ]),
-                                                children: ListNode([
+                                                'children': ListNode([
                                                   WidgetNode(
                                                     name: 'Text',
                                                     args: {
-                                                      data: RefNode([
+                                                      'data': RefNode([
                                                         'data',
                                                         'chefName',
                                                       ]),
-                                                      style: WidgetNode(
+                                                      'style': WidgetNode(
                                                         name: 'TextStyle',
                                                         args: {
-                                                          fontSize: ConstNode(
+                                                          'fontSize': ConstNode(
                                                             15,
                                                           ),
-                                                          fontStyle: RefNode([
+                                                          'fontStyle': RefNode([
                                                             'FontStyle',
                                                             'italic',
                                                           ]),
-                                                          color: WidgetNode(
+                                                          'color': WidgetNode(
                                                             name: 'Color',
                                                             args: {
-                                                              arg0: ConstNode(
+                                                              'arg0': ConstNode(
                                                                 4293454056,
                                                               ),
                                                             },
@@ -260,36 +262,38 @@ ScreenBinding get chefBinding => ScreenBinding(
                                                   WidgetNode(
                                                     name: 'SizedBox',
                                                     args: {
-                                                      height: ConstNode(2),
+                                                      'height': ConstNode(2),
                                                     },
                                                   ),
                                                   WidgetNode(
                                                     name: 'Text',
                                                     args: {
-                                                      data: RefNode([
+                                                      'data': RefNode([
                                                         'data',
                                                         'chefRoleUpper',
                                                       ]),
-                                                      style: WidgetNode(
+                                                      'style': WidgetNode(
                                                         name: 'TextStyle',
                                                         args: {
-                                                          fontSize: ConstNode(
+                                                          'fontSize': ConstNode(
                                                             11.5,
                                                           ),
-                                                          color: WidgetNode(
+                                                          'color': WidgetNode(
                                                             name: 'Color',
                                                             args: {
-                                                              arg0: ConstNode(
+                                                              'arg0': ConstNode(
                                                                 3003121663,
                                                               ),
                                                             },
                                                           ),
-                                                          letterSpacing:
+                                                          'letterSpacing':
                                                               ConstNode(1),
-                                                          fontWeight: RefNode([
-                                                            'FontWeight',
-                                                            'w600',
-                                                          ]),
+                                                          'fontWeight': RefNode(
+                                                            [
+                                                              'FontWeight',
+                                                              'w600',
+                                                            ],
+                                                          ),
                                                         },
                                                       ),
                                                     },
@@ -302,29 +306,31 @@ ScreenBinding get chefBinding => ScreenBinding(
                                         WidgetNode(
                                           name: 'Container',
                                           args: {
-                                            width: ConstNode(26),
-                                            height: ConstNode(26),
-                                            decoration: WidgetNode(
+                                            'width': ConstNode(26),
+                                            'height': ConstNode(26),
+                                            'decoration': WidgetNode(
                                               name: 'BoxDecoration',
                                               args: {
-                                                shape: RefNode([
+                                                'shape': RefNode([
                                                   'BoxShape',
                                                   'circle',
                                                 ]),
                                               },
                                             ),
-                                            child: WidgetNode(
+                                            'child': WidgetNode(
                                               name: 'Icon',
                                               args: {
-                                                icon: RefNode([
+                                                'icon': RefNode([
                                                   'Icons',
                                                   'play_arrow',
                                                 ]),
-                                                size: ConstNode(14),
-                                                color: WidgetNode(
+                                                'size': ConstNode(14),
+                                                'color': WidgetNode(
                                                   name: 'Color',
                                                   args: {
-                                                    arg0: ConstNode(4293454056),
+                                                    'arg0': ConstNode(
+                                                      4293454056,
+                                                    ),
                                                   },
                                                 ),
                                               },
@@ -347,33 +353,33 @@ ScreenBinding get chefBinding => ScreenBinding(
                       body: WidgetNode(
                         name: 'Padding',
                         args: {
-                          padding: WidgetNode(
+                          'padding': WidgetNode(
                             name: 'fromLTRB',
                             args: {
-                              arg0: ConstNode(24),
-                              arg1: ConstNode(0),
-                              arg2: ConstNode(24),
-                              arg3: ConstNode(26),
+                              'arg0': ConstNode(24),
+                              'arg1': ConstNode(0),
+                              'arg2': ConstNode(24),
+                              'arg3': ConstNode(26),
                             },
                           ),
-                          child: WidgetNode(
+                          'child': WidgetNode(
                             name: 'Row',
                             args: {
-                              crossAxisAlignment: RefNode([
+                              'crossAxisAlignment': RefNode([
                                 'CrossAxisAlignment',
                                 'start',
                               ]),
-                              children: ListNode([
+                              'children': ListNode([
                                 WidgetNode(
                                   name: 'Stack',
                                   args: {
-                                    children: ListNode([
+                                    'children': ListNode([
                                       WidgetNode(
                                         name: 'Container',
                                         args: {
-                                          width: ConstNode(118),
-                                          height: ConstNode(150),
-                                          color: IndexAccessNode(
+                                          'width': ConstNode(118),
+                                          'height': ConstNode(150),
+                                          'color': IndexAccessNode(
                                             target: RefNode(['Colors', 'grey']),
                                             key: ConstNode(300),
                                           ),
@@ -382,30 +388,30 @@ ScreenBinding get chefBinding => ScreenBinding(
                                       WidgetNode(
                                         name: 'Positioned',
                                         args: {
-                                          bottom: ConstNode(8),
-                                          left: ConstNode(8),
-                                          child: WidgetNode(
+                                          'bottom': ConstNode(8),
+                                          'left': ConstNode(8),
+                                          'child': WidgetNode(
                                             name: 'Container',
                                             args: {
-                                              padding: WidgetNode(
+                                              'padding': WidgetNode(
                                                 name: 'symmetric',
                                                 args: {
-                                                  horizontal: ConstNode(8),
-                                                  vertical: ConstNode(3),
+                                                  'horizontal': ConstNode(8),
+                                                  'vertical': ConstNode(3),
                                                 },
                                               ),
-                                              decoration: WidgetNode(
+                                              'decoration': WidgetNode(
                                                 name: 'BoxDecoration',
                                                 args: {
-                                                  color: WidgetNode(
+                                                  'color': WidgetNode(
                                                     name: 'Color',
                                                     args: {
-                                                      arg0: ConstNode(
+                                                      'arg0': ConstNode(
                                                         4076204272,
                                                       ),
                                                     },
                                                   ),
-                                                  borderRadius: EventNode(
+                                                  'borderRadius': EventNode(
                                                     [
                                                       'BorderRadius',
                                                       'circular',
@@ -416,24 +422,25 @@ ScreenBinding get chefBinding => ScreenBinding(
                                                   ),
                                                 },
                                               ),
-                                              child: WidgetNode(
+                                              'child': WidgetNode(
                                                 name: 'Text',
                                                 args: {
-                                                  data: RefNode([
+                                                  'data': RefNode([
                                                     'dish',
                                                     'numberLabel',
                                                   ]),
-                                                  style: WidgetNode(
+                                                  'style': WidgetNode(
                                                     name: 'TextStyle',
                                                     args: {
-                                                      fontSize: ConstNode(9.5),
-                                                      fontWeight: RefNode([
+                                                      'fontSize': ConstNode(
+                                                        9.5,
+                                                      ),
+                                                      'fontWeight': RefNode([
                                                         'FontWeight',
                                                         'w700',
                                                       ]),
-                                                      letterSpacing: ConstNode(
-                                                        1.5,
-                                                      ),
+                                                      'letterSpacing':
+                                                          ConstNode(1.5),
                                                     },
                                                   ),
                                                 },
@@ -447,61 +454,62 @@ ScreenBinding get chefBinding => ScreenBinding(
                                 ),
                                 WidgetNode(
                                   name: 'SizedBox',
-                                  args: {width: ConstNode(16)},
+                                  args: {'width': ConstNode(16)},
                                 ),
                                 WidgetNode(
                                   name: 'Expanded',
                                   args: {
-                                    child: WidgetNode(
+                                    'child': WidgetNode(
                                       name: 'Padding',
                                       args: {
-                                        padding: WidgetNode(
+                                        'padding': WidgetNode(
                                           name: 'only',
-                                          args: {top: ConstNode(4)},
+                                          args: {'top': ConstNode(4)},
                                         ),
-                                        child: WidgetNode(
+                                        'child': WidgetNode(
                                           name: 'Column',
                                           args: {
-                                            crossAxisAlignment: RefNode([
+                                            'crossAxisAlignment': RefNode([
                                               'CrossAxisAlignment',
                                               'start',
                                             ]),
-                                            children: ListNode([
+                                            'children': ListNode([
                                               WidgetNode(
                                                 name: 'Row',
                                                 args: {
-                                                  crossAxisAlignment: RefNode([
-                                                    'CrossAxisAlignment',
-                                                    'baseline',
-                                                  ]),
-                                                  textBaseline: RefNode([
+                                                  'crossAxisAlignment':
+                                                      RefNode([
+                                                        'CrossAxisAlignment',
+                                                        'baseline',
+                                                      ]),
+                                                  'textBaseline': RefNode([
                                                     'TextBaseline',
                                                     'alphabetic',
                                                   ]),
-                                                  children: ListNode([
+                                                  'children': ListNode([
                                                     WidgetNode(
                                                       name: 'Expanded',
                                                       args: {
-                                                        child: WidgetNode(
+                                                        'child': WidgetNode(
                                                           name: 'Text',
                                                           args: {
-                                                            data: RefNode([
+                                                            'data': RefNode([
                                                               'dish',
                                                               'name',
                                                             ]),
-                                                            style: WidgetNode(
+                                                            'style': WidgetNode(
                                                               name: 'TextStyle',
                                                               args: {
-                                                                fontSize:
+                                                                'fontSize':
                                                                     ConstNode(
                                                                       19,
                                                                     ),
-                                                                fontStyle:
+                                                                'fontStyle':
                                                                     RefNode([
                                                                       'FontStyle',
                                                                       'italic',
                                                                     ]),
-                                                                letterSpacing:
+                                                                'letterSpacing':
                                                                     ArithOpNode(
                                                                       op: ArithOp
                                                                           .sub,
@@ -514,7 +522,7 @@ ScreenBinding get chefBinding => ScreenBinding(
                                                                             0.2,
                                                                           ),
                                                                     ),
-                                                                height:
+                                                                'height':
                                                                     ConstNode(
                                                                       1.1,
                                                                     ),
@@ -527,22 +535,21 @@ ScreenBinding get chefBinding => ScreenBinding(
                                                     WidgetNode(
                                                       name: 'SizedBox',
                                                       args: {
-                                                        width: ConstNode(8),
+                                                        'width': ConstNode(8),
                                                       },
                                                     ),
                                                     WidgetNode(
                                                       name: 'Text',
                                                       args: {
-                                                        data: RefNode([
+                                                        'data': RefNode([
                                                           'dish',
                                                           'priceLabel',
                                                         ]),
-                                                        style: WidgetNode(
+                                                        'style': WidgetNode(
                                                           name: 'TextStyle',
                                                           args: {
-                                                            fontSize: ConstNode(
-                                                              16,
-                                                            ),
+                                                            'fontSize':
+                                                                ConstNode(16),
                                                           },
                                                         ),
                                                       },
@@ -561,31 +568,31 @@ ScreenBinding get chefBinding => ScreenBinding(
                                                     WidgetNode(
                                                       name: 'SizedBox',
                                                       args: {
-                                                        height: ConstNode(8),
+                                                        'height': ConstNode(8),
                                                       },
                                                     ),
                                                     WidgetNode(
                                                       name: 'Text',
                                                       args: {
-                                                        data: RefNode([
+                                                        'data': RefNode([
                                                           'dish',
                                                           'description',
                                                         ]),
-                                                        style: WidgetNode(
+                                                        'style': WidgetNode(
                                                           name: 'TextStyle',
                                                           args: {
-                                                            fontSize: ConstNode(
-                                                              12.5,
-                                                            ),
-                                                            color: WidgetNode(
+                                                            'fontSize':
+                                                                ConstNode(12.5),
+                                                            'color': WidgetNode(
                                                               name: 'Color',
                                                               args: {
-                                                                arg0: ConstNode(
-                                                                  4285229931,
-                                                                ),
+                                                                'arg0':
+                                                                    ConstNode(
+                                                                      4285229931,
+                                                                    ),
                                                               },
                                                             ),
-                                                            height: ConstNode(
+                                                            'height': ConstNode(
                                                               1.5,
                                                             ),
                                                           },
@@ -597,43 +604,44 @@ ScreenBinding get chefBinding => ScreenBinding(
                                               ),
                                               WidgetNode(
                                                 name: 'SizedBox',
-                                                args: {height: ConstNode(12)},
+                                                args: {'height': ConstNode(12)},
                                               ),
                                               WidgetNode(
                                                 name: 'Wrap',
                                                 args: {
-                                                  spacing: ConstNode(8),
-                                                  runSpacing: ConstNode(6),
-                                                  crossAxisAlignment: RefNode([
-                                                    'WrapCrossAlignment',
-                                                    'center',
-                                                  ]),
-                                                  children: ListNode([
+                                                  'spacing': ConstNode(8),
+                                                  'runSpacing': ConstNode(6),
+                                                  'crossAxisAlignment':
+                                                      RefNode([
+                                                        'WrapCrossAlignment',
+                                                        'center',
+                                                      ]),
+                                                  'children': ListNode([
                                                     WidgetNode(
                                                       name: 'Container',
                                                       args: {
-                                                        padding: WidgetNode(
+                                                        'padding': WidgetNode(
                                                           name: 'symmetric',
                                                           args: {
-                                                            horizontal:
+                                                            'horizontal':
                                                                 ConstNode(14),
-                                                            vertical: ConstNode(
-                                                              8,
-                                                            ),
+                                                            'vertical':
+                                                                ConstNode(8),
                                                           },
                                                         ),
-                                                        decoration: WidgetNode(
+                                                        'decoration': WidgetNode(
                                                           name: 'BoxDecoration',
                                                           args: {
-                                                            color: WidgetNode(
+                                                            'color': WidgetNode(
                                                               name: 'Color',
                                                               args: {
-                                                                arg0: ConstNode(
-                                                                  4281794739,
-                                                                ),
+                                                                'arg0':
+                                                                    ConstNode(
+                                                                      4281794739,
+                                                                    ),
                                                               },
                                                             ),
-                                                            borderRadius: EventNode(
+                                                            'borderRadius': EventNode(
                                                               [
                                                                 'BorderRadius',
                                                                 'circular',
@@ -647,29 +655,30 @@ ScreenBinding get chefBinding => ScreenBinding(
                                                             ),
                                                           },
                                                         ),
-                                                        child: WidgetNode(
+                                                        'child': WidgetNode(
                                                           name: 'Text',
                                                           args: {
-                                                            data: ConstNode(
+                                                            'data': ConstNode(
                                                               '+ Add to order',
                                                             ),
-                                                            style: WidgetNode(
+                                                            'style': WidgetNode(
                                                               name: 'TextStyle',
                                                               args: {
-                                                                color: RefNode([
-                                                                  'Colors',
-                                                                  'white',
-                                                                ]),
-                                                                fontSize:
+                                                                'color':
+                                                                    RefNode([
+                                                                      'Colors',
+                                                                      'white',
+                                                                    ]),
+                                                                'fontSize':
                                                                     ConstNode(
                                                                       12,
                                                                     ),
-                                                                fontWeight:
+                                                                'fontWeight':
                                                                     RefNode([
                                                                       'FontWeight',
                                                                       'w700',
                                                                     ]),
-                                                                letterSpacing:
+                                                                'letterSpacing':
                                                                     ConstNode(
                                                                       0.3,
                                                                     ),
@@ -682,24 +691,24 @@ ScreenBinding get chefBinding => ScreenBinding(
                                                     WidgetNode(
                                                       name: 'Text',
                                                       args: {
-                                                        data: ConstNode(
+                                                        'data': ConstNode(
                                                           'single serving',
                                                         ),
-                                                        style: WidgetNode(
+                                                        'style': WidgetNode(
                                                           name: 'TextStyle',
                                                           args: {
-                                                            fontSize: ConstNode(
-                                                              11,
-                                                            ),
-                                                            color: WidgetNode(
+                                                            'fontSize':
+                                                                ConstNode(11),
+                                                            'color': WidgetNode(
                                                               name: 'Color',
                                                               args: {
-                                                                arg0: ConstNode(
-                                                                  4288585374,
-                                                                ),
+                                                                'arg0':
+                                                                    ConstNode(
+                                                                      4288585374,
+                                                                    ),
                                                               },
                                                             ),
-                                                            letterSpacing:
+                                                            'letterSpacing':
                                                                 ConstNode(0.4),
                                                           },
                                                         ),
@@ -724,32 +733,32 @@ ScreenBinding get chefBinding => ScreenBinding(
                     WidgetNode(
                       name: 'Padding',
                       args: {
-                        padding: WidgetNode(
+                        'padding': WidgetNode(
                           name: 'fromLTRB',
                           args: {
-                            arg0: ConstNode(24),
-                            arg1: ConstNode(34),
-                            arg2: ConstNode(24),
-                            arg3: ConstNode(0),
+                            'arg0': ConstNode(24),
+                            'arg1': ConstNode(34),
+                            'arg2': ConstNode(24),
+                            'arg3': ConstNode(0),
                           },
                         ),
-                        child: WidgetNode(
+                        'child': WidgetNode(
                           name: 'Text',
                           args: {
-                            data: StringInterpNode([
+                            'data': StringInterpNode([
                               '— ',
                               RefNode(['data', 'refreshCadence']),
                               ' —',
                             ]),
-                            textAlign: RefNode(['TextAlign', 'center']),
-                            style: WidgetNode(
+                            'textAlign': RefNode(['TextAlign', 'center']),
+                            'style': WidgetNode(
                               name: 'TextStyle',
                               args: {
-                                fontSize: ConstNode(14),
-                                fontStyle: RefNode(['FontStyle', 'italic']),
-                                color: WidgetNode(
+                                'fontSize': ConstNode(14),
+                                'fontStyle': RefNode(['FontStyle', 'italic']),
+                                'color': WidgetNode(
                                   name: 'Color',
-                                  args: {arg0: ConstNode(4285229931)},
+                                  args: {'arg0': ConstNode(4285229931)},
                                 ),
                               },
                             ),
@@ -765,42 +774,45 @@ ScreenBinding get chefBinding => ScreenBinding(
           WidgetNode(
             name: 'Positioned',
             args: {
-              top: ConstNode(0),
-              left: ConstNode(0),
-              right: ConstNode(0),
-              child: WidgetNode(
+              'top': ConstNode(0),
+              'left': ConstNode(0),
+              'right': ConstNode(0),
+              'child': WidgetNode(
                 name: 'Container',
                 args: {
-                  padding: WidgetNode(
+                  'padding': WidgetNode(
                     name: 'fromLTRB',
                     args: {
-                      arg0: ConstNode(20),
-                      arg1: ConstNode(56),
-                      arg2: ConstNode(20),
-                      arg3: ConstNode(14),
+                      'arg0': ConstNode(20),
+                      'arg1': ConstNode(56),
+                      'arg2': ConstNode(20),
+                      'arg3': ConstNode(14),
                     },
                   ),
-                  color: WidgetNode(
+                  'color': WidgetNode(
                     name: 'Color',
-                    args: {arg0: ConstNode(4210422000)},
+                    args: {'arg0': ConstNode(4210422000)},
                   ),
-                  child: WidgetNode(
+                  'child': WidgetNode(
                     name: 'Row',
                     args: {
-                      mainAxisAlignment: RefNode([
+                      'mainAxisAlignment': RefNode([
                         'MainAxisAlignment',
                         'spaceBetween',
                       ]),
-                      children: ListNode([
+                      'children': ListNode([
                         WidgetNode(
                           name: 'GestureDetector',
                           args: {
-                            onTap: RefNode(['controller', 'tapBack']),
-                            child: WidgetNode(
+                            'onTap': RefNode(['controller', 'tapBack']),
+                            'child': WidgetNode(
                               name: 'Icon',
                               args: {
-                                icon: RefNode(['Icons', 'arrow_back_ios_new']),
-                                size: ConstNode(20),
+                                'icon': RefNode([
+                                  'Icons',
+                                  'arrow_back_ios_new',
+                                ]),
+                                'size': ConstNode(20),
                               },
                             ),
                           },
@@ -808,13 +820,13 @@ ScreenBinding get chefBinding => ScreenBinding(
                         WidgetNode(
                           name: 'Text',
                           args: {
-                            data: ConstNode('CHEF\'S CHOICE'),
-                            style: WidgetNode(
+                            'data': ConstNode('CHEF\'S CHOICE'),
+                            'style': WidgetNode(
                               name: 'TextStyle',
                               args: {
-                                fontSize: ConstNode(12),
-                                letterSpacing: ConstNode(2),
-                                fontWeight: RefNode(['FontWeight', 'w700']),
+                                'fontSize': ConstNode(12),
+                                'letterSpacing': ConstNode(2),
+                                'fontWeight': RefNode(['FontWeight', 'w700']),
                               },
                             ),
                           },
@@ -822,12 +834,12 @@ ScreenBinding get chefBinding => ScreenBinding(
                         WidgetNode(
                           name: 'GestureDetector',
                           args: {
-                            onTap: RefNode(['controller', 'toggleBookmark']),
-                            child: WidgetNode(
+                            'onTap': RefNode(['controller', 'toggleBookmark']),
+                            'child': WidgetNode(
                               name: 'Icon',
                               args: {
-                                icon: RefNode(['Icons', 'bookmark_border']),
-                                size: ConstNode(20),
+                                'icon': RefNode(['Icons', 'bookmark_border']),
+                                'size': ConstNode(20),
                               },
                             ),
                           },

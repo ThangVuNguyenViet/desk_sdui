@@ -166,6 +166,16 @@ void registerBuiltinWidgets(Runtime rt) {
         child: args['child']! as Widget,
       ),);
 
+  rt.registerWidget('Positioned', (ctx, args) => Positioned(
+        top: (args['top'] as num?)?.toDouble(),
+        left: (args['left'] as num?)?.toDouble(),
+        right: (args['right'] as num?)?.toDouble(),
+        bottom: (args['bottom'] as num?)?.toDouble(),
+        width: (args['width'] as num?)?.toDouble(),
+        height: (args['height'] as num?)?.toDouble(),
+        child: args['child'] as Widget?,
+      ),);
+
   rt.registerWidget('SafeArea', (ctx, args) => SafeArea(
         child: args['child']! as Widget,
       ),);

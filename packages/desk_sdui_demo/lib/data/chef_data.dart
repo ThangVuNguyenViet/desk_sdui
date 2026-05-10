@@ -16,6 +16,7 @@ class ChefDish {
     required this.name,
     required this.description,
     required this.price,
+    required this.priceLabel,
     required this.imageUrl,
   });
 
@@ -23,6 +24,7 @@ class ChefDish {
   final String name;
   final String description;
   final double price;
+  final String priceLabel;
   final String imageUrl;
 }
 
@@ -33,6 +35,7 @@ class ChefData {
     required this.pullQuote,
     required this.chefName,
     required this.chefRole,
+    required this.chefRoleUpper,
     required this.chefPortraitUrl,
     required this.refreshCadence,
     required this.dishes,
@@ -43,6 +46,7 @@ class ChefData {
   final String pullQuote;
   final String chefName;
   final String chefRole;
+  final String chefRoleUpper;
   final String chefPortraitUrl;
   final String refreshCadence;
   final List<ChefDish> dishes;

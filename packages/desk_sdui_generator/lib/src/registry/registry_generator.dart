@@ -19,7 +19,7 @@ class RegistryBuilder implements Builder {
 
   @override
   Map<String, List<String>> get buildExtensions => {
-    r'$package$': ['lib/desk_sdui_setup.sdui.g.dart'],
+    r'$package$': ['lib/desk_sdui_setup.g.dart'],
   };
 
   @override
@@ -32,10 +32,11 @@ class RegistryBuilder implements Builder {
       for (final annotated in libReader.annotatedWith(_checker)) {
         final el = annotated.element;
         final name = annotated.annotation.read('name').stringValue;
+        final safeName = name.replaceAll(RegExp(r'[^a-zA-Z0-9_]'), '_');
         if (el.name != null) {
           screens.add(_ScreenInfo(
             name: name,
-            bindingSymbol: '${el.name}Binding',
+            bindingSymbol: '${safeName}Binding',
             sourceUri: input.uri,
           ));
         }
@@ -44,7 +45,7 @@ class RegistryBuilder implements Builder {
 
     final source = _emitRegistry(screens, step.inputId.package);
     await step.writeAsString(
-      AssetId(step.inputId.package, 'lib/desk_sdui_setup.sdui.g.dart'),
+      AssetId(step.inputId.package, 'lib/desk_sdui_setup.g.dart'),
       source,
     );
   }
@@ -52,7 +53,10 @@ class RegistryBuilder implements Builder {
   String _emitRegistry(List<_ScreenInfo> screens, String packageName) {
     final imports = <String, List<String>>{};
     for (final s in screens) {
-      final uri = s.sourceUri.toString();
+      var uri = s.sourceUri.toString();
+      if (uri.startsWith('package:$packageName/')) {
+        uri = uri.substring('package:$packageName/'.length);
+      }
       imports.putIfAbsent(uri, () => []).add(s.bindingSymbol);
     }
 
@@ -67,6 +71,7 @@ class RegistryBuilder implements Builder {
 
     return '''
 // GENERATED CODE — DO NOT MODIFY BY HAND
+import 'package:desk_sdui/desk_sdui.dart';
 $importLines
 
 void registerAllScreens(Runtime rt) {

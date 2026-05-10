@@ -2,10 +2,11 @@ import 'package:dart_style/dart_style.dart';
 import 'package:desk_sdui_annotation/desk_sdui_annotation.dart';
 import 'ast_to_ir.dart';
 
-String emitDart(ScreenLowerResult result) {
+String emitDart(ScreenLowerResult result, {String? partOfUri}) {
   final safeName = result.name.replaceAll(RegExp(r'[^a-zA-Z0-9_]'), '_');
+  final partOf = partOfUri != null ? "part of '$partOfUri';" : "part of '';";
   final source = '''
-part of '';
+$partOf
 
 ScreenBinding get ${safeName}Binding => ScreenBinding(
   name: ${_dartString(result.name)},

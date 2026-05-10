@@ -60,6 +60,6 @@ class ScreenGenerator extends GeneratorForAnnotation<Screen> {
       jsonBytes,
     );
 
-    return emitDart(result.copyWith(root: ir));
+    return emitDart(result.copyWith(root: ir), partOfUri: buildStep.inputId.uri.toString());
   }
 }

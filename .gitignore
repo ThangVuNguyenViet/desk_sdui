@@ -21,4 +21,5 @@ coverage/
 
 # Generated
 *.g.dart
+!packages/desk_sdui_demo/**/*.g.dart
 *.freezed.dart

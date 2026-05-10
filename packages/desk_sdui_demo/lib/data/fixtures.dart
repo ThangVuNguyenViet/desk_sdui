@@ -9,6 +9,7 @@ const chefFixture = ChefData(
       'Cooking is about patience, passion, and the pursuit of flavor that lingers in memory.',
   chefName: 'Anna Moretti',
   chefRole: 'Executive Chef',
+  chefRoleUpper: 'EXECUTIVE CHEF',
   chefPortraitUrl: 'assets/chef_portrait.png',
   refreshCadence: 'Menu updates seasonally',
   dishes: [
@@ -17,6 +18,7 @@ const chefFixture = ChefData(
       name: 'Truffle Risotto',
       description: 'Arborio rice, black truffle, parmesan, white wine reduction',
       price: 34,
+      priceLabel: '\$34',
       imageUrl: 'assets/dish1.png',
     ),
     ChefDish(
@@ -24,6 +26,7 @@ const chefFixture = ChefData(
       name: 'Seared Scallops',
       description: 'Pan-seared diver scallops, cauliflower puree, brown butter',
       price: 42,
+      priceLabel: '\$42',
       imageUrl: 'assets/dish2.png',
     ),
     ChefDish(
@@ -31,6 +34,7 @@ const chefFixture = ChefData(
       name: 'Wagyu Tartare',
       description: 'Hand-cut wagyu, quail egg, capers, sourdough crisps',
       price: 28,
+      priceLabel: '\$28',
       imageUrl: 'assets/dish3.png',
     ),
   ],

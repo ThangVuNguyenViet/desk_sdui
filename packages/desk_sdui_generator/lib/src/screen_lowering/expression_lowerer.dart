@@ -100,6 +100,14 @@ IrNode lowerExpression(Expression expr) {
     return NotOpNode(lowerExpression(expr.operand));
   }
 
+  if (expr is PrefixExpression && expr.operator.lexeme == '-') {
+    return ArithOpNode(
+      op: ArithOp.sub,
+      left: LiteralNode(0),
+      right: lowerExpression(expr.operand),
+    );
+  }
+
   if (expr is ConditionalExpression) {
     return ConditionalNode(
       condition: lowerExpression(expr.condition),

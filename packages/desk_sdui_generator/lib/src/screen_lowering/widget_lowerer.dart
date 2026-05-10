@@ -143,10 +143,10 @@ IrNode _lowerArg(Expression a, {Object? Function(InstanceCreationExpression)? co
 
 IrNode _lowerIfElement(IfElement el, {Object? Function(InstanceCreationExpression)? constEvaluator}) {
   final cond = lowerExpression(el.expression);
-  final thenWidget = _lowerArg(el.thenElement as Expression, constEvaluator: constEvaluator);
+  final thenWidget = _lowerCollectionElement(el.thenElement, constEvaluator: constEvaluator);
   final otherwise = el.elseElement == null
       ? null
-      : _lowerArg(el.elseElement! as Expression, constEvaluator: constEvaluator);
+      : _lowerCollectionElement(el.elseElement!, constEvaluator: constEvaluator);
   return ConditionalNode(
     condition: cond,
     thenBranch: thenWidget,
@@ -154,21 +154,58 @@ IrNode _lowerIfElement(IfElement el, {Object? Function(InstanceCreationExpressio
   );
 }
 
+IrNode _lowerCollectionElement(CollectionElement el, {Object? Function(InstanceCreationExpression)? constEvaluator}) {
+  if (el is IfElement) return _lowerIfElement(el, constEvaluator: constEvaluator);
+  if (el is ForElement) return _lowerForElement(el, constEvaluator: constEvaluator);
+  if (el is SpreadElement) {
+    final expr = el.expression;
+    if (expr is ListLiteral) {
+      if (expr.elements.isEmpty) {
+        return SpreadNode(ListNode([]));
+      }
+      final lowered = expr.elements.map((e) => _lowerCollectionElement(e as CollectionElement, constEvaluator: constEvaluator)).toList();
+      return SpreadNode(ListNode(lowered));
+    }
+    return SpreadNode(lowerExpression(expr));
+  }
+  if (el is Expression) {
+    return _lowerArg(el, constEvaluator: constEvaluator);
+  }
+  throw LoweringError('unsupported collection element: ${el.runtimeType}', el);
+}
+
 IrNode _lowerForElement(ForElement el, {Object? Function(InstanceCreationExpression)? constEvaluator}) {
   final parts = el.forLoopParts;
   if (parts is ForEachPartsWithDeclaration) {
     final loopVar = parts.loopVariable.name.lexeme;
     final source = lowerExpression(parts.iterable);
-    final body = _lowerArg(el.body as Expression, constEvaluator: constEvaluator);
+    final body = _lowerForBody(el.body, constEvaluator: constEvaluator);
     return ForNode(variable: loopVar, source: source, body: body);
   }
   if (parts is ForEachPartsWithPattern) {
     final names = _extractPatternNames(parts.pattern);
     final source = lowerExpression(parts.iterable);
-    final body = _lowerArg(el.body as Expression, constEvaluator: constEvaluator);
+    final body = _lowerForBody(el.body, constEvaluator: constEvaluator);
     return ForNode.destructured(variables: names, source: source, body: body);
   }
   throw LoweringError('counter-style for not supported', el);
+}
+
+IrNode _lowerForBody(CollectionElement body, {Object? Function(InstanceCreationExpression)? constEvaluator}) {
+  if (body is SpreadElement) {
+    final expr = body.expression;
+    if (expr is ListLiteral && expr.elements.length == 1) {
+      final single = expr.elements.first;
+      if (single is Expression) {
+        return _lowerArg(single, constEvaluator: constEvaluator);
+      }
+    }
+    return SpreadNode(lowerExpression(expr));
+  }
+  if (body is Expression) {
+    return _lowerArg(body, constEvaluator: constEvaluator);
+  }
+  throw LoweringError('unsupported for body: ${body.runtimeType}', body);
 }
 
 String _ctorFullName(InstanceCreationExpression expr) {

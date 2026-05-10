@@ -2,8 +2,11 @@ import 'package:desk_sdui_annotation/desk_sdui_annotation.dart';
 
 IrNode constFold(IrNode node) {
   final folded = _foldChildren(node);
+  if (folded is LiteralNode) {
+    return ConstNode(folded.value);
+  }
   if (_isPureLiteral(folded)) {
-    return ConstNode(folded);
+    return folded;
   }
   return folded;
 }

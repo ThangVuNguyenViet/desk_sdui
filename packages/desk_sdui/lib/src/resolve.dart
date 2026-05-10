@@ -138,6 +138,31 @@ Object? _resolveArg(
       }
       return resolveNode(context, node, input, runtime);
 
+    case MethodCallNode(:final receiver, :final name, :final args):
+      final resolvedReceiver = _resolveArg(context, receiver, input, runtime);
+      final resolvedArgs =
+          args.map((a) => _resolveArg(context, a, input, runtime)).toList();
+      final handler = runtime.resolveMethodHandler(name);
+      if (handler == null) {
+        throw StateError(
+          'Method "$name" not registered. '
+          'Add it to a @Screen body or @RegisterForSdui annotation.',
+        );
+      }
+      return handler(resolvedReceiver, resolvedArgs);
+
+    case ValueCtorNode(:final name, :final args):
+      final resolvedArgs =
+          args.map((a) => _resolveArg(context, a, input, runtime)).toList();
+      final builder = runtime.resolveValueBuilder(name);
+      if (builder == null) {
+        throw StateError(
+          'Value constructor "$name" not registered. '
+          'Add it to a @Screen body or @RegisterForSdui annotation.',
+        );
+      }
+      return builder(resolvedArgs);
+
     case EventNode():
       return _bindEvent(node, input, runtime);
 

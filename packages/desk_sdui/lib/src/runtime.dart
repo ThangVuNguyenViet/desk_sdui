@@ -152,6 +152,15 @@ class Runtime {
 
   SduiWidgetBuilder? resolveWidget(String name) => _sduiWidgets[name];
   Object? resolveConstant(String name) => _constants[name];
+
+  /// Returns the registered [SduiMethodHandler] for [name], or null if not
+  /// registered. Used by resolve.dart to dispatch [MethodCallNode].
+  SduiMethodHandler? resolveMethodHandler(String name) => _methods[name];
+
+  /// Returns the registered [SduiValueBuilder] for [name], or null if not
+  /// registered. Used by resolve.dart to dispatch [ValueCtorNode].
+  SduiValueBuilder? resolveValueBuilder(String name) => _valueBuilders[name];
+
   Object? invokeMethod(String name, Object? receiver, List<Object?> args) =>
       _methods[name]?.call(receiver, args);
   Object? invokeSubscript(String name, Object? receiver, Object? key) =>

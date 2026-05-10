@@ -1,0 +1,24 @@
+name: desk_sdui_demo
+description: Reference + parity tests for desk_sdui — ports of chef_screen + home variants.
+version: 0.0.1-dev
+publish_to: none
+
+environment:
+  sdk: ^3.6.0
+  flutter: ">=3.27.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  desk_sdui:
+    path: ../desk_sdui
+  desk_sdui_annotation:
+    path: ../desk_sdui_annotation
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  desk_sdui_generator:
+    path: ../desk_sdui_generator
+  build_runner: ^2.4.0
+  very_good_analysis: ^7.0.0

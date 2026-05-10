@@ -13,7 +13,7 @@ class RemoteIrFetcher implements IrFetcher {
   @override
   Future<List<int>> fetch(String name) async {
     final uri = endpoint.replace(
-      pathSegments: [...endpoint.pathSegments, '$name.uib'],
+      pathSegments: [...endpoint.pathSegments, '$name.sdui.json'],
     );
     return _client(uri);
   }

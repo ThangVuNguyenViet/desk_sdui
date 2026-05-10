@@ -150,7 +150,7 @@ class JsonIrEncoder {
       'ConstNode JSON encoding requires a stable id resolved by the runtime '
       'registry. v1 const-fold pass uses Dart-literal output only; the wire '
       'format does not yet support ConstNode. Lower without const-folding '
-      'when emitting .uib until the const id system lands in Phase 2.',
+      'when emitting .sdui.json until the const id system lands in Phase 2.',
     );
   }
 }

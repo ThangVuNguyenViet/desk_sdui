@@ -4,7 +4,7 @@ import 'package:meta/meta.dart';
 /// IR by `desk_sdui_generator` at build time.
 ///
 /// The [name] is the screen's identifier — used both in the generated
-/// `ScreenBinding` and as the filename stem for the published `.uib` blob.
+/// `ScreenBinding` and as the filename stem for the published `.sdui.json` blob.
 @immutable
 class Screen {
   const Screen(this.name);

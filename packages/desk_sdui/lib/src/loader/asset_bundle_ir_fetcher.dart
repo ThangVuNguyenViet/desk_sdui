@@ -8,7 +8,7 @@ class AssetBundleIrFetcher implements IrFetcher {
 
   @override
   Future<List<int>> fetch(String name) async {
-    final key = '$prefix/$name.uib';
+    final key = '$prefix/$name.sdui.json';
     final data = await bundle.load(key);
     return data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
   }

@@ -18,7 +18,7 @@ class JsonIrDecoder {
       'literal' => LiteralNode(map['value']),
       'const' => throw UnimplementedError(
           'ConstNode JSON decoding not supported in Phase 1; '
-          'lower without const-folding for .uib output.',
+          'lower without const-folding for .sdui.json output.',
         ),
       'ref' => RefNode(
           (map['path']! as List).cast<String>(),

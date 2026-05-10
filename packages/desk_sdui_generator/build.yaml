@@ -2,7 +2,7 @@ builders:
   screen_builder:
     import: 'package:desk_sdui_generator/desk_sdui_generator.dart'
     builder_factories: ['screenBuilder']
-    build_extensions: {'.dart': ['.sdui.g.dart', '.uib']}
+    build_extensions: {'.dart': ['.sdui.g.dart', '.sdui.json']}
     auto_apply: dependents
     build_to: source
 

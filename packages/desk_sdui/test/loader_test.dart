@@ -8,9 +8,9 @@ import 'package:desk_sdui/src/loader/remote_ir_fetcher.dart';
 
 void main() {
   group('AssetBundleIrFetcher', () {
-    test('reads <prefix>/<name>.uib from bundle', () async {
+    test('reads <prefix>/<name>.sdui.json from bundle', () async {
       final bundle = _FakeBundle({
-        'sdui/cart.uib':
+        'sdui/cart.sdui.json':
             '{"name":"cart","version":1,'
             r'"root":{"$type":"literal","value":null}}',
       });
@@ -23,7 +23,7 @@ void main() {
   });
 
   group('RemoteIrFetcher', () {
-    test('GETs <endpoint>/<name>.uib', () async {
+    test('GETs <endpoint>/<name>.sdui.json', () async {
       late Uri capturedUri;
       final fetcher = RemoteIrFetcher(
         endpoint: Uri.parse('https://api.example.com/sdui'),
@@ -35,7 +35,7 @@ void main() {
       final bytes = await fetcher.fetch('home');
       expect(
         capturedUri.toString(),
-        'https://api.example.com/sdui/home.uib',
+        'https://api.example.com/sdui/home.sdui.json',
       );
       expect(utf8.decode(bytes), '{"ok":true}');
     });

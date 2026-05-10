@@ -56,7 +56,7 @@ class ScreenGenerator extends GeneratorForAnnotation<Screen> {
     final tree = IrTree(name: ann.name, version: 1, root: ir);
     final jsonBytes = emitJson(tree);
     await buildStep.writeAsBytes(
-      buildStep.inputId.changeExtension('.uib'),
+      buildStep.inputId.changeExtension('.sdui.json'),
       jsonBytes,
     );
 

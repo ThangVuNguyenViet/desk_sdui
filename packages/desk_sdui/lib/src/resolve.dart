@@ -21,15 +21,15 @@ Widget resolveNode(
         :final name,
         :final args,
         :final key,
-        :final reactiveSignals,
+        :final listenablePaths,
       ):
-      if (reactiveSignals.isNotEmpty) {
+      if (listenablePaths.isNotEmpty) {
         return _resolveReactiveWidget(
           context,
           name,
           args,
           key,
-          reactiveSignals,
+          listenablePaths,
           input,
           runtime,
         );
@@ -217,19 +217,19 @@ Widget _resolveReactiveWidget(
   String name,
   Map<String, IrNode> args,
   IrNode? key,
-  Set<String> reactiveSignals,
+  Set<String> listenablePaths,
   Map<String, Object?> input,
   Runtime runtime,
 ) {
   final reactiveMap = input['__reactive__'] as Map<String, Object?>?;
   if (reactiveMap == null) {
     throw StateError(
-      'WidgetNode "$name" declares reactiveSignals but input '
+      'WidgetNode "$name" declares listenablePaths but input '
       'has no __reactive__ map',
     );
   }
   final listenables = <Listenable>[];
-  for (final pathStr in reactiveSignals) {
+  for (final pathStr in listenablePaths) {
     final l = reactiveMap[pathStr];
     if (l is Listenable) listenables.add(l);
   }
@@ -237,7 +237,7 @@ Widget _resolveReactiveWidget(
     listenable: Listenable.merge(listenables),
     builder: (ctx, _) {
       final scopedInput = Map<String, Object?>.of(input);
-      for (final pathStr in reactiveSignals) {
+      for (final pathStr in listenablePaths) {
         _installReactiveGetter(
           scopedInput,
           pathStr.split('.'),

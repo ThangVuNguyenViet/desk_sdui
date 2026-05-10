@@ -60,7 +60,7 @@ void main() {
           ]),
         },
         key: LiteralNode('mykey'),
-        reactiveSignals: {'vm.flag'},
+        listenablePaths: {'vm.flag'},
       );
       final encoded = codec.encode(node);
       final decoded = codec.decode(encoded);

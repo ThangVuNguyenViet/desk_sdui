@@ -104,20 +104,20 @@ final class EventNode extends IrNode {
 
 /// A registered widget invocation. [name] is the registered widget id;
 /// [args] map argument names to IrNodes; [key] is an optional ValueKey
-/// expression. [reactiveSignals] is metadata emitted by the lowerer's
+/// expression. [listenablePaths] is metadata emitted by the lowerer's
 /// reactive-scope-hoisting pass.
 final class WidgetNode extends IrNode {
   const WidgetNode({
     required this.name,
     required this.args,
     this.key,
-    this.reactiveSignals = const {},
+    this.listenablePaths = const {},
   });
 
   final String name;
   final Map<String, IrNode> args;
   final IrNode? key;
-  final Set<String> reactiveSignals;
+  final Set<String> listenablePaths;
 
   @override
   bool operator ==(Object other) =>
@@ -125,14 +125,14 @@ final class WidgetNode extends IrNode {
       other.name == name &&
       _mapEquals(other.args, args) &&
       other.key == key &&
-      _setEquals(other.reactiveSignals, reactiveSignals);
+      _setEquals(other.listenablePaths, listenablePaths);
 
   @override
   int get hashCode => Object.hash(
         name,
         Object.hashAll(args.entries),
         key,
-        Object.hashAll(reactiveSignals),
+        Object.hashAll(listenablePaths),
       );
 
   @override

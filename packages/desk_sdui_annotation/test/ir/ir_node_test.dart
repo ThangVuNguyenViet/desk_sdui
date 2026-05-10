@@ -59,8 +59,8 @@ void main() {
       expect(node.key, isNull);
     });
 
-    test('reactiveSignals defaults to empty set', () {
-      expect(const WidgetNode(name: 'X', args: {}).reactiveSignals, isEmpty);
+    test('listenablePaths defaults to empty set', () {
+      expect(const WidgetNode(name: 'X', args: {}).listenablePaths, isEmpty);
     });
   });
 

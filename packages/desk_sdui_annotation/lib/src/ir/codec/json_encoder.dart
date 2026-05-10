@@ -36,8 +36,8 @@ class JsonIrEncoder {
           'name': node.name,
           'args': node.args.map((k, v) => MapEntry(k, _encodeNode(v))),
           if (node.key != null) 'key': _encodeNode(node.key!),
-          if (node.reactiveSignals.isNotEmpty)
-            'reactiveSignals': node.reactiveSignals.toList(),
+          if (node.listenablePaths.isNotEmpty)
+            'listenablePaths': node.listenablePaths.toList(),
         },
       BuiltinWidgetNode() => {
           r'$type': 'builtin',

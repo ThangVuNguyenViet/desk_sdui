@@ -32,7 +32,7 @@ class JsonIrDecoder {
           name: map['name']! as String,
           args: _decodeNamedArgs(map['args']),
           key: _decodeOptional(map['key']),
-          reactiveSignals: ((map['reactiveSignals'] as List?) ?? const [])
+          listenablePaths: ((map['listenablePaths'] as List?) ?? const [])
               .cast<String>()
               .toSet(),
         ),

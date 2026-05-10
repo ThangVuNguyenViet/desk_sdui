@@ -5,7 +5,7 @@ import 'package:desk_sdui/src/resolve.dart';
 
 void main() {
   testWidgets(
-    'WidgetNode.reactiveSignals rebuilds only its subtree on signal change',
+    'WidgetNode.listenablePaths rebuilds only its subtree on signal change',
     (tester) async {
       final rt = Runtime();
       var outerBuilds = 0;
@@ -35,7 +35,7 @@ void main() {
           'children': ListNode([
             WidgetNode(
               name: 'Inner',
-              reactiveSignals: {'count'},
+              listenablePaths: {'count'},
               args: {
                 'label': RefNode(['count'], reactive: true),
               },

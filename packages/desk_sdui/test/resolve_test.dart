@@ -8,16 +8,16 @@ void main() {
 
   setUp(() {
     rt = Runtime();
-    rt.registerWidget('Sentinel', (ctx, args) {
+    rt.registerWidgetWithContext('Sentinel', (ctx, args) {
       return Text(
         args['label'] as String? ?? '',
         textDirection: TextDirection.ltr,
       );
     });
-    rt.registerWidget('Container', (ctx, args) {
+    rt.registerWidgetWithContext('Container', (ctx, args) {
       return Container(child: args['child'] as Widget?);
     });
-    rt.registerWidget('Column', (ctx, args) {
+    rt.registerWidgetWithContext('Column', (ctx, args) {
       return Column(
         children: (args['children']! as List).cast<Widget>(),
       );

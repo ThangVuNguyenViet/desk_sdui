@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../runtime.dart';
 
 void registerBuiltinWidgets(Runtime rt) {
-  rt.registerWidget('Container', (ctx, args) => Container(
+  rt.registerWidgetWithContext('Container', (ctx, args) => Container(
         padding: args['padding'] as EdgeInsetsGeometry?,
         margin: args['margin'] as EdgeInsetsGeometry?,
         color: args['color'] as Color?,
@@ -12,18 +12,18 @@ void registerBuiltinWidgets(Runtime rt) {
         child: args['child'] as Widget?,
       ),);
 
-  rt.registerWidget('Padding', (ctx, args) => Padding(
+  rt.registerWidgetWithContext('Padding', (ctx, args) => Padding(
         padding: args['padding']! as EdgeInsetsGeometry,
         child: args['child']! as Widget,
       ),);
 
-  rt.registerWidget('SizedBox', (ctx, args) => SizedBox(
+  rt.registerWidgetWithContext('SizedBox', (ctx, args) => SizedBox(
         width: (args['width'] as num?)?.toDouble(),
         height: (args['height'] as num?)?.toDouble(),
         child: args['child'] as Widget?,
       ),);
 
-  rt.registerWidget('Column', (ctx, args) => Column(
+  rt.registerWidgetWithContext('Column', (ctx, args) => Column(
         mainAxisAlignment:
             args['mainAxisAlignment'] as MainAxisAlignment? ??
                 MainAxisAlignment.start,
@@ -36,7 +36,7 @@ void registerBuiltinWidgets(Runtime rt) {
             ((args['children'] as List?) ?? const []).cast<Widget>(),
       ),);
 
-  rt.registerWidget('Row', (ctx, args) => Row(
+  rt.registerWidgetWithContext('Row', (ctx, args) => Row(
         mainAxisAlignment:
             args['mainAxisAlignment'] as MainAxisAlignment? ??
                 MainAxisAlignment.start,
@@ -50,7 +50,7 @@ void registerBuiltinWidgets(Runtime rt) {
             ((args['children'] as List?) ?? const []).cast<Widget>(),
       ),);
 
-  rt.registerWidget('Stack', (ctx, args) => Stack(
+  rt.registerWidgetWithContext('Stack', (ctx, args) => Stack(
         alignment: args['alignment'] as AlignmentGeometry? ??
             AlignmentDirectional.topStart,
         fit: args['fit'] as StackFit? ?? StackFit.loose,
@@ -58,28 +58,28 @@ void registerBuiltinWidgets(Runtime rt) {
             ((args['children'] as List?) ?? const []).cast<Widget>(),
       ),);
 
-  rt.registerWidget(
+  rt.registerWidgetWithContext(
     'Center',
     (ctx, args) => Center(child: args['child'] as Widget?),
   );
 
-  rt.registerWidget('Align', (ctx, args) => Align(
+  rt.registerWidgetWithContext('Align', (ctx, args) => Align(
         alignment: args['alignment'] as AlignmentGeometry? ??
             Alignment.center,
         child: args['child'] as Widget?,
       ),);
 
-  rt.registerWidget('Expanded', (ctx, args) => Expanded(
+  rt.registerWidgetWithContext('Expanded', (ctx, args) => Expanded(
         flex: (args['flex'] as int?) ?? 1,
         child: args['child']! as Widget,
       ),);
 
-  rt.registerWidget('Flexible', (ctx, args) => Flexible(
+  rt.registerWidgetWithContext('Flexible', (ctx, args) => Flexible(
         flex: (args['flex'] as int?) ?? 1,
         child: args['child']! as Widget,
       ),);
 
-  rt.registerWidget('Text', (ctx, args) => Text(
+  rt.registerWidgetWithContext('Text', (ctx, args) => Text(
         args['data']! as String,
         style: args['style'] as TextStyle?,
         textAlign: args['textAlign'] as TextAlign?,
@@ -87,23 +87,23 @@ void registerBuiltinWidgets(Runtime rt) {
         overflow: args['overflow'] as TextOverflow?,
       ),);
 
-  rt.registerWidget('Icon', (ctx, args) => Icon(
+  rt.registerWidgetWithContext('Icon', (ctx, args) => Icon(
         args['icon']! as IconData,
         size: (args['size'] as num?)?.toDouble(),
         color: args['color'] as Color?,
       ),);
 
-  rt.registerWidget('InkWell', (ctx, args) => InkWell(
+  rt.registerWidgetWithContext('InkWell', (ctx, args) => InkWell(
         onTap: args['onTap'] as VoidCallback?,
         child: args['child'] as Widget?,
       ),);
 
-  rt.registerWidget('GestureDetector', (ctx, args) => GestureDetector(
+  rt.registerWidgetWithContext('GestureDetector', (ctx, args) => GestureDetector(
         onTap: args['onTap'] as VoidCallback?,
         child: args['child'] as Widget?,
       ),);
 
-  rt.registerWidget('SingleChildScrollView', (ctx, args) =>
+  rt.registerWidgetWithContext('SingleChildScrollView', (ctx, args) =>
       SingleChildScrollView(
         scrollDirection:
             args['scrollDirection'] as Axis? ?? Axis.vertical,
@@ -111,7 +111,7 @@ void registerBuiltinWidgets(Runtime rt) {
         child: args['child'] as Widget?,
       ),);
 
-  rt.registerWidget('ListView', (ctx, args) => ListView(
+  rt.registerWidgetWithContext('ListView', (ctx, args) => ListView(
         scrollDirection:
             args['scrollDirection'] as Axis? ?? Axis.vertical,
         padding: args['padding'] as EdgeInsetsGeometry?,
@@ -120,54 +120,54 @@ void registerBuiltinWidgets(Runtime rt) {
             ((args['children'] as List?) ?? const []).cast<Widget>(),
       ),);
 
-  rt.registerWidget('ClipRRect', (ctx, args) => ClipRRect(
+  rt.registerWidgetWithContext('ClipRRect', (ctx, args) => ClipRRect(
         borderRadius: args['borderRadius'] as BorderRadiusGeometry? ??
             BorderRadius.zero,
         child: args['child'] as Widget?,
       ),);
 
-  rt.registerWidget('Card', (ctx, args) => Card(
+  rt.registerWidgetWithContext('Card', (ctx, args) => Card(
         elevation: (args['elevation'] as num?)?.toDouble(),
         color: args['color'] as Color?,
         margin: args['margin'] as EdgeInsetsGeometry?,
         child: args['child'] as Widget?,
       ),);
 
-  rt.registerWidget('Material', (ctx, args) => Material(
+  rt.registerWidgetWithContext('Material', (ctx, args) => Material(
         color: args['color'] as Color?,
         elevation:
             (args['elevation'] as num?)?.toDouble() ?? 0,
         child: args['child'] as Widget?,
       ),);
 
-  rt.registerWidget('Divider', (ctx, args) => Divider(
+  rt.registerWidgetWithContext('Divider', (ctx, args) => Divider(
         height: (args['height'] as num?)?.toDouble(),
         thickness: (args['thickness'] as num?)?.toDouble(),
         color: args['color'] as Color?,
       ),);
 
-  rt.registerWidget(
+  rt.registerWidgetWithContext(
     'Spacer',
     (ctx, args) => Spacer(flex: (args['flex'] as int?) ?? 1),
   );
 
-  rt.registerWidget('AspectRatio', (ctx, args) => AspectRatio(
+  rt.registerWidgetWithContext('AspectRatio', (ctx, args) => AspectRatio(
         aspectRatio: (args['aspectRatio']! as num).toDouble(),
         child: args['child']! as Widget,
       ),);
 
-  rt.registerWidget('Wrap', (ctx, args) => Wrap(
+  rt.registerWidgetWithContext('Wrap', (ctx, args) => Wrap(
         spacing: (args['spacing'] as num?)?.toDouble() ?? 0,
         runSpacing: (args['runSpacing'] as num?)?.toDouble() ?? 0,
         children:
             ((args['children'] as List?) ?? const []).cast<Widget>(),
       ),);
 
-  rt.registerWidget('IntrinsicHeight', (ctx, args) => IntrinsicHeight(
+  rt.registerWidgetWithContext('IntrinsicHeight', (ctx, args) => IntrinsicHeight(
         child: args['child']! as Widget,
       ),);
 
-  rt.registerWidget('Positioned', (ctx, args) => Positioned(
+  rt.registerWidgetWithContext('Positioned', (ctx, args) => Positioned(
         top: (args['top'] as num?)?.toDouble(),
         left: (args['left'] as num?)?.toDouble(),
         right: (args['right'] as num?)?.toDouble(),
@@ -177,18 +177,18 @@ void registerBuiltinWidgets(Runtime rt) {
         child: args['child']! as Widget,
       ),);
 
-  rt.registerWidget('SafeArea', (ctx, args) => SafeArea(
+  rt.registerWidgetWithContext('SafeArea', (ctx, args) => SafeArea(
         child: args['child']! as Widget,
       ),);
 
-  rt.registerWidget('NetworkImage', (ctx, args) => Image.network(
+  rt.registerWidgetWithContext('NetworkImage', (ctx, args) => Image.network(
         args['src']! as String,
         width: (args['width'] as num?)?.toDouble(),
         height: (args['height'] as num?)?.toDouble(),
         fit: args['fit'] as BoxFit?,
       ),);
 
-  rt.registerWidget('AssetImage', (ctx, args) => Image.asset(
+  rt.registerWidgetWithContext('AssetImage', (ctx, args) => Image.asset(
         args['src']! as String,
         width: (args['width'] as num?)?.toDouble(),
         height: (args['height'] as num?)?.toDouble(),

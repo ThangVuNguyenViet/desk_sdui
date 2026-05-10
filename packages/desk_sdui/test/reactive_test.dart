@@ -10,13 +10,13 @@ void main() {
       final rt = Runtime();
       var outerBuilds = 0;
       var innerBuilds = 0;
-      rt.registerWidget('Outer', (ctx, args) {
+      rt.registerWidgetWithContext('Outer', (ctx, args) {
         outerBuilds++;
         return Column(
           children: (args['children']! as List).cast<Widget>(),
         );
       });
-      rt.registerWidget('Inner', (ctx, args) {
+      rt.registerWidgetWithContext('Inner', (ctx, args) {
         innerBuilds++;
         return Text(
           args['label'].toString(),

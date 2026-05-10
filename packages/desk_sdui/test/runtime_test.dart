@@ -19,7 +19,7 @@ void main() {
   group('Runtime', () {
     test('register and look up widget', () {
       final rt = Runtime();
-      rt.registerWidget('Sentinel', (ctx, args) => const SizedBox());
+      rt.registerWidgetWithContext('Sentinel', (ctx, args) => const SizedBox());
       expect(rt.widgetFor('Sentinel'), isNotNull);
     });
 

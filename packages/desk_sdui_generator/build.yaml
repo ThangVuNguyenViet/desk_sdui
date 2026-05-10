@@ -1,0 +1,15 @@
+builders:
+  screen_builder:
+    import: 'package:desk_sdui_generator/desk_sdui_generator.dart'
+    builder_factories: ['screenBuilder']
+    buildExtensions: {".dart": [".sdui.g.dart", ".uib"]}
+    auto_apply: dependents
+    build_to: source
+
+  registry_builder:
+    import: 'package:desk_sdui_generator/desk_sdui_generator.dart'
+    builder_factories: ['registryBuilder']
+    buildExtensions: {"$package$": ["lib/desk_sdui_setup.sdui.g.dart"]}
+    auto_apply: dependents
+    build_to: source
+    runs_before: [':screen_builder']

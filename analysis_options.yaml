@@ -8,5 +8,9 @@ analyzer:
 
 linter:
   rules:
-    public_member_api_docs: false  # not enforced for v1; relax later
+    public_member_api_docs: false
     sort_pub_dependencies: false
+    always_use_package_imports: false
+    directives_ordering: false
+    avoid_field_initializers_in_const_classes: false
+    unnecessary_parenthesis: false

@@ -114,7 +114,7 @@ void main() {
     test('parts list of mixed string/IrNode', () {
       const node = StringInterpNode([
         LiteralNode('hello '),
-        RefNode(['name'])
+        RefNode(['name']),
       ]);
       expect(node.parts.length, 2);
     });

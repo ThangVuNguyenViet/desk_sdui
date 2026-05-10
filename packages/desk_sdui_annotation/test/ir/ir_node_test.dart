@@ -10,7 +10,9 @@ void main() {
 
     test('hashCode by value', () {
       expect(
-          const LiteralNode(true).hashCode, const LiteralNode(true).hashCode);
+        const LiteralNode(true).hashCode,
+        const LiteralNode(true).hashCode,
+      );
     });
 
     test('toString includes value', () {

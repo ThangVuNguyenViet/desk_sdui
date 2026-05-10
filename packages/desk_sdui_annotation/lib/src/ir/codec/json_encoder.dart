@@ -1,5 +1,4 @@
-import '../ir_expression.dart';
-import '../ir_node.dart';
+import 'package:desk_sdui_annotation/src/ir/ir_node.dart';
 
 /// Encodes an IR tree to JSON-serializable maps. Every node carries a
 /// `$type` discriminator. Constructors (e.g., `EdgeInsets.all(8)`) encoded

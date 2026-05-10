@@ -1,16 +1,16 @@
 // ExpressionNode and all expression subclasses are defined in ir_node.dart
 // because sealed classes must be in the same library.
-// This file is kept for backward compatibility and re-exports from ir_node.dart.
+// This file re-exports them for backward compatibility.
 export 'ir_node.dart'
     show
-        ExpressionNode,
-        CompareOpNode,
         ArithOpNode,
-        LogicOpNode,
-        NotOpNode,
         CoalesceOpNode,
-        MemberAccessNode,
+        CompareOpNode,
+        ExpressionNode,
         IndexAccessNode,
-        LengthOfNode,
         IsNullCheckNode,
+        LengthOfNode,
+        LogicOpNode,
+        MemberAccessNode,
+        NotOpNode,
         StringInterpNode;

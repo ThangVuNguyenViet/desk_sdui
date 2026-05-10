@@ -1,7 +1,7 @@
+import 'package:desk_sdui_annotation/src/ir/ir_node.dart';
+
 import '../arith_op.dart';
 import '../compare_op.dart';
-import '../ir_expression.dart';
-import '../ir_node.dart';
 import '../logic_op.dart';
 
 class JsonIrDecoder {

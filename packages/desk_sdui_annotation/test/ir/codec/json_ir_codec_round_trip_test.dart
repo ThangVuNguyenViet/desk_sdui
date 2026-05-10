@@ -2,7 +2,7 @@ import 'package:desk_sdui_annotation/desk_sdui_annotation.dart';
 import 'package:test/test.dart';
 
 void main() {
-  final codec = const JsonIrCodec();
+  const codec = JsonIrCodec();
 
   group('JsonIrCodec round-trip', () {
     test('LiteralNode', () {

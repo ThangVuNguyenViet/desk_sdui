@@ -14,3 +14,5 @@ linter:
     directives_ordering: false
     avoid_field_initializers_in_const_classes: false
     unnecessary_parenthesis: false
+    cascade_invocations: false
+    one_member_abstracts: false

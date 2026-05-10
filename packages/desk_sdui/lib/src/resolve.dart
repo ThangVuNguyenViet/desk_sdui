@@ -221,10 +221,11 @@ Widget _resolveReactiveWidget(
   Map<String, Object?> input,
   Runtime runtime,
 ) {
-  final reactiveMap = input['__reactive__'];
-  if (reactiveMap is! Map) {
+  final reactiveMap = input['__reactive__'] as Map<String, Object?>?;
+  if (reactiveMap == null) {
     throw StateError(
-      'WidgetNode "$name" declares reactiveSignals but input has no __reactive__ map',
+      'WidgetNode "$name" declares reactiveSignals but input '
+      'has no __reactive__ map',
     );
   }
   final listenables = <Listenable>[];
@@ -251,12 +252,12 @@ Widget _resolveReactiveWidget(
 void _installReactiveGetter(
   Map<String, Object?> input,
   List<String> path,
-  Map reactiveMap,
+  Map<String, Object?> reactiveMap,
 ) {
   final pathStr = path.join('.');
   final listenable = reactiveMap[pathStr];
   if (listenable is! ValueListenable) return;
-  Map<String, Object?> cursor = input;
+  var cursor = input;
   for (var i = 0; i < path.length - 1; i++) {
     final next = cursor[path[i]];
     if (next is Map) {

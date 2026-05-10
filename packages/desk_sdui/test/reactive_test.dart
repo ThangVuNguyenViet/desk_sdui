@@ -1,7 +1,5 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:desk_sdui_annotation/desk_sdui_annotation.dart';
 import 'package:desk_sdui/desk_sdui.dart';
 import 'package:desk_sdui/src/resolve.dart';
 
@@ -15,7 +13,7 @@ void main() {
       rt.registerWidget('Outer', (ctx, args) {
         outerBuilds++;
         return Column(
-          children: (args['children'] as List).cast<Widget>(),
+          children: (args['children']! as List).cast<Widget>(),
         );
       });
       rt.registerWidget('Inner', (ctx, args) {
@@ -31,15 +29,15 @@ void main() {
         '__reactive__': {'count': notifier},
       };
 
-      final ir = WidgetNode(
+      const ir = WidgetNode(
         name: 'Outer',
         args: {
           'children': ListNode([
             WidgetNode(
               name: 'Inner',
-              reactiveSignals: const {'count'},
+              reactiveSignals: {'count'},
               args: {
-                'label': const RefNode(['count'], reactive: true),
+                'label': RefNode(['count'], reactive: true),
               },
             ),
           ]),
@@ -48,7 +46,7 @@ void main() {
 
       await tester.pumpWidget(Builder(builder: (ctx) {
         return resolveNode(ctx, ir, input, rt);
-      }));
+      },),);
 
       expect(outerBuilds, 1);
       expect(innerBuilds, 1);

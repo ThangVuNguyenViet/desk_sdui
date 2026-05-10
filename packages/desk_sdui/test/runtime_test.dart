@@ -7,7 +7,7 @@ void main() {
     test('stores name and reader', () {
       final binding = InputBinding<int>(
         name: 'count',
-        read: (input) => input as int,
+        read: (input) => input! as int,
       );
       expect(binding.name, 'count');
       expect(binding.read(42), 42);
@@ -31,10 +31,10 @@ void main() {
 
     test('register and look up screen', () {
       final rt = Runtime();
-      final binding = ScreenBinding(
+      const binding = ScreenBinding(
         name: 'home',
-        ir: IrTree(name: 'home', version: 1, root: const LiteralNode(null)),
-        inputs: const [],
+        ir: IrTree(name: 'home', version: 1, root: LiteralNode(null)),
+        inputs: [],
       );
       rt.registerScreen(binding);
       expect(rt.screenFor('home')?.name, 'home');

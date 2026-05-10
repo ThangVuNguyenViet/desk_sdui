@@ -8,12 +8,12 @@ import 'package:flutter/foundation.dart';
 void installReactiveGetter(
   Map<String, Object?> input,
   List<String> path,
-  Map reactiveMap,
+  Map<String, Object?> reactiveMap,
 ) {
   final pathStr = path.join('.');
   final listenable = reactiveMap[pathStr];
   if (listenable is! ValueListenable) return;
-  Map<String, Object?> cursor = input;
+  var cursor = input;
   for (var i = 0; i < path.length - 1; i++) {
     final next = cursor[path[i]];
     if (next is Map) {

@@ -16,15 +16,15 @@ Object? evalExpression(IrNode node, Map<String, Object?> input) {
       return switch (op) {
         CompareOp.eq => l == r,
         CompareOp.neq => l != r,
-        CompareOp.lt => (l as num) < (r as num),
-        CompareOp.lte => (l as num) <= (r as num),
-        CompareOp.gt => (l as num) > (r as num),
-        CompareOp.gte => (l as num) >= (r as num),
+        CompareOp.lt => (l! as num) < (r! as num),
+        CompareOp.lte => (l! as num) <= (r! as num),
+        CompareOp.gt => (l! as num) > (r! as num),
+        CompareOp.gte => (l! as num) >= (r! as num),
       };
 
     case ArithOpNode(:final op, :final left, :final right):
-      final l = evalExpression(left, input) as num;
-      final r = evalExpression(right, input) as num;
+      final l = evalExpression(left, input)! as num;
+      final r = evalExpression(right, input)! as num;
       return switch (op) {
         ArithOp.add => l + r,
         ArithOp.sub => l - r,
@@ -34,14 +34,14 @@ Object? evalExpression(IrNode node, Map<String, Object?> input) {
       };
 
     case LogicOpNode(:final op, :final left, :final right):
-      final l = evalExpression(left, input) as bool;
+      final l = evalExpression(left, input)! as bool;
       return switch (op) {
-        LogicOp.and => l && (evalExpression(right, input) as bool),
-        LogicOp.or => l || (evalExpression(right, input) as bool),
+        LogicOp.and => l && (evalExpression(right, input)! as bool),
+        LogicOp.or => l || (evalExpression(right, input)! as bool),
       };
 
     case NotOpNode(:final operand):
-      return !(evalExpression(operand, input) as bool);
+      return !(evalExpression(operand, input)! as bool);
 
     case CoalesceOpNode(:final left, :final right):
       final l = evalExpression(left, input);
@@ -55,7 +55,7 @@ Object? evalExpression(IrNode node, Map<String, Object?> input) {
     case IndexAccessNode(:final target, :final key):
       final t = evalExpression(target, input);
       final k = evalExpression(key, input);
-      if (t is List) return t[k as int];
+      if (t is List) return t[k! as int];
       if (t is Map) return t[k];
       throw StateError('IndexAccess on ${t.runtimeType}');
 

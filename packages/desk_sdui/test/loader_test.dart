@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -12,11 +11,11 @@ void main() {
     test('reads <prefix>/<name>.uib from bundle', () async {
       final bundle = _FakeBundle({
         'sdui/cart.uib':
-            '{"name":"cart","version":1,"root":{"\$type":"literal","value":null}}',
+            '{"name":"cart","version":1,'
+            r'"root":{"$type":"literal","value":null}}',
       });
       final fetcher = AssetBundleIrFetcher(
         bundle: bundle,
-        prefix: 'sdui',
       );
       final bytes = await fetcher.fetch('cart');
       expect(utf8.decode(bytes), contains('"name":"cart"'));

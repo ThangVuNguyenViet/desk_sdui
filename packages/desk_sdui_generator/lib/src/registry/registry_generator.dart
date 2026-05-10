@@ -1,7 +1,10 @@
 import 'package:build/build.dart';
 import 'package:glob/glob.dart';
 import 'package:source_gen/source_gen.dart';
+import 'package:analyzer/dart/element/element.dart';
 import 'package:desk_sdui_annotation/desk_sdui_annotation.dart';
+import '../registration_emitter.dart';
+import '../type_collector.dart';
 
 class _ScreenInfo {
   _ScreenInfo({
@@ -34,6 +37,7 @@ class ScreenInfoForTest {
 
 class RegistryBuilder implements Builder {
   static const _checker = TypeChecker.fromRuntime(Screen);
+  static const _coverageChecker = TypeChecker.fromRuntime(RegisterForSdui);
 
   @override
   Map<String, List<String>> get buildExtensions => {
@@ -43,10 +47,14 @@ class RegistryBuilder implements Builder {
   @override
   Future<void> build(BuildStep step) async {
     final screens = <_ScreenInfo>[];
+    final coverageTypes = CollectedTypes();
+
     await for (final input in step.findAssets(Glob('lib/**.dart'))) {
       if (input.path.endsWith('.sdui.g.dart')) continue;
       final lib = await step.resolver.libraryFor(input);
       final libReader = LibraryReader(lib);
+
+      // Collect @Screen annotated functions.
       for (final annotated in libReader.annotatedWith(_checker)) {
         final el = annotated.element;
         final name = annotated.annotation.read('name').stringValue;
@@ -63,9 +71,22 @@ class RegistryBuilder implements Builder {
           ));
         }
       }
+
+      // Collect @RegisterForSdui annotated classes.
+      for (final annotated in libReader.annotatedWith(_coverageChecker)) {
+        final el = annotated.element;
+        if (el is! ClassElement) continue;
+        final annotation = annotated.annotation.objectValue;
+        final partial = collectTypesFromAnnotation(el, annotation);
+        coverageTypes.unionWith(partial);
+      }
     }
 
-    final source = _emitRegistry(screens, step.inputId.package);
+    final source = _emitRegistry(
+      screens,
+      step.inputId.package,
+      coverageTypes: coverageTypes,
+    );
     await step.writeAsString(
       AssetId(step.inputId.package, 'lib/desk_sdui_setup.g.dart'),
       source,
@@ -78,6 +99,7 @@ class RegistryBuilder implements Builder {
   String emitRegistryForTest({
     required List<ScreenInfoForTest> screens,
     required String packageName,
+    CollectedTypes? coverageTypes,
   }) {
     return _emitRegistry(
       screens
@@ -91,10 +113,15 @@ class RegistryBuilder implements Builder {
           )
           .toList(),
       packageName,
+      coverageTypes: coverageTypes,
     );
   }
 
-  String _emitRegistry(List<_ScreenInfo> screens, String packageName) {
+  String _emitRegistry(
+    List<_ScreenInfo> screens,
+    String packageName, {
+    CollectedTypes? coverageTypes,
+  }) {
     final imports = <String, List<String>>{};
     for (final s in screens) {
       var uri = s.sourceUri.toString();
@@ -115,14 +142,38 @@ class RegistryBuilder implements Builder {
       return '  rt.registerScreen(${s.bindingSymbol});\n  ${s.registrationFn}(rt);';
     }).join('\n');
 
+    // Build optional registerSduiCoverage block.
+    final coverageBlock = _emitCoverageBlock(coverageTypes);
+    final coverageCall = coverageBlock.isNotEmpty ? '\n  registerSduiCoverage(rt);' : '';
+
     return '''
 // GENERATED CODE — DO NOT MODIFY BY HAND
 import 'package:desk_sdui/desk_sdui.dart';
 $importLines
-
+$coverageBlock
 void registerAllScreens(Runtime rt) {
-$registrations
+$registrations$coverageCall
 }
 ''';
+  }
+
+  /// Returns the `void registerSduiCoverage(Runtime rt) { ... }` source block
+  /// when [ct] is non-null and non-empty, or an empty string otherwise.
+  String _emitCoverageBlock(CollectedTypes? ct) {
+    if (ct == null) return '';
+    if (ct.widgets.isEmpty &&
+        ct.valueTypes.isEmpty &&
+        ct.constants.isEmpty &&
+        ct.methods.isEmpty &&
+        ct.subscriptables.isEmpty &&
+        ct.functions.isEmpty) {
+      return '';
+    }
+    final registrations = RegistrationEmitter()
+        .emitAll(ct)
+        .split('\n')
+        .map((l) => '  $l')
+        .join('\n');
+    return '\nvoid registerSduiCoverage(Runtime rt) {\n$registrations\n}';
   }
 }

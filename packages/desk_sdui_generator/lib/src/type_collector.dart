@@ -1,6 +1,7 @@
 // ignore_for_file: deprecated_member_use
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
+import 'package:analyzer/dart/constant/value.dart';
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/type.dart';
 
@@ -70,6 +71,49 @@ CollectedTypes collectTypes(FunctionDeclaration screen) {
   final visitor = _TypeVisitor(screen);
   screen.accept(visitor);
   return visitor.collected;
+}
+
+/// Collect types from a `@RegisterForSdui([T1, T2, ...])` annotation on
+/// [annotated].
+///
+/// Each `Type` literal in the `types` list is extracted via
+/// [DartObject.toTypeValue] → [DartType] → [ClassElement]. Types that are
+/// Widget subclasses are placed in [CollectedTypes.widgets]; all others in
+/// [CollectedTypes.valueTypes].
+///
+/// Returns an empty [CollectedTypes] when the annotation has no elements or
+/// any element cannot be resolved to a [ClassElement].
+CollectedTypes collectTypesFromAnnotation(
+  ClassElement annotated,
+  DartObject annotation,
+) {
+  final collected = CollectedTypes();
+  final typesField = annotation.getField('types');
+  final typeList = typesField?.toListValue();
+  if (typeList == null) return collected;
+
+  for (final typeObj in typeList) {
+    final dartType = typeObj.toTypeValue();
+    if (dartType == null) continue;
+    final element = dartType.element;
+    if (element is! ClassElement) continue;
+    if (_isWidgetSubtypeStatic(element)) {
+      collected.widgets.add(element);
+    } else {
+      collected.valueTypes.add(element);
+    }
+  }
+  return collected;
+}
+
+/// Static helper: true if [cls] is a subtype of Flutter's `Widget`.
+/// Mirrors the instance method in [_TypeVisitor] for use outside that class.
+bool _isWidgetSubtypeStatic(ClassElement cls) {
+  if (cls.name == 'Widget') return true;
+  for (final supertype in cls.allSupertypes) {
+    if (supertype.element.name == 'Widget') return true;
+  }
+  return false;
 }
 
 // ---------------------------------------------------------------------------

@@ -4,15 +4,19 @@ version: 0.0.1-dev
 publish_to: none
 
 environment:
-  sdk: ">=3.5.0 <4.0.0"
-  flutter: ">=3.24.0"
+  sdk: ^3.6.0
+  flutter: ">=3.27.0"
 
 dependencies:
   flutter:
     sdk: flutter
   desk_sdui_annotation:
     path: ../desk_sdui_annotation
+  crypto: ^3.0.5
+  http: ^1.2.2
+  meta: ^1.16.0
 
 dev_dependencies:
-  test: ^1.25.0
+  flutter_test:
+    sdk: flutter
   very_good_analysis: ^7.0.0

@@ -7,10 +7,28 @@ class _ScreenInfo {
   _ScreenInfo({
     required this.name,
     required this.bindingSymbol,
+    required this.registrationFn,
     required this.sourceUri,
   });
   final String name;
   final String bindingSymbol;
+  final String registrationFn;
+  final Uri sourceUri;
+}
+
+/// Public test-surface data class that mirrors [_ScreenInfo].
+/// Exposed so that unit tests can call [RegistryBuilder.emitRegistryForTest]
+/// without depending on build infrastructure.
+class ScreenInfoForTest {
+  ScreenInfoForTest({
+    required this.name,
+    required this.bindingSymbol,
+    required this.registrationFn,
+    required this.sourceUri,
+  });
+  final String name;
+  final String bindingSymbol;
+  final String registrationFn;
   final Uri sourceUri;
 }
 
@@ -34,9 +52,13 @@ class RegistryBuilder implements Builder {
         final name = annotated.annotation.read('name').stringValue;
         final safeName = name.replaceAll(RegExp(r'[^a-zA-Z0-9_]'), '_');
         if (el.name != null) {
+          final capitalizedName = safeName.isEmpty
+              ? safeName
+              : safeName[0].toUpperCase() + safeName.substring(1);
           screens.add(_ScreenInfo(
             name: name,
             bindingSymbol: '${safeName}Binding',
+            registrationFn: 'register${capitalizedName}Dependencies',
             sourceUri: input.uri,
           ));
         }
@@ -50,6 +72,28 @@ class RegistryBuilder implements Builder {
     );
   }
 
+  /// Test-only entry point — converts [ScreenInfoForTest] records into the
+  /// same output as the private [_emitRegistry] without requiring a
+  /// [BuildStep].
+  String emitRegistryForTest({
+    required List<ScreenInfoForTest> screens,
+    required String packageName,
+  }) {
+    return _emitRegistry(
+      screens
+          .map(
+            (s) => _ScreenInfo(
+              name: s.name,
+              bindingSymbol: s.bindingSymbol,
+              registrationFn: s.registrationFn,
+              sourceUri: s.sourceUri,
+            ),
+          )
+          .toList(),
+      packageName,
+    );
+  }
+
   String _emitRegistry(List<_ScreenInfo> screens, String packageName) {
     final imports = <String, List<String>>{};
     for (final s in screens) {
@@ -57,7 +101,9 @@ class RegistryBuilder implements Builder {
       if (uri.startsWith('package:$packageName/')) {
         uri = uri.substring('package:$packageName/'.length);
       }
-      imports.putIfAbsent(uri, () => []).add(s.bindingSymbol);
+      imports.putIfAbsent(uri, () => [])
+        ..add(s.bindingSymbol)
+        ..add(s.registrationFn);
     }
 
     final importLines = imports.entries.map((e) {
@@ -66,7 +112,7 @@ class RegistryBuilder implements Builder {
     }).join('\n');
 
     final registrations = screens.map((s) {
-      return '  rt.registerScreen(${s.bindingSymbol});';
+      return '  rt.registerScreen(${s.bindingSymbol});\n  ${s.registrationFn}(rt);';
     }).join('\n');
 
     return '''

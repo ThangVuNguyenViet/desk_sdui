@@ -1,0 +1,14 @@
+name: desk_sdui_annotation
+description: Annotations and IR types for desk_sdui — pure Dart, no Flutter.
+version: 0.0.1-dev
+publish_to: none  # not yet publishing
+
+environment:
+  sdk: ">=3.5.0 <4.0.0"
+
+dependencies:
+  meta: ^1.16.0
+
+dev_dependencies:
+  test: ^1.25.0
+  very_good_analysis: ^7.0.0

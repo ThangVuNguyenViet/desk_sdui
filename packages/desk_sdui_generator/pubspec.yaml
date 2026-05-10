@@ -1,0 +1,19 @@
+name: desk_sdui_generator
+description: build_runner codegen for desk_sdui — lowers @Screen functions to IR.
+version: 0.0.1-dev
+publish_to: none
+
+environment:
+  sdk: ">=3.5.0 <4.0.0"
+
+dependencies:
+  analyzer: ^7.0.0
+  build: ^2.4.0
+  source_gen: ^2.0.0
+  desk_sdui_annotation:
+    path: ../desk_sdui_annotation
+
+dev_dependencies:
+  build_runner: ^2.4.0
+  test: ^1.25.0
+  very_good_analysis: ^7.0.0

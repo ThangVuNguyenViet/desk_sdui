@@ -1,9 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:desk_sdui_annotation/desk_sdui_annotation.dart';
+import 'package:desk_sdui/desk_sdui.dart';
 import 'package:desk_sdui/src/expression_eval.dart';
 
 void main() {
   group('ExpressionEval', () {
+    final rt = Runtime();
     final input = <String, Object?>{
       'a': 5,
       'b': 3,
@@ -19,7 +20,7 @@ void main() {
         left: RefNode(['a']),
         right: RefNode(['b']),
       );
-      expect(evalExpression(node, input), true);
+      expect(evalExpression(node, input, rt), true);
     });
 
     test('CompareOp >= equal', () {
@@ -28,7 +29,7 @@ void main() {
         left: RefNode(['a']),
         right: LiteralNode(5),
       );
-      expect(evalExpression(node, input), true);
+      expect(evalExpression(node, input, rt), true);
     });
 
     test('ArithOp +', () {
@@ -37,7 +38,7 @@ void main() {
         left: RefNode(['a']),
         right: RefNode(['b']),
       );
-      expect(evalExpression(node, input), 8);
+      expect(evalExpression(node, input, rt), 8);
     });
 
     test('LogicOp && short-circuits on false', () {
@@ -46,7 +47,7 @@ void main() {
         left: LiteralNode(false),
         right: RefNode(['nonexistent']),
       );
-      expect(evalExpression(node, input), false);
+      expect(evalExpression(node, input, rt), false);
     });
 
     test('LogicOp || short-circuits on true', () {
@@ -55,12 +56,12 @@ void main() {
         left: LiteralNode(true),
         right: RefNode(['nonexistent']),
       );
-      expect(evalExpression(node, input), true);
+      expect(evalExpression(node, input, rt), true);
     });
 
     test('NotOp', () {
       const node = NotOpNode(RefNode(['flag']));
-      expect(evalExpression(node, input), false);
+      expect(evalExpression(node, input, rt), false);
     });
 
     test('CoalesceOp picks right when left is null', () {
@@ -68,7 +69,7 @@ void main() {
         left: RefNode(['maybe']),
         right: LiteralNode('fallback'),
       );
-      expect(evalExpression(node, input), 'fallback');
+      expect(evalExpression(node, input, rt), 'fallback');
     });
 
     test('MemberAccess', () {
@@ -79,7 +80,7 @@ void main() {
         target: RefNode(['pair']),
         name: 'first',
       );
-      expect(evalExpression(node, inputWithRecord), 1);
+      expect(evalExpression(node, inputWithRecord, rt), 1);
     });
 
     test('IndexAccess', () {
@@ -87,27 +88,27 @@ void main() {
         target: RefNode(['xs']),
         key: LiteralNode(1),
       );
-      expect(evalExpression(node, input), 2);
+      expect(evalExpression(node, input, rt), 2);
     });
 
     test('LengthOf list', () {
       const node = LengthOfNode(RefNode(['xs']));
-      expect(evalExpression(node, input), 3);
+      expect(evalExpression(node, input, rt), 3);
     });
 
     test('LengthOf string', () {
       const node = LengthOfNode(RefNode(['name']));
-      expect(evalExpression(node, input), 5);
+      expect(evalExpression(node, input, rt), 5);
     });
 
     test('IsNullCheck true for null', () {
       const node = IsNullCheckNode(RefNode(['maybe']));
-      expect(evalExpression(node, input), true);
+      expect(evalExpression(node, input, rt), true);
     });
 
     test('IsNullCheck false for non-null', () {
       const node = IsNullCheckNode(RefNode(['a']));
-      expect(evalExpression(node, input), false);
+      expect(evalExpression(node, input, rt), false);
     });
 
     test('StringInterp concatenates', () {
@@ -116,11 +117,11 @@ void main() {
         RefNode(['name']),
         '!',
       ]);
-      expect(evalExpression(node, input), 'Hi World!');
+      expect(evalExpression(node, input, rt), 'Hi World!');
     });
 
     test('LiteralNode passes through', () {
-      expect(evalExpression(const LiteralNode(42), input), 42);
+      expect(evalExpression(const LiteralNode(42), input, rt), 42);
     });
   });
 }

@@ -1,19 +1,24 @@
 import 'package:desk_sdui_annotation/desk_sdui_annotation.dart';
 import 'package:flutter/material.dart';
 import 'ref_resolver.dart';
+import 'runtime.dart';
 
-Object? evalExpression(IrNode node, Map<String, Object?> input) {
+Object? evalExpression(
+  IrNode node,
+  Map<String, Object?> input,
+  Runtime runtime,
+) {
   switch (node) {
     case LiteralNode(:final value):
       return value;
     case ConstNode(:final value):
       return value;
     case RefNode(:final path):
-      return resolveFlutterRef(path, input);
+      return resolveFlutterRef(path, input, runtime);
 
     case CompareOpNode(:final op, :final left, :final right):
-      final l = evalExpression(left, input);
-      final r = evalExpression(right, input);
+      final l = evalExpression(left, input, runtime);
+      final r = evalExpression(right, input, runtime);
       return switch (op) {
         CompareOp.eq => l == r,
         CompareOp.neq => l != r,
@@ -24,8 +29,8 @@ Object? evalExpression(IrNode node, Map<String, Object?> input) {
       };
 
     case ArithOpNode(:final op, :final left, :final right):
-      final l = evalExpression(left, input)! as num;
-      final r = evalExpression(right, input)! as num;
+      final l = evalExpression(left, input, runtime)! as num;
+      final r = evalExpression(right, input, runtime)! as num;
       return switch (op) {
         ArithOp.add => l + r,
         ArithOp.sub => l - r,
@@ -35,27 +40,27 @@ Object? evalExpression(IrNode node, Map<String, Object?> input) {
       };
 
     case LogicOpNode(:final op, :final left, :final right):
-      final l = evalExpression(left, input)! as bool;
+      final l = evalExpression(left, input, runtime)! as bool;
       return switch (op) {
-        LogicOp.and => l && (evalExpression(right, input)! as bool),
-        LogicOp.or => l || (evalExpression(right, input)! as bool),
+        LogicOp.and => l && (evalExpression(right, input, runtime)! as bool),
+        LogicOp.or => l || (evalExpression(right, input, runtime)! as bool),
       };
 
     case NotOpNode(:final operand):
-      return !(evalExpression(operand, input)! as bool);
+      return !(evalExpression(operand, input, runtime)! as bool);
 
     case CoalesceOpNode(:final left, :final right):
-      final l = evalExpression(left, input);
-      return l ?? evalExpression(right, input);
+      final l = evalExpression(left, input, runtime);
+      return l ?? evalExpression(right, input, runtime);
 
     case MemberAccessNode(:final target, :final name):
-      final t = evalExpression(target, input);
+      final t = evalExpression(target, input, runtime);
       if (t is Map) return t[name];
       throw StateError('MemberAccess on non-map ${t.runtimeType}');
 
     case IndexAccessNode(:final target, :final key):
-      final t = evalExpression(target, input);
-      final k = evalExpression(key, input);
+      final t = evalExpression(target, input, runtime);
+      final k = evalExpression(key, input, runtime);
       if (t is List) return t[k! as int];
       if (t is Map) return t[k];
       // Handle MaterialColor indexing (e.g., Colors.grey[300])
@@ -65,14 +70,14 @@ Object? evalExpression(IrNode node, Map<String, Object?> input) {
       throw StateError('IndexAccess on ${t.runtimeType}');
 
     case LengthOfNode(:final target):
-      final t = evalExpression(target, input);
+      final t = evalExpression(target, input, runtime);
       if (t is String) return t.length;
       if (t is List) return t.length;
       if (t is Map) return t.length;
       throw StateError('LengthOf on ${t.runtimeType}');
 
     case IsNullCheckNode(:final operand):
-      return evalExpression(operand, input) == null;
+      return evalExpression(operand, input, runtime) == null;
 
     case StringInterpNode(:final parts):
       final buf = StringBuffer();
@@ -80,7 +85,7 @@ Object? evalExpression(IrNode node, Map<String, Object?> input) {
         if (p is String) {
           buf.write(p);
         } else if (p is IrNode) {
-          buf.write(evalExpression(p, input) ?? '');
+          buf.write(evalExpression(p, input, runtime) ?? '');
         }
       }
       return buf.toString();

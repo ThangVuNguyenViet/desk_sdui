@@ -44,7 +44,7 @@ Widget resolveNode(
         :final thenBranch,
         :final elseBranch,
       ):
-      final cond = evalExpression(condition, input);
+      final cond = evalExpression(condition, input, runtime);
       if (cond == true) {
         return _resolveBranch(context, thenBranch, input, runtime);
       }
@@ -80,7 +80,7 @@ Object? _resolveArg(
     case ConstNode(:final value):
       return value;
     case RefNode(:final path):
-      return resolveFlutterRef(path, input);
+      return resolveFlutterRef(path, input, runtime);
 
     case ListNode(:final children):
       final out = <Object?>[];
@@ -99,7 +99,7 @@ Object? _resolveArg(
         } else if (child is ForNode) {
           out.addAll(_expandFor(context, child, input, runtime));
         } else if (child is ConditionalNode) {
-          final cond = evalExpression(child.condition, input);
+          final cond = evalExpression(child.condition, input, runtime);
           if (cond == true) {
             out.add(
               resolveNode(context, child.thenBranch, input, runtime),
@@ -171,7 +171,7 @@ Object? _resolveArg(
       return _bindEvent(node, input, runtime);
 
     default:
-      return evalExpression(node, input);
+      return evalExpression(node, input, runtime);
   }
 }
 
@@ -203,7 +203,7 @@ List<Object?> _expandFor(
   Map<String, Object?> input,
   Runtime runtime,
 ) {
-  final source = evalExpression(node.source, input);
+  final source = evalExpression(node.source, input, runtime);
   if (source is! Iterable) {
     throw StateError('ForNode source did not resolve to Iterable');
   }
@@ -238,7 +238,7 @@ Object? _bindEvent(
   if (fn != null) {
     final fnArgs = <String, Object?>{};
     node.args.forEach((k, v) {
-      fnArgs[k] = evalExpression(v, input);
+      fnArgs[k] = evalExpression(v, input, runtime);
     });
     return Function.apply(fn, [fnArgs]);
   }
@@ -253,7 +253,7 @@ Object? _bindEvent(
       for (var i = 0;; i++) {
         final argKey = 'arg$i';
         if (!node.args.containsKey(argKey)) break;
-        positional.add(evalExpression(node.args[argKey]!, input));
+        positional.add(evalExpression(node.args[argKey]!, input, runtime));
       }
       return () => Function.apply(methodFn, positional);
     }

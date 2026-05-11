@@ -37,6 +37,7 @@ Object? evalExpression(
         ArithOp.mul => l * r,
         ArithOp.div => l / r,
         ArithOp.mod => l % r,
+        ArithOp.intDiv => l ~/ r,
       };
 
     case LogicOpNode(:final op, :final left, :final right):

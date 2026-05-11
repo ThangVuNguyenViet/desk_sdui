@@ -50,9 +50,20 @@ class ScreenGenerator extends GeneratorForAnnotation<Screen> {
     }
 
     final body = fnDecl.functionExpression.body;
-    if (body is! ExpressionFunctionBody) {
+    if (body is ExpressionFunctionBody) {
+      // expression-bodied — fine
+    } else if (body is BlockFunctionBody) {
+      final statements = body.block.statements;
+      if (statements.length != 1 || statements.single is! ReturnStatement) {
+        throw InvalidGenerationSourceError(
+          '@Screen body must be a single return statement or expression body; '
+          'got ${body.runtimeType}',
+        );
+      }
+    } else {
       throw InvalidGenerationSourceError(
-        '@Screen function must be `=>`-bodied',
+        '@Screen body must be a single return statement or expression body; '
+        'got ${body.runtimeType}',
       );
     }
 

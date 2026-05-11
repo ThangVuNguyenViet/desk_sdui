@@ -19,6 +19,7 @@ import 'package:analyzer/dart/analysis/results.dart';
 import 'package:analyzer/dart/analysis/utilities.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_style/dart_style.dart';
+import 'package:desk_sdui_generator/src/diagnostics.dart';
 import 'package:desk_sdui_generator/src/registration_emitter.dart';
 import 'package:desk_sdui_generator/src/screen_lowering/ast_to_ir.dart';
 import 'package:desk_sdui_generator/src/screen_lowering/const_fold_pass.dart';
@@ -153,6 +154,42 @@ Widget build() => Icon(Icons.person);
         output,
         contains('registerConstant'),
         reason: 'registerConstant call must be present',
+      );
+    });
+
+    test('block-body @Screen with single return lowers identically', () async {
+      final arrowFn = await _resolveScreen('''
+import 'package:flutter/material.dart';
+
+Widget s() => Text('hi');
+''');
+      final blockFn = await _resolveScreen('''
+import 'package:flutter/material.dart';
+
+Widget s() {
+  return Text('hi');
+}
+''');
+
+      final arrowOutput = _runPipeline(arrowFn, 's');
+      final blockOutput = _runPipeline(blockFn, 's');
+
+      expect(arrowOutput, blockOutput);
+    });
+
+    test('block-body @Screen with multi-statement rejected', () async {
+      final fnDecl = await _resolveScreen('''
+import 'package:flutter/material.dart';
+
+Widget s() {
+  final x = 1;
+  return Text('hi');
+}
+''');
+
+      expect(
+        () => _runPipeline(fnDecl, 's'),
+        throwsA(isA<LoweringError>()),
       );
     });
   });

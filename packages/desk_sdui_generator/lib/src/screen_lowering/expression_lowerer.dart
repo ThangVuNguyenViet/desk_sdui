@@ -4,6 +4,10 @@ import 'package:desk_sdui_annotation/desk_sdui_annotation.dart';
 import '../diagnostics.dart';
 
 IrNode lowerExpression(Expression expr) {
+  if (expr is ParenthesizedExpression) {
+    return lowerExpression(expr.expression);
+  }
+
   if (expr is IntegerLiteral) return LiteralNode(expr.value);
   if (expr is DoubleLiteral) return LiteralNode(expr.value);
   if (expr is BooleanLiteral) return LiteralNode(expr.value);
@@ -81,6 +85,8 @@ IrNode lowerExpression(Expression expr) {
         return ArithOpNode(op: ArithOp.mul, left: left, right: right);
       case '/':
         return ArithOpNode(op: ArithOp.div, left: left, right: right);
+      case '~/':
+        return ArithOpNode(op: ArithOp.intDiv, left: left, right: right);
       case '%':
         return ArithOpNode(op: ArithOp.mod, left: left, right: right);
       case '==':

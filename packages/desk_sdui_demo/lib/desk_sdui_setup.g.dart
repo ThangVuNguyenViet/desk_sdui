@@ -7,6 +7,7 @@ import 'package:flutter/rendering.dart';
 import 'package:desk_sdui_demo/screens/counter_actions.dart' show counter_actionsBinding;
 import 'package:desk_sdui_demo/screens/counter_bouncy.dart' show counter_bouncyBinding;
 import 'package:desk_sdui_demo/screens/counter_burst.dart' show counter_burstBinding;
+import 'package:desk_sdui_demo/screens/counter_math.dart' show counter_mathBinding;
 import 'package:desk_sdui_demo/screens/counter_minimal.dart' show counter_minimalBinding;
 import 'package:desk_sdui_demo/screens/counter_record.dart' show counter_recordBinding;
 import 'package:desk_sdui_demo/screens/counter_shorthand.dart' show counter_shorthandBinding;
@@ -15,6 +16,7 @@ import 'package:desk_sdui_demo/screens/themed_counter.dart' show themed_counterB
 import 'package:desk_sdui_demo/screens/counter_actions.sdui_reg.g.dart' show registerCounter_actionsDependencies;
 import 'package:desk_sdui_demo/screens/counter_bouncy.sdui_reg.g.dart' show registerCounter_bouncyDependencies;
 import 'package:desk_sdui_demo/screens/counter_burst.sdui_reg.g.dart' show registerCounter_burstDependencies;
+import 'package:desk_sdui_demo/screens/counter_math.sdui_reg.g.dart' show registerCounter_mathDependencies;
 import 'package:desk_sdui_demo/screens/counter_minimal.sdui_reg.g.dart' show registerCounter_minimalDependencies;
 import 'package:desk_sdui_demo/screens/counter_record.sdui_reg.g.dart' show registerCounter_recordDependencies;
 import 'package:desk_sdui_demo/screens/counter_shorthand.sdui_reg.g.dart' show registerCounter_shorthandDependencies;
@@ -183,6 +185,8 @@ void registerAllScreens(Runtime rt) {
   registerCounter_bouncyDependencies(rt);
   rt.registerScreen(counter_burstBinding);
   registerCounter_burstDependencies(rt);
+  rt.registerScreen(counter_mathBinding);
+  registerCounter_mathDependencies(rt);
   rt.registerScreen(counter_minimalBinding);
   registerCounter_minimalDependencies(rt);
   rt.registerScreen(counter_recordBinding);

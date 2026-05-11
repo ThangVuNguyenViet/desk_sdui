@@ -46,11 +46,42 @@ class ScreenAnnotationData {
 
 ScreenLowerResult lowerScreen(FunctionDeclaration fn, ScreenAnnotationData ann) {
   final body = fn.functionExpression.body;
-  if (body is! ExpressionFunctionBody) {
-    throw LoweringError('@Screen function must be `=>`-bodied', fn);
+  final Expression expr;
+  if (body is ExpressionFunctionBody) {
+    expr = body.expression;
+  } else if (body is BlockFunctionBody) {
+    final statements = body.block.statements;
+    if (statements.length != 1) {
+      throw LoweringError(
+        '@Screen body must be a single return statement or expression body; '
+        'got ${statements.length} statements',
+        fn,
+      );
+    }
+    final stmt = statements.single;
+    if (stmt is! ReturnStatement) {
+      throw LoweringError(
+        '@Screen body must be a single return statement or expression body; '
+        'got ${stmt.runtimeType}',
+        fn,
+      );
+    }
+    final returnExpr = stmt.expression;
+    if (returnExpr == null) {
+      throw LoweringError(
+        '@Screen body must be a single return statement or expression body; '
+        'got empty return',
+        fn,
+      );
+    }
+    expr = returnExpr;
+  } else {
+    throw LoweringError(
+      '@Screen body must be a single return statement or expression body; '
+      'got ${body.runtimeType}',
+      fn,
+    );
   }
-
-  final expr = body.expression;
   final IrNode rootIr;
   if (expr is InstanceCreationExpression) {
     rootIr = lowerWidgetInstance(expr);

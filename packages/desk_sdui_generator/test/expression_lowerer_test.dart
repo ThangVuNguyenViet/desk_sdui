@@ -105,4 +105,21 @@ void main() {
     expect(ir.children.length, 3);
     expect((ir.children[0] as LiteralNode).value, 1);
   });
+
+  test('integer division ~/', () {
+    final ir = lower('10 ~/ 3') as ArithOpNode;
+    expect(ir.op, ArithOp.intDiv);
+    expect((ir.left as LiteralNode).value, 10);
+    expect((ir.right as LiteralNode).value, 3);
+  });
+
+  test('parenthesized expression unwraps transparently', () {
+    final ir = lower('(a + b) * c') as ArithOpNode;
+    expect(ir.op, ArithOp.mul);
+    final left = ir.left as ArithOpNode;
+    expect(left.op, ArithOp.add);
+    expect((left.left as RefNode).path, ['a']);
+    expect((left.right as RefNode).path, ['b']);
+    expect((ir.right as RefNode).path, ['c']);
+  });
 }

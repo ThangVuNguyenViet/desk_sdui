@@ -167,7 +167,9 @@ class RegistrationEmitter {
   ///   - optional with default → `args['name'] as TypeName? ?? defaultValue`
   ///   - optional nullable, no default → `args['name'] as TypeName`
   ///
-  /// Positional parameters: `args['argN'] as TypeName` using the param name.
+  /// Positional parameters are passed WITHOUT a `name:` label (since they are
+  /// positional in the Dart call), but still read from the map using the
+  /// declared parameter name as the key.
   String _buildWidgetArgList(List<ParameterElement> params) {
     if (params.isEmpty) return '';
     final parts = <String>[];
@@ -190,20 +192,20 @@ class RegistrationEmitter {
         }
         parts.add('$paramName: $valuePart');
       } else {
-        // Positional: use param name as the map key
+        // Positional: no label prefix — read from map by declared param name.
         final typeStr = _typeDisplayName(p.type);
-        parts.add("$paramName: args['$paramName'] as $typeStr");
+        parts.add("args['$paramName'] as $typeStr");
       }
     }
     return parts.join(', ');
   }
 
   /// Build an argument list for **method / function / value-builder** closures
-  /// where `args` is `List<Object?>` for purely positional callables, or
-  /// `Map<String, Object?>` for callables with named params.
+  /// where `args` is `Map<String, Object?>`.
   ///
-  /// Positional params use `args[i]` index access.
   /// Named params use `args['name']` map access.
+  /// Positional params use `args['arg0']`, `args['arg1']`, etc. — the resolver
+  /// indexes positional IR nodes with the same `arg0`, `arg1` keys.
   String _buildCallArgList(List<ParameterElement> params) {
     if (params.isEmpty) return '';
     final parts = <String>[];
@@ -223,7 +225,7 @@ class RegistrationEmitter {
         parts.add('$paramName: $valuePart');
       } else {
         final typeStr = _typeDisplayName(p.type);
-        parts.add('args[$positionalIndex] as $typeStr');
+        parts.add("args['arg$positionalIndex'] as $typeStr");
         positionalIndex++;
       }
     }

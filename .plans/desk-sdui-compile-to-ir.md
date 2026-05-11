@@ -8,7 +8,7 @@ import 'package:desk_sdui_generator/desk_sdui_generator.dart';
 final result = await compileToIr(
   screenSource: '@Screen("counter") Widget counter(D d) => Text("${d.value}");',
   dataModelSource: 'class D { final int value; const D(this.value); }',
-  coverageSource: '@RegisterForSdui([Text]) class _C {}',
+  catalogSource: '@RegisterForSdui([Text]) class _C {}',
 );
 
 switch (result) {
@@ -61,7 +61,7 @@ Public entry point in `packages/desk_sdui_generator/lib/desk_sdui_generator.dart
 Future<CompileResult> compileToIr({
   required String screenSource,
   String? dataModelSource,
-  String? coverageSource,
+  String? catalogSource,
 });
 ```
 

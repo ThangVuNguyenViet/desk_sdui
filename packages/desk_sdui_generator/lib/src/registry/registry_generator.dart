@@ -172,6 +172,7 @@ import 'package:desk_sdui/desk_sdui.dart';
 $flutterImport$importLines
 $coverageBlock
 void registerAllScreens(Runtime rt) {
+  registerCoreAccessors(rt);
 $registrations$coverageCall
 }
 ''';

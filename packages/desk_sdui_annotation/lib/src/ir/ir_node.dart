@@ -434,6 +434,24 @@ final class CoalesceOpNode extends ExpressionNode {
   String toString() => 'CoalesceOpNode($left ?? $right)';
 }
 
+/// `receiver.name` where `name` is resolved through Runtime.invokeGetter,
+/// not by walking a data path. `name` is the qualified handler key, e.g.
+/// `'String.isNotEmpty'`, `'Iterable.first'`. Emitted by the lowerer when
+/// the receiver's static type is a known core type.
+final class GetterNode extends ExpressionNode {
+  const GetterNode({required this.receiver, required this.name});
+  final IrNode receiver;
+  final String name;
+
+  @override
+  bool operator ==(Object other) =>
+      other is GetterNode && other.receiver == receiver && other.name == name;
+  @override
+  int get hashCode => Object.hash(receiver, name);
+  @override
+  String toString() => 'GetterNode($receiver.$name)';
+}
+
 /// `a.b` — accesses a property on the target.
 final class MemberAccessNode extends ExpressionNode {
   const MemberAccessNode({

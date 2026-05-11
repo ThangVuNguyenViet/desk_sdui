@@ -106,6 +106,11 @@ class JsonIrEncoder {
           'left': _encodeNode(node.left),
           'right': _encodeNode(node.right),
         },
+      GetterNode() => {
+          r'$type': 'getter',
+          'receiver': _encodeNode(node.receiver),
+          'name': node.name,
+        },
       MemberAccessNode() => {
           r'$type': 'member',
           'target': _encodeNode(node.target),

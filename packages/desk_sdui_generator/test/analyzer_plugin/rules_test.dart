@@ -6,6 +6,7 @@ import 'package:desk_sdui_generator/src/analyzer_plugin/rules/no_function_defini
 import 'package:desk_sdui_generator/src/analyzer_plugin/rules/no_try_catch.dart';
 import 'package:desk_sdui_generator/src/analyzer_plugin/rules/unsupported_loop.dart';
 import 'package:desk_sdui_generator/src/analyzer_plugin/rules/missing_key_warning.dart';
+import 'package:desk_sdui_generator/src/analyzer_plugin/rules/no_side_effects_in_screen.dart';
 import 'package:desk_sdui_generator/src/analyzer_plugin/rules/error_info.dart';
 import 'package:test/test.dart';
 
@@ -125,6 +126,72 @@ void fn() => [for (final x in items) Text(x)];
       final warnings = <AnalysisErrorInfo>[];
       result.unit.accept(MissingKeyWarningVisitor(warnings));
       expect(warnings, isNotEmpty);
+    });
+  });
+
+  group('no_side_effects_in_screen', () {
+    test('flags import of dart:io', () {
+      final result = parseString(content: '''
+import 'dart:io';
+void fn() { File('x').readAsStringSync(); }
+''');
+      final errors = <AnalysisErrorInfo>[];
+      result.unit.accept(NoSideEffectsImportVisitor(errors));
+      expect(errors, isNotEmpty);
+      expect(errors.first.code, equals('sdui_no_side_effects_in_screen'));
+      expect(errors.first.message, contains('dart:io'));
+      expect(errors.first.message, contains('sdui_no_side_effects_in_screen'));
+    });
+
+    test('flags import of dart:isolate', () {
+      final result = parseString(content: '''
+import 'dart:isolate';
+void fn() { Isolate.spawn(null, null); }
+''');
+      final errors = <AnalysisErrorInfo>[];
+      result.unit.accept(NoSideEffectsImportVisitor(errors));
+      expect(errors, isNotEmpty);
+      expect(errors.first.code, equals('sdui_no_side_effects_in_screen'));
+    });
+
+    test('flags import of dart:ffi', () {
+      final result = parseString(content: '''
+import 'dart:ffi';
+void fn() {}
+''');
+      final errors = <AnalysisErrorInfo>[];
+      result.unit.accept(NoSideEffectsImportVisitor(errors));
+      expect(errors, isNotEmpty);
+    });
+
+    test('flags import of dart:mirrors', () {
+      final result = parseString(content: '''
+import 'dart:mirrors';
+void fn() {}
+''');
+      final errors = <AnalysisErrorInfo>[];
+      result.unit.accept(NoSideEffectsImportVisitor(errors));
+      expect(errors, isNotEmpty);
+    });
+
+    test('no error for flutter/material.dart import', () {
+      final result = parseString(content: '''
+import 'package:flutter/material.dart';
+void fn() => Text('hello');
+''');
+      final errors = <AnalysisErrorInfo>[];
+      result.unit.accept(NoSideEffectsImportVisitor(errors));
+      expect(errors, isEmpty);
+    });
+
+    test('no error for dart:core import', () {
+      final result = parseString(content: '''
+import 'dart:core';
+void fn() => print('hello');
+''');
+      final errors = <AnalysisErrorInfo>[];
+      result.unit.accept(NoSideEffectsImportVisitor(errors));
+      expect(errors, isEmpty);
     });
   });
 }

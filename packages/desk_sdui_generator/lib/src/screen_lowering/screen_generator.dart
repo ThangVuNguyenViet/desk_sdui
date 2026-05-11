@@ -15,6 +15,8 @@ import 'ir_emitter_dart.dart';
 import 'ir_emitter_json.dart';
 import '../type_collector.dart';
 import '../registration_emitter.dart';
+import '../analyzer_plugin/rules/no_side_effects_in_screen.dart';
+import '../analyzer_plugin/rules/error_info.dart';
 
 class ScreenGenerator extends GeneratorForAnnotation<Screen> {
   @override
@@ -83,6 +85,17 @@ class ScreenGenerator extends GeneratorForAnnotation<Screen> {
           final declResult = resolvedLibResult.getElementDeclaration(element);
           resolvedFnDecl = declResult?.node as FunctionDeclaration?;
         }
+      }
+    }
+
+    // Enforce Apple §3.3.2 posture: no references to dart:io, dart:isolate,
+    // dart:ffi, or dart:mirrors inside a @Screen body.
+    if (resolvedFnDecl != null) {
+      final sideEffectErrors = <AnalysisErrorInfo>[];
+      resolvedFnDecl.accept(NoSideEffectsIdentifierVisitor(sideEffectErrors));
+      if (sideEffectErrors.isNotEmpty) {
+        final first = sideEffectErrors.first;
+        throw InvalidGenerationSourceError(first.message);
       }
     }
 

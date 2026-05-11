@@ -6,4 +6,5 @@ export 'rules/no_try_catch.dart';
 export 'rules/unsupported_loop.dart';
 export 'rules/unregistered_symbol.dart';
 export 'rules/missing_key_warning.dart';
+export 'rules/no_side_effects_in_screen.dart';
 export 'rules/error_info.dart';

@@ -159,7 +159,7 @@ Object? _resolveArg(
       if (handler == null) {
         throw StateError(
           'Method "$name" not registered. '
-          'Add it to a @Screen body or @RegisterForSdui annotation.',
+          'Add it to a @Screen body or @Register annotation.',
         );
       }
       return handler(resolvedReceiver, resolvedArgs);
@@ -173,7 +173,7 @@ Object? _resolveArg(
       if (builder == null) {
         throw StateError(
           'Value constructor "$name" not registered. '
-          'Add it to a @Screen body or @RegisterForSdui annotation.',
+          'Add it to a @Screen body or @Register annotation.',
         );
       }
       return builder(resolvedArgs);

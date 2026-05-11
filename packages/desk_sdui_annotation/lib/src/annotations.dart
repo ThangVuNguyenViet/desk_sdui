@@ -31,17 +31,16 @@ class Screen {
 /// in a file that is part of your app's build:
 ///
 /// ```dart
-/// @RegisterForSdui([PageView, SliverList, CupertinoButton])
+/// @Register([PageView, SliverList, CupertinoButton])
 /// class _SduiCatalog {}
-/// ```
 ///
 /// `desk_sdui_generator` discovers all classes annotated with
-/// `@RegisterForSdui` and emits a `registerSduiCatalog(rt)` call (invoked
+/// `@Register` and emits a `registerSduiCatalog(rt)` call (invoked
 /// automatically from `registerAllScreens`) that registers each listed type
 /// exactly as if it had been found in a `@Screen` body.
 @immutable
-class RegisterForSdui {
-  const RegisterForSdui(this.types);
+class Register {
+  const Register(this.types);
 
   /// The list of widget / value types to pre-register with the SDUI runtime.
   final List<Type> types;

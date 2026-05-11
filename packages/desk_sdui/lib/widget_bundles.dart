@@ -1,10 +1,10 @@
-/// Curated `const List<Type>` bundles for use with `@RegisterForSdui`.
+/// Curated `const List<Type>` bundles for use with `@Register`.
 ///
 /// ```dart
 /// import 'package:desk_sdui/widget_bundles.dart';
 /// import 'package:desk_sdui_annotation/desk_sdui_annotation.dart';
 ///
-/// @RegisterForSdui([
+/// @Register([
 ///   ...kCommonWidgets,
 ///   ...kCommonMaterialWidgets,
 ///   MyCustomButton,
@@ -33,7 +33,7 @@ const List<Type> kCommonWidgets = <Type>[
 /// Note: [AppBar], [FloatingActionButton], [Scaffold], and [TextField] are
 /// excluded because their constructors reference private Flutter framework
 /// symbols (e.g. `_DefaultHeroTag`, `_defaultContextMenuBuilder`) that cannot
-/// be emitted in generated code. Add them to your `@RegisterForSdui` list only
+/// be emitted in generated code. Add them to your `@Register` list only
 /// if the desk_sdui codegen correctly handles their constructors in your
 /// Flutter SDK version.
 const List<Type> kCommonMaterialWidgets = <Type>[

@@ -1,6 +1,6 @@
 /// Tests for the registration diagnostic: the registry builder must detect
 /// when a `@Screen` body references a widget type that is NOT listed in any
-/// `@RegisterForSdui` annotation.
+/// `@Register` annotation.
 ///
 /// These tests exercise the diagnostic logic directly using the resolved-AST
 /// fixture pattern (resolveFile into desk_sdui_demo/lib) so that Flutter types
@@ -27,7 +27,7 @@ import 'package:desk_sdui_annotation/desk_sdui_annotation.dart';
 
 const _demoPackageRoot =
     // ignore: lines_longer_than_80_chars
-    '/Users/vietthangvunguyen/Workspace/dart_desk_workspace/desk_sdui/packages/desk_sdui_demo';
+    '/Users/vietthangvunguyen/Workspace/dart_desk_workspace/desk_sdui-wt-register/packages/desk_sdui_demo';
 
 /// Resolve a Dart source string in the desk_sdui_demo context and return the
 /// [ResolvedUnitResult].
@@ -56,13 +56,13 @@ FunctionDeclaration _firstFn(ResolvedUnitResult result) {
   return result.unit.declarations.whereType<FunctionDeclaration>().first;
 }
 
-/// Collect widget names from a `@RegisterForSdui([...])` annotation in a
+/// Collect widget names from a `@Register([...])` annotation in a
 /// resolved source string.
 Future<Set<String>> _registeredWidgetNames(String source) async {
   final result = await _resolveSource(source);
   final libReader = LibraryReader(result.libraryElement);
   const checker =
-      TypeChecker.typeNamed(RegisterForSdui, inPackage: 'desk_sdui_annotation');
+      TypeChecker.typeNamed(Register, inPackage: 'desk_sdui_annotation');
   final collected = CollectedTypes();
   for (final annotated in libReader.annotatedWith(checker)) {
     final el = annotated.element;
@@ -97,9 +97,9 @@ void main() {
 
   group('registration diagnostic — missing widget detection', () {
     test(
-      '@Screen referencing Stack with no @RegisterForSdui → Stack reported as missing',
+      '@Screen referencing Stack with no @Register → Stack reported as missing',
       () async {
-        // Screen source: references Stack but no @RegisterForSdui covers it.
+        // Screen source: references Stack but no @Register covers it.
         const screenSource = '''
 import 'package:flutter/material.dart';
 
@@ -110,7 +110,7 @@ import 'package:flutter/material.dart';
 import 'package:desk_sdui_annotation/desk_sdui_annotation.dart';
 
 // No Stack in this list
-@RegisterForSdui([SizedBox])
+@Register([SizedBox])
 class _Cov {}
 ''';
 
@@ -137,7 +137,7 @@ class _Cov {}
     );
 
     test(
-      '@Screen referencing Stack with @RegisterForSdui([Stack]) → no missing widgets',
+      '@Screen referencing Stack with @Register([Stack]) → no missing widgets',
       () async {
         const screenSource = '''
 import 'package:flutter/material.dart';
@@ -148,7 +148,7 @@ Widget buildTest() => Stack(children: [Text('hi')]);
 import 'package:flutter/material.dart';
 import 'package:desk_sdui_annotation/desk_sdui_annotation.dart';
 
-@RegisterForSdui([Stack, Text])
+@Register([Stack, Text])
 class _Cov {}
 ''';
 
@@ -175,7 +175,7 @@ class _Cov {}
     );
 
     test(
-      '@RegisterForSdui with top-level const reference is resolved correctly',
+      '@Register with top-level const reference is resolved correctly',
       () async {
         // The key Task-1 verification: const references compose for free
         // because collectTypesFromAnnotation uses DartObject.toListValue().
@@ -187,7 +187,7 @@ import 'package:desk_sdui_annotation/desk_sdui_annotation.dart';
 
 const _top = <Type>[Column, Row];
 
-@RegisterForSdui(_top)
+@Register(_top)
 class _Cov {}
 ''';
 
@@ -207,7 +207,7 @@ class _Cov {}
   // -------------------------------------------------------------------------
 
   group('RegistryBuilder — emitRegistryForTest unchanged', () {
-    test('no @RegisterForSdui → no registerSduiCatalog emitted', () {
+    test('no @Register → no registerSduiCatalog emitted', () {
       final output = RegistryBuilder().emitRegistryForTest(
         screens: [],
         packageName: 'desk_sdui_demo',
@@ -215,19 +215,19 @@ class _Cov {}
       expect(output, isNot(contains('registerSduiCatalog')));
     });
 
-    test('screen with @RegisterForSdui([Stack]) → Stack registered', () async {
+    test('screen with @Register([Stack]) → Stack registered', () async {
       const catalogSource = '''
 import 'package:flutter/material.dart';
 import 'package:desk_sdui_annotation/desk_sdui_annotation.dart';
 
-@RegisterForSdui([Stack])
+@Register([Stack])
 class _Cov {}
 ''';
 
       final result = await _resolveSource(catalogSource);
       final libReader = LibraryReader(result.libraryElement);
       const checker =
-          TypeChecker.typeNamed(RegisterForSdui, inPackage: 'desk_sdui_annotation');
+          TypeChecker.typeNamed(Register, inPackage: 'desk_sdui_annotation');
       final catalogTypes = CollectedTypes();
       for (final annotated in libReader.annotatedWith(checker)) {
         final el = annotated.element;

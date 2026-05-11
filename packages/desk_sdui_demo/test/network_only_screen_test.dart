@@ -8,7 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   testWidgets(
-    'network-only @Screen using @RegisterForSdui-only widget renders',
+    'network-only @Screen using @Register-only widget renders',
     (tester) async {
       final payload = jsonEncode({
         r'$type': 'widget',

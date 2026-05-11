@@ -1,5 +1,5 @@
 /// Tests for [collectTypesFromAnnotation] and the [RegistryBuilder] catalog
-/// path that handles `@RegisterForSdui([T1, T2, ...])` annotations.
+/// path that handles `@Register([T1, T2, ...])` annotations.
 ///
 /// We use the same resolved-AST fixture pattern as other tests in this package:
 /// a temporary Dart file is written into desk_sdui_demo/lib (which has a valid
@@ -26,7 +26,7 @@ import 'package:desk_sdui_annotation/desk_sdui_annotation.dart';
 
 const _demoPackageRoot =
     // ignore: lines_longer_than_80_chars
-    '/Users/vietthangvunguyen/Workspace/dart_desk_workspace/desk_sdui/packages/desk_sdui_demo';
+    '/Users/vietthangvunguyen/Workspace/dart_desk_workspace/desk_sdui-wt-register/packages/desk_sdui_demo';
 
 /// Resolve a Dart source string in the desk_sdui_demo context and return the
 /// [ResolvedUnitResult].
@@ -61,7 +61,7 @@ void main() {
 
   group('collectTypesFromAnnotation', () {
     test(
-      '@RegisterForSdui([PageView]) → PageView in widgets set',
+      '@Register([PageView]) → PageView in widgets set',
       () async {
         // We need the annotation value as a DartObject, so we resolve a file
         // that contains the annotation and extract it via the analyzer's
@@ -70,13 +70,13 @@ void main() {
 import 'package:flutter/material.dart';
 import 'package:desk_sdui_annotation/desk_sdui_annotation.dart';
 
-@RegisterForSdui([PageView])
+@Register([PageView])
 class _Cov {}
 ''';
 
         final result = await _resolveSource(source);
         final libReader = LibraryReader(result.libraryElement);
-        final checker = TypeChecker.typeNamed(RegisterForSdui, inPackage: 'desk_sdui_annotation');
+        final checker = TypeChecker.typeNamed(Register, inPackage: 'desk_sdui_annotation');
 
         final annotatedList = libReader.annotatedWith(checker).toList();
         expect(annotatedList, hasLength(1), reason: '_Cov must be found');
@@ -102,19 +102,19 @@ class _Cov {}
     );
 
     test(
-      '@RegisterForSdui([EdgeInsets]) → EdgeInsets in valueTypes set',
+      '@Register([EdgeInsets]) → EdgeInsets in valueTypes set',
       () async {
         const source = '''
 import 'package:flutter/material.dart';
 import 'package:desk_sdui_annotation/desk_sdui_annotation.dart';
 
-@RegisterForSdui([EdgeInsets])
+@Register([EdgeInsets])
 class _Cov {}
 ''';
 
         final result = await _resolveSource(source);
         final libReader = LibraryReader(result.libraryElement);
-        final checker = TypeChecker.typeNamed(RegisterForSdui, inPackage: 'desk_sdui_annotation');
+        final checker = TypeChecker.typeNamed(Register, inPackage: 'desk_sdui_annotation');
 
         final annotated = libReader.annotatedWith(checker).first;
         final el = annotated.element as ClassElement;
@@ -134,19 +134,19 @@ class _Cov {}
     );
 
     test(
-      '@RegisterForSdui([PageView, SizedBox]) → both in widgets set',
+      '@Register([PageView, SizedBox]) → both in widgets set',
       () async {
         const source = '''
 import 'package:flutter/material.dart';
 import 'package:desk_sdui_annotation/desk_sdui_annotation.dart';
 
-@RegisterForSdui([PageView, SizedBox])
+@Register([PageView, SizedBox])
 class _Cov {}
 ''';
 
         final result = await _resolveSource(source);
         final libReader = LibraryReader(result.libraryElement);
-        final checker = TypeChecker.typeNamed(RegisterForSdui, inPackage: 'desk_sdui_annotation');
+        final checker = TypeChecker.typeNamed(Register, inPackage: 'desk_sdui_annotation');
 
         final annotated = libReader.annotatedWith(checker).first;
         final el = annotated.element as ClassElement;
@@ -167,19 +167,19 @@ class _Cov {}
 
   group('RegistryBuilder — catalog registration', () {
     test(
-      '@RegisterForSdui([PageView]) → generated output contains rt.registerWidget(\'PageView\')',
+      '@Register([PageView]) → generated output contains rt.registerWidget(\'PageView\')',
       () async {
         const source = '''
 import 'package:flutter/material.dart';
 import 'package:desk_sdui_annotation/desk_sdui_annotation.dart';
 
-@RegisterForSdui([PageView])
+@Register([PageView])
 class _Cov {}
 ''';
 
         final result = await _resolveSource(source);
         final libReader = LibraryReader(result.libraryElement);
-        final checker = TypeChecker.typeNamed(RegisterForSdui, inPackage: 'desk_sdui_annotation');
+        final checker = TypeChecker.typeNamed(Register, inPackage: 'desk_sdui_annotation');
 
         final annotated = libReader.annotatedWith(checker).first;
         final el = annotated.element as ClassElement;
@@ -212,7 +212,7 @@ class _Cov {}
     );
 
     test(
-      'no @RegisterForSdui → registerSduiCatalog not emitted',
+      'no @Register → registerSduiCatalog not emitted',
       () {
         final builder = RegistryBuilder();
         final output = builder.emitRegistryForTest(
@@ -236,13 +236,13 @@ class _Cov {}
 import 'package:flutter/material.dart';
 import 'package:desk_sdui_annotation/desk_sdui_annotation.dart';
 
-@RegisterForSdui([SizedBox])
+@Register([SizedBox])
 class _Cov {}
 ''';
 
         final result = await _resolveSource(source);
         final libReader = LibraryReader(result.libraryElement);
-        final checker = TypeChecker.typeNamed(RegisterForSdui, inPackage: 'desk_sdui_annotation');
+        final checker = TypeChecker.typeNamed(Register, inPackage: 'desk_sdui_annotation');
 
         final annotated = libReader.annotatedWith(checker).first;
         final el = annotated.element as ClassElement;

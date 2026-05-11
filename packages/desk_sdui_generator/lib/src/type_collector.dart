@@ -84,7 +84,7 @@ CollectedTypes collectTypes(FunctionDeclaration screen) {
   return visitor.collected;
 }
 
-/// Collect types from a `@RegisterForSdui([T1, T2, ...])` annotation on
+/// Collect types from a `@Register([T1, T2, ...])` annotation on
 /// [annotated].
 ///
 /// Each `Type` literal in the `types` list is extracted via

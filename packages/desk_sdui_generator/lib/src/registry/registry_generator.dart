@@ -46,7 +46,7 @@ class RegistryBuilder implements Builder {
   static const _checker =
       TypeChecker.typeNamed(Screen, inPackage: 'desk_sdui_annotation');
   static const _catalogChecker =
-      TypeChecker.typeNamed(RegisterForSdui, inPackage: 'desk_sdui_annotation');
+      TypeChecker.typeNamed(Register, inPackage: 'desk_sdui_annotation');
 
   @override
   Map<String, List<String>> get buildExtensions => {
@@ -75,7 +75,7 @@ class RegistryBuilder implements Builder {
             : safeName[0].toUpperCase() + safeName.substring(1);
 
         // Resolve the screen body to collect referenced widget types for
-        // diagnostic comparison against the @RegisterForSdui registered set.
+        // diagnostic comparison against the @Register registered set.
         // We must use the RESOLVED AST so that ClassElements are populated.
         var referencedWidgetNames = <String>{};
         if (el is TopLevelFunctionElement) {
@@ -119,7 +119,7 @@ class RegistryBuilder implements Builder {
         ));
       }
 
-      // Collect @RegisterForSdui annotated classes.
+      // Collect @Register annotated classes.
       for (final annotated in libReader.annotatedWith(_catalogChecker)) {
         final el = annotated.element;
         if (el is! ClassElement) continue;
@@ -130,7 +130,7 @@ class RegistryBuilder implements Builder {
     }
 
     // Diagnostic: for each screen, fail the build if any widget type referenced
-    // in its body is not listed in any @RegisterForSdui annotation.
+    // in its body is not listed in any @Register annotation.
     final registeredWidgetNames = catalogTypes.widgets
         .map((e) => e.name)
         .whereType<String>()
@@ -151,8 +151,8 @@ class RegistryBuilder implements Builder {
       throw StateError(
         'desk_sdui registration diagnostic failed.\n'
         'The following widget types are referenced in @Screen bodies but are '
-        'not listed in any @RegisterForSdui annotation.\n'
-        'Add them to a @RegisterForSdui list or import one of the bundles '
+        'not listed in any @Register annotation.\n'
+        'Add them to a @Register list or import one of the bundles '
         'from package:desk_sdui/widget_bundles.dart.\n'
         '$details',
       );

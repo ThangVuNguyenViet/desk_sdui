@@ -14,6 +14,7 @@ dependencies:
     path: ../desk_sdui
   desk_sdui_annotation:
     path: ../desk_sdui_annotation
+  cue: ^0.2.1
 
 dev_dependencies:
   flutter_test:

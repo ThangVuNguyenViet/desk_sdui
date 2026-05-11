@@ -1,5 +1,7 @@
-import 'package:desk_sdui_annotation/desk_sdui_annotation.dart';
+import 'package:desk_sdui/desk_sdui.dart';
 import 'package:flutter/material.dart';
+
+part 'counter_minimal.sdui.g.dart';
 
 class CounterData {
   const CounterData({required this.value, this.chips = const []});

@@ -1,13 +1,15 @@
 import 'package:cue/cue.dart';
-import 'package:desk_sdui_annotation/desk_sdui_annotation.dart';
+import 'package:desk_sdui/desk_sdui.dart';
 import 'package:desk_sdui_demo/screens/counter_minimal.dart' show CounterData;
 import 'package:flutter/material.dart';
+
+part 'counter_stress.sdui.g.dart';
 
 @Screen('counter_stress')
 Widget counterStress(CounterData data) => Stack(
       alignment: Alignment.center,
       children: [
-        for (final i in data.chips)
+        for (final _ in data.chips)
           Cue.onMount(
             motion: const CueMotion.smooth(),
             acts: const [

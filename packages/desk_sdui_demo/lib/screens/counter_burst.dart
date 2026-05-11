@@ -1,7 +1,9 @@
 import 'package:cue/cue.dart';
-import 'package:desk_sdui_annotation/desk_sdui_annotation.dart';
+import 'package:desk_sdui/desk_sdui.dart';
 import 'package:desk_sdui_demo/screens/counter_minimal.dart' show CounterData;
 import 'package:flutter/material.dart';
+
+part 'counter_burst.sdui.g.dart';
 
 @Screen('counter_burst')
 Widget counterBurst(CounterData data) => Stack(

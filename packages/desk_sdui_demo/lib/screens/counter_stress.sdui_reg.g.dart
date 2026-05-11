@@ -1,6 +1,7 @@
 // GENERATED CODE — DO NOT MODIFY BY HAND
-// ignore_for_file: cast_nullable_to_non_nullable, cascade_invocations, prefer_const_constructors, lines_longer_than_80_chars, unnecessary_const, unused_import, directives_ordering, always_use_package_imports
+// ignore_for_file: cast_nullable_to_non_nullable, cascade_invocations, prefer_const_constructors, lines_longer_than_80_chars, unnecessary_const, unused_import, directives_ordering, always_use_package_imports, instantiate_abstract_class
 import 'dart:ui';
+import 'package:cue/cue.dart';
 import 'package:desk_sdui/desk_sdui.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -72,7 +73,6 @@ void registerCounter_stressDependencies(Runtime rt) {
       selectionColor: args['selectionColor'] as Color?,
     ),
   );
-  rt.registerValueBuilder('CueMotion', (args) => CueMotion());
   rt.registerValueBuilder(
     'CueMotion.linear',
     (args) => CueMotion.linear(args['arg0'] as Duration),
@@ -232,7 +232,6 @@ void registerCounter_stressDependencies(Runtime rt) {
       snapToEnd: args['snapToEnd'] as bool,
     ),
   );
-  rt.registerValueBuilder('Act', (args) => Act());
   rt.registerValueBuilder(
     'Act.scale',
     (args) => Act.scale(

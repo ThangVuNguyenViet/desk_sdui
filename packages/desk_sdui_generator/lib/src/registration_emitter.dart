@@ -116,9 +116,14 @@ class RegistrationEmitter {
     }
 
     for (final valueType in collected.valueTypes) {
-      final unnamed = _unnamedCtor(valueType);
-      if (unnamed != null) {
-        lines.add(emitValueBuilder(unnamed));
+      // Skip the unnamed (default) builder for abstract classes — they can't
+      // be directly instantiated.  Named factory constructors are still emitted
+      // below so callers can use `CueMotion.smooth()`, `Act.scale()`, etc.
+      if (!valueType.isAbstract) {
+        final unnamed = _unnamedCtor(valueType);
+        if (unnamed != null) {
+          lines.add(emitValueBuilder(unnamed));
+        }
       }
       for (final ctor in valueType.constructors) {
         final ctorName = ctor.name ?? '';

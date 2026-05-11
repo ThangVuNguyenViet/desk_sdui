@@ -11,7 +11,7 @@ ScreenBinding get counter_stressBinding => ScreenBinding(
         'alignment': RefNode(['Alignment', 'center']),
         'children': ListNode([
           ForNode(
-            variable: 'i',
+            variable: '_',
             source: RefNode(['data', 'chips']),
             body: WidgetNode(
               name: 'Cue.onMount',

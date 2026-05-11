@@ -1,131 +1,59 @@
-# desk_sdui — `BuildContext context` as a `@Screen` parameter
+# desk_sdui — `context` as a first-class reserved input
 
-**Goal:** Allow `@Screen` functions to declare a `BuildContext context` parameter so the body can call `Theme.of(context)`, `MediaQuery.sizeOf(context)`, `Navigator.of(context)`, etc. The runtime auto-supplies the live `BuildContext` (the host does NOT pass it via `inputs`). Inherited-widget dependency tracking works automatically because the call happens inside `SduiScreen.build`.
+**Goal:** Make `BuildContext context` a first-class, always-available reactive input to `@Screen` bodies. The runtime unconditionally injects the live `BuildContext` (from `SduiScreen.build`) under the reserved key `'context'`. Authors who declare `BuildContext context` in their `@Screen` signature get to call `Theme.of(context)`, `MediaQuery.sizeOf(context)`, `Navigator.of(context)`, etc. Authors who don't declare it pay nothing — the key sits unused in the input map.
 
-**Why opt-in, not ambient:** Declaring the parameter explicitly avoids the false-friend trap. Without a declared `context` parameter, `Theme.of(context)` fails at build time with "unknown reference". With it, the full context API is uniformly reachable.
+**Why first-class instead of opt-in:** A `wantsContext` flag, generated `contextParamName`, and lowerer type-detection add three moving parts to save one host-side `Builder` wrapper. Cheaper to reserve the key and inject unconditionally.
 
-**Prereqs:** `vm-callable` merged (needs the unified callable registry and static-method emission on registered classes).
+**Prereqs:** `vm-callable` merged (needs static-method emission on registered classes so `Theme.of` etc. become callables).
 
 **Acceptance:**
 
-1. A `@Screen` with `BuildContext context` as a parameter:
-   - Lowerer recognizes the parameter by **type** (not name; author may call it `ctx`).
-   - Lowerer does NOT add it to the user-input contract — host doesn't pass it.
-   - Generated `ScreenBinding` has `wantsContext: true`.
-2. Runtime `_composeInput` injects `'context': context` (from `SduiScreen.build`'s `BuildContext`) when `binding.wantsContext` is true. Otherwise unchanged.
-3. `Theme.of(context)` in a screen body lowers to a call to the `'Theme.of'` registry entry with `arg0` = `RefNode(['context'])`. Runs without errors when `Theme` is registered.
-4. Static methods accepting `BuildContext` on registered classes (e.g. `Theme.of`, `MediaQuery.sizeOf`, `Navigator.of`) emit as flat registry entries via the existing static-methods branch from vm-callable.
-5. Demo: a new `themed_counter` screen renders the counter with `Theme.of(context).colorScheme.primary` and `.textTheme.headlineLarge`. Tap +/-, counter updates. Toggle theme, screen reflects new theme without manual rebuild.
-6. Build-time diagnostic: a screen body references `context` without a `BuildContext` parameter → fail with a clear message.
+1. Runtime `_composeInput` unconditionally injects `'context': context` into every screen's materialization input map. Host-supplied `'context'` (if any) overrides.
+2. Author writes `@Screen Widget x(BuildContext context, VM vm) => Theme.of(context)...` — host passes `inputs: {'vm': vm}` only.
+3. `Theme.of(context).colorScheme.primary` resolves end-to-end when `Theme` is registered (and the access chain getters are reachable via the existing pipeline).
+4. Demo: `themed_counter` screen with theme-aware background and text style. Toggling the app theme rebuilds the screen via Flutter's inherited-widget mechanism (no manual subscription).
+5. Screen author with `BuildContext context` declared but no matching expressions in the body → standard "unused input" lint behavior (if any); no new diagnostic required.
 
 ---
 
-## Task 1 — Lowerer: recognize `BuildContext` parameter
-
-**File:** `packages/desk_sdui_generator/lib/src/screen_lowering/screen_lowerer.dart` (or wherever screen parameters are walked)
-
-Locate the parameter walker that builds the input contract for a `@Screen` function. For each parameter:
-
-```dart
-// Pseudocode:
-if (param.type.isExactlyType(BuildContext)) {
-  wantsContext = true;
-  // Do NOT add to userInputs / input contract.
-  // The parameter name (typically 'context') is reserved as a reactive input key,
-  // injected by the runtime at materialization time.
-  contextParamName = param.name;  // usually 'context'; preserve actual name
-  continue;
-}
-// ... existing logic for non-context params (becomes a reactive input).
-```
-
-`BuildContext` is in `package:flutter/widgets.dart`. Use the existing `TypeChecker` pattern (e.g. `_buildContextChecker = TypeChecker.typeNamed(BuildContext, inPackage: 'flutter')`).
-
-The parameter's **name** is what the body references (`RefNode([name])`). If the author wrote `BuildContext ctx`, the lowerer treats `ctx` as the reserved key; runtime injects `'ctx': context`. Keep this consistent.
-
----
-
-## Task 2 — Emitter: surface `wantsContext` on `ScreenBinding`
-
-**File:** `packages/desk_sdui_generator/lib/src/screen_lowering/ir_emitter_dart.dart`
-
-Add `wantsContext: bool` and `contextParamName: String` (default `'context'` if not present) to the emitted `ScreenBinding`. Example:
-
-```dart
-ScreenBinding(
-  name: 'themed_counter',
-  wantsContext: true,
-  contextParamName: 'context',
-  inputs: const ['vm'],
-  methodRefs: const {'vm': ['increment', 'decrement']},
-  // ...
-);
-```
-
-**File:** `packages/desk_sdui/lib/src/runtime.dart`
-
-Update the `ScreenBinding` class accordingly. Default both fields for backward compat (existing bindings without context).
-
----
-
-## Task 3 — Runtime: inject context in `_composeInput`
+## Task 1 — Runtime: unconditional context injection
 
 **File:** `packages/desk_sdui/lib/src/sdui_screen.dart`
 
+Locate `_composeInput`. Thread the live `BuildContext` from `SduiScreen.build` through:
+
 ```dart
+@override
+Widget build(BuildContext context) {
+  // ... existing setup
+  final input = _composeInput(binding, widget.inputs, context);  // <- pass context
+  // ...
+}
+
 Map<String, Object?> _composeInput(
   ScreenBinding? binding,
   Map<String, Object?> userInputs,
-  BuildContext context,                  // NEW
+  BuildContext context,                       // <- new param
 ) {
-  final input = <String, Object?>{...userInputs};
-  if (binding?.wantsContext ?? false) {
-    final key = binding!.contextParamName;  // typically 'context'
-    input[key] = context;
-  }
-  // ... rest (methods composition + reactive composition) unchanged
+  final input = <String, Object?>{
+    'context': context,                       // <- reserved key, always injected
+    ...userInputs,                            // host can override (escape hatch)
+  };
+
+  // ... existing methods-composition and reactive-composition unchanged
+  return input;
 }
 ```
 
-Update the caller in `SduiScreen.build(BuildContext context)` to pass its `context` argument through to `_composeInput`.
+That's the entire runtime change. No `ScreenBinding` field, no lowerer change.
 
 ---
 
-## Task 4 — Static methods on registered classes: confirm emission path
-
-**File:** `packages/desk_sdui_generator/lib/src/registration_emitter.dart`
-
-vm-callable's Task 1 added "all public instance methods of classes registered in `@Register([...])`". Confirm the same discovery walks **public static methods** that aren't constructors. If the existing functions branch already handles statics-on-classes, no work here. If not, extend the discovery to:
-
-- Walk `class.methods` where `method.isStatic == true`.
-- Keep public statics (name doesn't start with `_`).
-- Emit as a flat entry: `'Theme.of': (args) => Theme.of(args['arg0'] as BuildContext)`.
-- Cast based on the declared parameter type; `BuildContext` from `flutter/widgets.dart` is allowed.
-
-Add a generator test fixture: `@Register([Theme])` → emitted output contains `rt.register('Theme.of', ...)`.
-
----
-
-## Task 5 — Build-time diagnostic for undeclared `context`
-
-**File:** `packages/desk_sdui_generator/lib/src/registry/registry_generator.dart`
-
-If a screen body references a name that isn't a declared parameter or a known top-level (e.g. references `context` without a `BuildContext` param), produce:
-
-```
-Screen "themed_counter" references "context" but no BuildContext parameter is declared.
-Add `BuildContext context` to the @Screen function's parameters.
-```
-
-The existing "unknown reference" path probably already fires; specialize the message when the name matches the reserved context name to point devs to the fix.
-
----
-
-## Task 6 — Catalog: register `Theme`
+## Task 2 — Catalog: register `Theme`
 
 **File:** `packages/desk_sdui_demo/lib/sdui_catalog.dart`
 
-Add `Theme` to the catalog (alongside any other context-access types you want for the demo; `MediaQuery` and `Navigator` optional for this plan).
+Add `Theme` to the demo catalog:
 
 ```dart
 @Register([
@@ -134,16 +62,16 @@ Add `Theme` to the catalog (alongside any other context-access types you want fo
   PageView,
   Cue, Act, CueMotion,
   CounterController,
-  Theme,                  // <- new
+  Theme,                                      // <- new
 ])
 library;
 ```
 
-**Note on getters:** `Theme.of(context).colorScheme.primary` needs `ThemeData.colorScheme` and `ColorScheme.primary` getters in the registry. If the existing getter-walking pipeline already emits getters for registered types (or for types reached from the screen body), this works. If not, add minimal getter-emission for the access chains the demo uses. Out-of-scope to walk *all* getters on `ThemeData`/`ColorScheme` — emit only what's referenced.
+vm-callable's static-methods emission generates `'Theme.of'`. If getter-walking on the returned `ThemeData` is needed for `.colorScheme.primary` etc. and isn't already automatic, emit on-demand from the screen body's reachability walk (no full type registration).
 
 ---
 
-## Task 7 — Demo screen
+## Task 3 — Demo screen
 
 **File (new):** `packages/desk_sdui_demo/lib/screens/themed_counter.dart`
 
@@ -179,54 +107,47 @@ Widget themedCounter(BuildContext context, CounterController vm) => Container(
     );
 ```
 
-In the demo app, route to `themed_counter` and wire:
+Demo app wiring:
 
 ```dart
 final vm = CounterController();
-SduiScreen(
-  name: 'themed_counter',
-  runtime: runtime,
-  inputs: {'vm': vm},          // NOTE: no 'context' key — runtime auto-supplies
-);
+SduiScreen(name: 'themed_counter', runtime: runtime, inputs: {'vm': vm});
+// host does NOT pass 'context' — runtime injects it
 ```
 
-Wrap the demo's `MaterialApp` with theme toggling (light/dark or a colored seed). Verify that toggling rebuilds `themed_counter` without manual subscription — Flutter's inherited-widget mechanism handles it because `Theme.of(context)` runs inside `SduiScreen.build`.
+Add a theme toggle to the demo's `MaterialApp` (e.g. light/dark switch). Confirm tapping the toggle rebuilds `themed_counter` automatically.
 
 ---
 
-## Task 8 — Tests
+## Task 4 — Tests
 
-**Generator tests** (`packages/desk_sdui_generator/test/`):
+**File:** `packages/desk_sdui/test/sdui_screen_test.dart` (or wherever runtime tests live)
 
-- `context_param_test.dart`: a `@Screen` with `BuildContext context` parameter → emitted binding has `wantsContext: true`, `inputs` does NOT contain `'context'`.
-- `register_for_sdui_test.dart`: `@Register([Theme])` → emitted output contains `rt.register('Theme.of', ...)`.
-- Diagnostic: screen references `context` without declaring it → fails with the specialized message.
+- A screen with `EventNode`/`CallNode` referencing `'context'` materializes successfully, receives the live `BuildContext`.
+- Host-supplied `'context'` in `inputs` overrides the auto-injected one (escape hatch).
 
-**Runtime tests** (`packages/desk_sdui/test/`):
+**File:** `packages/desk_sdui_generator/test/register_for_sdui_test.dart`
 
-- `sdui_screen_test.dart`: a screen with `wantsContext: true` materializes with `context` auto-injected; a callable in the IR receives the live `BuildContext`.
+- `@Register([Theme])` → emitted output contains `rt.register('Theme.of', ...)`. (May already exist if vm-callable's test covers it; skip if redundant.)
 
 ---
 
-## Task 9 — Verify
+## Task 5 — Verify
 
 ```
+cd packages/desk_sdui && dart analyze && dart test
 cd packages/desk_sdui_generator && dart analyze && dart test
 cd packages/desk_sdui_demo && dart run build_runner build --delete-conflicting-outputs && dart analyze && flutter test
 ```
 
-All green. Run the demo, navigate to `themed_counter`, tap +/-, toggle theme — counter updates and theme follows.
-
-Inspect:
-- `packages/desk_sdui_demo/lib/screens/themed_counter.sdui.g.dart` has `wantsContext: true`.
-- `packages/desk_sdui_demo/lib/desk_sdui_setup.g.dart` contains `rt.register('Theme.of', ...)`.
+All green. Launch the demo, route to `themed_counter`, tap +/-, toggle theme — counter increments, theme follows.
 
 ---
 
 ## Out of scope
 
-- Builder-style widgets (`Builder`, `LayoutBuilder`, `OrientationBuilder`) — body is a closure, SDUI can't lower closures. Inherent limit.
-- `Navigator.of(context).push(MaterialPageRoute(builder: ...))` — closure problem again. Use `Navigator.pushNamed(context, '/route')` instead.
-- Full getter-walking on `ThemeData`/`ColorScheme`/`TextTheme`/`MediaQueryData`. Emit only what demo references.
-- Storing `context` in VM fields — Flutter forbids this in general; SDUI inherits the same rule. No new enforcement.
-- Renaming the auto-supplied input key. Reserved key is whatever the author named the parameter (usually `context`).
+- Builder-style widgets (`Builder`, `LayoutBuilder`, `OrientationBuilder`). Closure bodies, not lowerable. Inherent SDUI limit.
+- `Navigator.of(context).push(MaterialPageRoute(builder: …))`. Closure problem. Use `pushNamed`.
+- Reserving alternative names — the key is `'context'`, period. Authors can name the parameter `context` only.
+- Comprehensive getter-walking on `ThemeData`/`ColorScheme`/`TextTheme`. Emit only what demo references via existing reachability.
+- Diagnostic for "wrote `Theme.of(context)` but didn't declare the parameter" — existing "unknown reference" path already handles it; no specialization.

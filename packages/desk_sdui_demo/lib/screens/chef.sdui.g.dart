@@ -556,11 +556,13 @@ ScreenBinding get chefBinding => ScreenBinding(
                                                 },
                                               ),
                                               ConditionalNode(
-                                                condition: RefNode([
-                                                  'dish',
-                                                  'description',
-                                                  'isNotEmpty',
-                                                ]),
+                                                condition: GetterNode(
+                                                  receiver: RefNode([
+                                                    'dish',
+                                                    'description',
+                                                  ]),
+                                                  name: 'String.isNotEmpty',
+                                                ),
                                                 thenBranch: SpreadNode(
                                                   ListNode([
                                                     WidgetNode(

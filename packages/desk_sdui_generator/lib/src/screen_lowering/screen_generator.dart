@@ -56,24 +56,8 @@ class ScreenGenerator extends GeneratorForAnnotation<Screen> {
       );
     }
 
-    var result = lowerScreen(fnDecl, ann);
-    var ir = constFold(result.root);
-    ir = reactiveHoist(ir);
-    ir = inferKeys(ir);
-
-    final tree = IrTree(name: ann.name, version: 1, root: ir);
-    final jsonBytes = emitJson(tree);
-    await buildStep.writeAsBytes(
-      buildStep.inputId.changeExtension('.sdui.json'),
-      jsonBytes,
-    );
-
-    final bindingCode = emitDart(result.copyWith(root: ir), partOfUri: buildStep.inputId.uri.toString());
-
-    // Collect external type references from the *resolved* AST so that element
-    // identity (ClassElement, MethodElement, etc.) is available to the visitor.
-    // The fnDecl obtained above via compilationUnitFor is unresolved; we resolve
-    // the library via the element's session to get the proper declaration.
+    // Resolve the library first so the lowerer has access to static types
+    // (needed to split RefNode paths at core-type boundaries).
     FunctionDeclaration? resolvedFnDecl;
     if (element is FunctionElement) {
       final session = element.session;
@@ -87,6 +71,21 @@ class ScreenGenerator extends GeneratorForAnnotation<Screen> {
         }
       }
     }
+
+    final lowerFnDecl = resolvedFnDecl ?? fnDecl;
+    var result = lowerScreen(lowerFnDecl, ann);
+    var ir = constFold(result.root);
+    ir = reactiveHoist(ir);
+    ir = inferKeys(ir);
+
+    final tree = IrTree(name: ann.name, version: 1, root: ir);
+    final jsonBytes = emitJson(tree);
+    await buildStep.writeAsBytes(
+      buildStep.inputId.changeExtension('.sdui.json'),
+      jsonBytes,
+    );
+
+    final bindingCode = emitDart(result.copyWith(root: ir), partOfUri: buildStep.inputId.uri.toString());
 
     // Enforce Apple §3.3.2 posture: no references to dart:io, dart:isolate,
     // dart:ffi, or dart:mirrors inside a @Screen body.

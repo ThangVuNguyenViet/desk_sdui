@@ -2,8 +2,20 @@ import 'package:meta/meta.dart';
 
 import 'ir_node.dart';
 
-/// Root container for a full screen's IR. Carries the screen's identifier,
-/// a schema version (used to gate runtime compatibility), and the root node.
+/// Root container for a full screen's IR (Intermediate Representation).
+///
+/// The IR is the portable, JSON-serializable tree that desk_sdui's generator
+/// produces from each `@Screen` Dart function. At runtime, the desk_sdui
+/// [Runtime] walks this tree and materializes a Flutter widget tree.
+///
+/// An [IrTree] carries:
+/// - [name] — the screen's stable identifier (matches `@Screen('...')`).
+/// - [version] — a schema version, used to gate runtime compatibility.
+/// - [root] — the root [IrNode] of the widget tree.
+///
+/// Trees can be loaded from local assets, fetched over the network, or
+/// composed server-side; the [Runtime] accepts any path because the
+/// in-memory representation is the same.
 @immutable
 class IrTree {
   const IrTree({

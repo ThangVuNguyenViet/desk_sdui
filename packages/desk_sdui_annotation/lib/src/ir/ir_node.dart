@@ -4,8 +4,25 @@ import 'arith_op.dart';
 import 'compare_op.dart';
 import 'logic_op.dart';
 
-/// Base class for every IR node. Sealed so the resolver/codegen exhaustively
-/// dispatch on subtype.
+/// Base class for every node in a desk_sdui IR (Intermediate Representation)
+/// tree.
+///
+/// The IR is a sealed discriminated-union — each concrete subclass represents
+/// one kind of build-time-known fragment of a screen:
+///
+/// - [LiteralNode] — a const value (`42`, `'hello'`, `EdgeInsets.all(8)`).
+/// - [RefNode] — a data binding (`data.headline`, evaluated at render time
+///   against the screen's data input).
+/// - `WidgetNode` / `ValueCtorNode` — a constructor call producing a widget
+///   or a const value, with named/positional argument sub-nodes.
+/// - Iteration and conditional nodes — `for` and `if` constructs lifted from
+///   the original Dart source.
+/// - Expression nodes ([ExpressionNode] and its subclasses) — arithmetic,
+///   comparison, and logical operations evaluated by the runtime.
+///
+/// Because the union is sealed, the runtime resolver and the generator can
+/// `switch` exhaustively over [IrNode] without a default arm — adding a new
+/// node type is a compile-time-checked change across all dispatch sites.
 @immutable
 sealed class IrNode {
   const IrNode();

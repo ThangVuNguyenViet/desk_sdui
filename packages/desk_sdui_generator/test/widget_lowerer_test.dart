@@ -19,6 +19,26 @@ void main() {
     throw Exception('Expected widget expression, got ${expr.runtimeType}');
   }
 
+  /// Lowers a widget arg expression (a named-arg value in a widget call).
+  IrNode lowerArg(String argSrc) {
+    // Wrap in a Padding call so the arg is in an arg slot
+    final result = parseString(
+        content: 'Widget _() => Padding(padding: $argSrc, child: null);');
+    final func = result.unit.declarations.single as FunctionDeclaration;
+    final body = func.functionExpression.body as ExpressionFunctionBody;
+    final expr = body.expression;
+    if (expr is MethodInvocation) {
+      // lowerWidgetInvocation lowers all args — extract the 'padding' one
+      final ir = lowerWidgetInvocation(expr) as WidgetNode;
+      return ir.args['padding']!;
+    }
+    if (expr is InstanceCreationExpression) {
+      final ir = lowerWidgetInstance(expr) as WidgetNode;
+      return ir.args['padding']!;
+    }
+    throw Exception('Expected MethodInvocation, got ${expr.runtimeType}');
+  }
+
   IrNode lowerInList(String src) {
     final result = parseString(content: 'final _ = [$src];');
     final decl = result.unit.declarations.single as TopLevelVariableDeclaration;
@@ -64,5 +84,56 @@ void main() {
     final children = (ir.args['children']! as ListNode).children;
     expect(children.single, isA<WidgetNode>());
     expect((children.single as WidgetNode).name, 'Text');
+  });
+
+  // ── Value-constructor qualified-name tests ──────────────────────────────
+  // Regression for: IR emitted unqualified `'only'` instead of `'EdgeInsets.only'`
+  // which caused `Bad state: Widget "only" is not registered` at runtime.
+
+  test('const EdgeInsets.only → WidgetNode with qualified name', () {
+    final ir = lowerArg('const EdgeInsets.only(top: 8)') as WidgetNode;
+    expect(ir.name, 'EdgeInsets.only',
+        reason: 'Must use qualified name so the value-builder registry can find it');
+    expect((ir.args['top']! as LiteralNode).value, 8);
+  });
+
+  test('const EdgeInsets.fromLTRB → WidgetNode with qualified name', () {
+    final ir =
+        lowerArg('const EdgeInsets.fromLTRB(24, 10, 24, 22)') as WidgetNode;
+    expect(ir.name, 'EdgeInsets.fromLTRB');
+    expect((ir.args['arg0']! as LiteralNode).value, 24);
+    expect((ir.args['arg1']! as LiteralNode).value, 10);
+  });
+
+  test('const EdgeInsets.symmetric → WidgetNode with qualified name', () {
+    final ir = lowerArg(
+            'const EdgeInsets.symmetric(horizontal: 8, vertical: 3)')
+        as WidgetNode;
+    expect(ir.name, 'EdgeInsets.symmetric');
+    expect((ir.args['horizontal']! as LiteralNode).value, 8);
+    expect((ir.args['vertical']! as LiteralNode).value, 3);
+  });
+
+  test('const BorderRadius.circular → WidgetNode with qualified name', () {
+    final ir = lowerArg('const BorderRadius.circular(26)') as WidgetNode;
+    expect(ir.name, 'BorderRadius.circular');
+    expect((ir.args['arg0']! as LiteralNode).value, 26);
+  });
+
+  test('BorderRadius.circular (no const) → WidgetNode with qualified name', () {
+    final ir = lowerArg('BorderRadius.circular(26)') as WidgetNode;
+    expect(ir.name, 'BorderRadius.circular');
+    expect((ir.args['arg0']! as LiteralNode).value, 26);
+  });
+
+  test('simple widget stays unqualified', () {
+    final ir = lowerWidget('Column(children: [])') as WidgetNode;
+    expect(ir.name, 'Column', reason: 'Simple widgets must keep their plain name');
+  });
+
+  test('const Color stays unqualified', () {
+    // Color is a simple class name (no dot), should remain 'Color'
+    final ir = lowerArg('const Color(0xFF2D5F2D)') as WidgetNode;
+    expect(ir.name, 'Color');
   });
 }

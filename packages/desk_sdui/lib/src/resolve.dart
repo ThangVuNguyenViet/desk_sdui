@@ -136,6 +136,17 @@ Object? _resolveArg(
         });
         return Function.apply(fn, [fnArgs]);
       }
+      // Qualified value-ctor names (e.g. `'EdgeInsets.only'`) are registered
+      // via `registerValueBuilder`, not `registerWidget`. Try that path before
+      // falling through to the widget resolver.
+      final valueBuilder = runtime.resolveValueBuilder(name);
+      if (valueBuilder != null) {
+        final resolvedArgs = <String, Object?>{};
+        args.forEach((k, v) {
+          resolvedArgs[k] = _resolveArg(context, v, input, runtime);
+        });
+        return valueBuilder(resolvedArgs);
+      }
       return resolveNode(context, node, input, runtime);
 
     case MethodCallNode(:final receiver, :final name, :final args):

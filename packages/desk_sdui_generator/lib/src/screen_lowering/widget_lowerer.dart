@@ -36,7 +36,12 @@ IrNode lowerWidgetInstance(InstanceCreationExpression expr, {Object? Function(In
     }
   }
 
-  final widgetName = ctorName.split('.').first;
+  // Use the fully-qualified constructor name so that value-type constructors
+  // like `EdgeInsets.only` are registered and dispatched correctly.
+  // For regular widgets (e.g. `Column`, `Padding`) ctorName is already the
+  // simple class name; for named constructors and static factories the
+  // qualifier is now preserved (e.g. `'EdgeInsets.only'`).
+  final widgetName = ctorName;
   final args = <String, IrNode>{};
   IrNode? key;
 
@@ -122,6 +127,36 @@ IrNode _lowerArg(Expression a, {Object? Function(InstanceCreationExpression)? co
       return lowerWidgetInvocation(a, constEvaluator: constEvaluator);
     }
     return lowerClosure(a);
+  }
+  // Qualified static-factory / named-constructor call without `const` keyword:
+  // e.g. `BorderRadius.circular(26)`, `EdgeInsets.all(8)`.
+  // The unresolved parser produces a MethodInvocation with a SimpleIdentifier
+  // target (the class name). If the target starts with an uppercase letter it
+  // is a type name, and we treat the whole call as a value-ctor invocation so
+  // it dispatches to the correct `registerValueBuilder` entry at runtime.
+  if (a is MethodInvocation &&
+      a.target is SimpleIdentifier &&
+      _isUppercase((a.target as SimpleIdentifier).name)) {
+    final className = (a.target as SimpleIdentifier).name;
+    final methodName = a.methodName.name;
+    final qualifiedName = '$className.$methodName';
+    final args = <String, IrNode>{};
+    IrNode? key;
+    for (final arg in a.argumentList.arguments) {
+      if (arg is NamedExpression) {
+        final argName = arg.name.label.name;
+        final value = _lowerArg(arg.expression, constEvaluator: constEvaluator);
+        if (argName == 'key') {
+          key = value;
+        } else {
+          args[argName] = value;
+        }
+      } else {
+        final i = args.length;
+        args['arg$i'] = _lowerArg(arg, constEvaluator: constEvaluator);
+      }
+    }
+    return WidgetNode(name: qualifiedName, args: args, key: key);
   }
   if (a is ListLiteral) {
     return ListNode(
@@ -210,7 +245,12 @@ IrNode _lowerForBody(CollectionElement body, {Object? Function(InstanceCreationE
 
 String _ctorFullName(InstanceCreationExpression expr) {
   final ctor = expr.constructorName;
-  final type = ctor.type.name2.lexeme;
+  // Use toSource() on the NamedType so that qualified forms like
+  // `EdgeInsets.only` (where the unresolved parser encodes the class as an
+  // importPrefix and `only` as the type name) are reconstructed correctly.
+  // For simple types like `Color` or `TextStyle`, toSource() is identical to
+  // name2.lexeme, so this is backward-compatible.
+  final type = ctor.type.toSource();
   final name = ctor.name?.name;
   return name != null && name != type ? '$type.$name' : type;
 }
@@ -221,6 +261,8 @@ bool _isConstFoldable(String ctor) {
   }
   return false;
 }
+
+bool _isUppercase(String s) => s.isNotEmpty && s[0] == s[0].toUpperCase();
 
 List<String> _extractPatternNames(DartPattern pat) {
   final names = <String>[];

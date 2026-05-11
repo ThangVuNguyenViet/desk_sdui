@@ -48,3 +48,65 @@ escape hatch:
         },
       },
     )
+
+## Registering widgets
+
+desk_sdui uses an **explicit-registration** model: the widgets available to
+network-driven screens are exactly the ones you list in `@RegisterForSdui`.
+At build time the generator checks every `@Screen` body and **fails the build**
+if it references a widget that isn't listed — so gaps are caught at compile time,
+not at runtime when a remote payload arrives.
+
+### Common case — drop in the bundles
+
+`package:desk_sdui/widget_bundles.dart` ships three curated lists:
+
+| Constant | Source | What's inside |
+|---|---|---|
+| `kCommonWidgets` | `flutter/widgets.dart` | Align, Column, Container, Row, Stack, Text, … |
+| `kCommonMaterialWidgets` | `flutter/material.dart` | AppBar, Card, ElevatedButton, Scaffold, … |
+| `kCommonCupertinoWidgets` | `flutter/cupertino.dart` | CupertinoButton, CupertinoPageScaffold, … |
+
+Spread one or more bundles into a `@RegisterForSdui` annotation on any class in
+your package (typically a dedicated `sdui_coverage.dart` file):
+
+```dart
+import 'package:desk_sdui/widget_bundles.dart';
+import 'package:desk_sdui_annotation/desk_sdui_annotation.dart';
+
+@RegisterForSdui([...kCommonWidgets, ...kCommonMaterialWidgets])
+class _Core {}
+```
+
+### Third-party design systems
+
+If your screens use components from a design system like `shadcn_ui`, list them
+alongside the bundles:
+
+```dart
+@RegisterForSdui([
+  ...kCommonWidgets,
+  ShadButton, ShadCard, ShadInput, ShadSelect,
+])
+class _ShadcnRegistrations {}
+```
+
+### What happens if you forget
+
+If a `@Screen` body references a widget not covered by any `@RegisterForSdui`
+annotation, `dart run build_runner build` fails with a clear error:
+
+```
+E desk_sdui_generator:registry_builder on $package$:
+  Bad state: desk_sdui registration diagnostic failed.
+  The following widget types are referenced in @Screen bodies but are not
+  listed in any @RegisterForSdui annotation.
+  Add them to a @RegisterForSdui list or import one of the bundles from
+  package:desk_sdui/widget_bundles.dart.
+    Screen "chef" references unregistered widget(s): Stack
+```
+
+Add the missing type to your `@RegisterForSdui` list and re-run the build.
+
+For the full type list exported by each bundle, see the API documentation for
+[`kCommonWidgets`](lib/widget_bundles.dart).

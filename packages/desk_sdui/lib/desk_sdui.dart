@@ -1,5 +1,6 @@
 export 'package:desk_sdui_annotation/desk_sdui_annotation.dart';
 
+export 'src/core_accessors.dart';
 export 'src/runtime.dart';
 export 'src/sdui_screen.dart';
 export 'src/loader/ir_fetcher.dart';

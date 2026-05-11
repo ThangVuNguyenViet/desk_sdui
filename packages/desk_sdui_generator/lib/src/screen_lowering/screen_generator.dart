@@ -103,26 +103,28 @@ class ScreenGenerator extends GeneratorForAnnotation<Screen> {
     final registrations = RegistrationEmitter().emitAll(collected);
     final capitalizedName = _capitalize(ann.name);
 
-    // The registration function references many Flutter types (DragStartBehavior,
-    // HitTestBehavior, TapMoveDetails, LongPressDownDetails, ViewPadding,
-    // ColorSpace, Matrix4, etc.).  Rather than tracking individual library URIs
-    // (which surface as internal `src/` paths via the analyzer element model),
-    // we emit a fixed set of public barrel imports that collectively cover every
-    // type that any Flutter widget constructor or value-type constructor may
-    // reference.
-    //
-    // Part files cannot carry import directives, so the registration function
-    // lives in a separate standalone file (<screen>.sdui_reg.g.dart).
-    // vector_math exports a `Colors` symbol that conflicts with Flutter's
-    // `Colors`. Hide it to avoid the ambiguity while still getting `Matrix4`.
-    const importBlock = '''
-import 'dart:ui';
-import 'package:cue/cue.dart';
-import 'package:desk_sdui/desk_sdui.dart';
-import 'package:flutter/gestures.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
-import 'package:vector_math/vector_math_64.dart' hide Colors;''';
+    // Build import block: fixed Flutter/desk_sdui imports plus any extra
+    // packages discovered by the type collector (e.g. package:cue/cue.dart).
+    final extraImports = <String>{};
+    for (final uri in collected.extraLibraryUris) {
+      if (uri.startsWith('package:')) {
+        final pkg = uri.substring('package:'.length).split('/').first;
+        if (pkg != 'desk_sdui' && pkg != 'flutter' && pkg != 'vector_math') {
+          extraImports.add('package:$pkg/$pkg.dart');
+        }
+      }
+    }
+
+    final importLines = [
+      "import 'dart:ui';",
+      for (final imp in extraImports.toList()..sort()) "import '$imp';",
+      "import 'package:desk_sdui/desk_sdui.dart';",
+      "import 'package:flutter/gestures.dart';",
+      "import 'package:flutter/material.dart';",
+      "import 'package:flutter/rendering.dart';",
+      "import 'package:vector_math/vector_math_64.dart' hide Colors;",
+    ];
+    final importBlock = importLines.join('\n');
 
     final ignoreDirective = '// ignore_for_file: '
         'cast_nullable_to_non_nullable, '

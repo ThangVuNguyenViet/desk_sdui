@@ -145,11 +145,14 @@ class RegistryBuilder implements Builder {
     // Build optional registerSduiCoverage block.
     final coverageBlock = _emitCoverageBlock(coverageTypes);
     final coverageCall = coverageBlock.isNotEmpty ? '\n  registerSduiCoverage(rt);' : '';
+    final flutterImport = coverageBlock.isNotEmpty
+        ? "import 'package:flutter/gestures.dart';\nimport 'package:flutter/material.dart';\nimport 'package:flutter/rendering.dart';\n"
+        : '';
 
     return '''
 // GENERATED CODE — DO NOT MODIFY BY HAND
 import 'package:desk_sdui/desk_sdui.dart';
-$importLines
+$flutterImport$importLines
 $coverageBlock
 void registerAllScreens(Runtime rt) {
 $registrations$coverageCall

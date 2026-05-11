@@ -1,0 +1,1 @@
+{"name":"chef_view","version":1,"root":{"$type":"widget","name":"Text","args":{"data":{"$type":"ref","path":["data","headline"]}}}}

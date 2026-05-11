@@ -233,4 +233,66 @@ Widget build(List<String> items) => Column(
       expect(a.methods, isEmpty);
     });
   });
+
+  group('collectTypes — record-type parameter', () {
+    test('screen with record parameter collects Text widget from body', () async {
+      // ({int value}) data — the record param itself contributes no widgets;
+      // the Text constructor in the body should still be collected.
+      final screen = await resolveScreen('''
+import 'package:flutter/material.dart';
+import 'package:desk_sdui_annotation/desk_sdui_annotation.dart';
+@Screen('counter_record')
+Widget counterRecord(({int value}) data) => Center(
+  child: Text(
+    '\${data.value}',
+    style: const TextStyle(fontSize: 96, fontWeight: FontWeight.w800),
+  ),
+);
+''');
+      final types = collectTypes(screen);
+      expect(types.widgets.map((e) => e.name), contains('Text'));
+      expect(types.widgets.map((e) => e.name), contains('Center'));
+    });
+
+    test('record parameter does not crash type library recording', () async {
+      // Regression guard: _recordDartTypeLibraries must handle RecordType
+      // without throwing.
+      final screen = await resolveScreen('''
+import 'package:flutter/material.dart';
+Widget build(({String title, int count}) data) =>
+    Text('\${data.title}: \${data.count}');
+''');
+      // Should complete without error.
+      final types = collectTypes(screen);
+      expect(types.widgets.map((e) => e.name), contains('Text'));
+    });
+  });
+
+  group('collectTypes — extension-type parameter', () {
+    test('screen with extension-type parameter collects Text widget', () async {
+      final screen = await resolveScreen('''
+import 'package:flutter/material.dart';
+import 'package:desk_sdui_annotation/desk_sdui_annotation.dart';
+extension type ChefView(Map<String, Object?> raw) {
+  String get headline => raw['headline'] as String;
+}
+@Screen('chef_view')
+Widget chefView(ChefView data) => Text(data.headline);
+''');
+      final types = collectTypes(screen);
+      expect(types.widgets.map((e) => e.name), contains('Text'));
+    });
+
+    test('extension type does not crash type library recording', () async {
+      // Regression guard: _unwrapExtensionType + _recordDartTypeLibraries must
+      // handle extension types without throwing.
+      final screen = await resolveScreen('''
+import 'package:flutter/material.dart';
+extension type MyId(int raw) {}
+Widget build(MyId id) => Text('\$id');
+''');
+      final types = collectTypes(screen);
+      expect(types.widgets.map((e) => e.name), contains('Text'));
+    });
+  });
 }

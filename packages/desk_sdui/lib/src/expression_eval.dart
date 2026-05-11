@@ -53,6 +53,12 @@ Object? evalExpression(
       final l = evalExpression(left, input, runtime);
       return l ?? evalExpression(right, input, runtime);
 
+    case GetterNode(:final receiver, :final name):
+      final r = evalExpression(receiver, input, runtime);
+      final handler = runtime.resolveGetter(name);
+      if (handler != null) return handler(r);
+      throw StateError('No getter registered for "$name" (receiver: ${r.runtimeType})');
+
     case MemberAccessNode(:final target, :final name):
       final t = evalExpression(target, input, runtime);
       if (t is Map) return t[name];

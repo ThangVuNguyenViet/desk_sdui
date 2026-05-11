@@ -116,7 +116,7 @@ IrNode _demoteAllConst(IrNode node) {
       );
     case MethodCallNode():
       return MethodCallNode(
-        receiver: _demoteAllConst(node.receiver),
+        receiver: node.receiver != null ? _demoteAllConst(node.receiver!) : null,
         name: node.name,
         args: node.args.map(_demoteAllConst).toList(),
       );

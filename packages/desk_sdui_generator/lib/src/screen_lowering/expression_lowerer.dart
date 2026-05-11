@@ -31,7 +31,7 @@ IrNode lowerExpression(Expression expr) {
       return LengthOfNode(lowerExpression(expr.prefix));
     }
     final target = lowerExpression(expr.prefix);
-    final bucket = _coreTypeBucket(expr.prefix.staticType);
+    final bucket = coreTypeBucket(expr.prefix.staticType);
     if (target is RefNode && bucket == null) {
       return RefNode([...target.path, expr.identifier.name]);
     }
@@ -49,7 +49,7 @@ IrNode lowerExpression(Expression expr) {
       return LengthOfNode(lowerExpression(expr.target!));
     }
     final target = lowerExpression(expr.target!);
-    final bucket = _coreTypeBucket(expr.target!.staticType);
+    final bucket = coreTypeBucket(expr.target!.staticType);
     if (target is RefNode && bucket == null) {
       return RefNode([...target.path, expr.propertyName.name]);
     }
@@ -145,7 +145,7 @@ IrNode lowerExpression(Expression expr) {
 /// 'DateTime', 'Duration'). Returns null when the type is not a recognized
 /// core type (in that case the expression-lowerer should keep folding into
 /// RefNode or emit MemberAccessNode as before).
-String? _coreTypeBucket(DartType? type) {
+String? coreTypeBucket(DartType? type) {
   if (type == null || type is DynamicType || type is InvalidType) return null;
   final el = type.element;
   if (el == null) return null;

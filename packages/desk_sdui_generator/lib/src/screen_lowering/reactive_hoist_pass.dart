@@ -200,7 +200,7 @@ IrNode reactiveHoist(IrNode node) {
       return (node, <String>{});
 
     case MethodCallNode():
-      final (receiver, receiverPaths) = _hoist(node.receiver);
+      final (receiver, receiverPaths) = node.receiver != null ? _hoist(node.receiver!) : (null, <String>{});
       final allArgPaths = <String>{};
       final newArgs = <IrNode>[];
       for (final arg in node.args) {

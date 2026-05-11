@@ -183,7 +183,9 @@ void _collectRefs(
         }
       }
     case MethodCallNode():
-      _collectRefs(node.receiver, widgetRefs, methodRefs, fnRefs);
+      if (node.receiver != null) {
+        _collectRefs(node.receiver!, widgetRefs, methodRefs, fnRefs);
+      }
       for (final arg in node.args) {
         _collectRefs(arg, widgetRefs, methodRefs, fnRefs);
       }

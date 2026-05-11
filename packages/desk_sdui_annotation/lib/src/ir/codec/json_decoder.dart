@@ -116,7 +116,9 @@ class JsonIrDecoder {
           }).toList(),
         ),
       'MethodCall' => MethodCallNode(
-          receiver: _decodeNode(map['receiver']! as Map<String, Object?>),
+          receiver: map['receiver'] != null
+              ? _decodeNode(map['receiver']! as Map<String, Object?>)
+              : null,
           name: map['name']! as String,
           args: ((map['args']! as List).cast<Map<String, Object?>>())
               .map(_decodeNode)

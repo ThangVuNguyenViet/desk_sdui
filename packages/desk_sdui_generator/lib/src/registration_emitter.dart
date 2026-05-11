@@ -51,11 +51,17 @@ class RegistrationEmitter {
   /// [receiverType] is the static type on which the method is invoked — used
   /// for the cast expression and the qualified registration name.
   String emitMethod(MethodElement method, {required DartType receiverType}) {
-    final receiverTypeName = _typeDisplayName(receiverType);
     final receiverClassName = method.enclosingElement!.name;
     final qualifiedName = '$receiverClassName.${method.name}';
     final params = method.formalParameters;
     final callArgs = _buildCallArgList(params);
+
+    if (method.isStatic) {
+      return "rt.registerFunction('$qualifiedName', "
+          "(args) => $receiverClassName.${method.name}($callArgs));";
+    }
+
+    final receiverTypeName = _typeDisplayName(receiverType);
     return "rt.registerMethod('$qualifiedName', "
         "(recv, args) => (recv as $receiverTypeName).${method.name}($callArgs));";
   }

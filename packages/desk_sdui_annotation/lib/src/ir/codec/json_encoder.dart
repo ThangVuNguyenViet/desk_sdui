@@ -139,7 +139,7 @@ class JsonIrEncoder {
         },
       MethodCallNode() => {
           r'$type': 'MethodCall',
-          'receiver': _encodeNode(node.receiver),
+          if (node.receiver != null) 'receiver': _encodeNode(node.receiver!),
           'name': node.name,
           'args': node.args.map(_encodeNode).toList(),
         },

@@ -101,7 +101,8 @@ String _emitNode(IrNode node) {
       return 'StringInterpNode([$parts])';
     case MethodCallNode():
       final args = node.args.map(_emitNode).join(', ');
-      return 'MethodCallNode(receiver: ${_emitNode(node.receiver)}, name: ${_dartString(node.name)}, args: [$args])';
+      final receiver = node.receiver != null ? _emitNode(node.receiver!) : 'null';
+      return 'MethodCallNode(receiver: $receiver, name: ${_dartString(node.name)}, args: [$args])';
     case ValueCtorNode():
       final args = node.args.map(_emitNode).join(', ');
       return 'ValueCtorNode(name: ${_dartString(node.name)}, args: [$args])';

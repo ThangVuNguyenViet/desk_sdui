@@ -164,7 +164,7 @@ IrNode inferKeys(IrNode node, {TypeLookup? lookupType}) {
 
     case MethodCallNode():
       return MethodCallNode(
-        receiver: inferKeys(node.receiver, lookupType: lookupType),
+        receiver: node.receiver != null ? inferKeys(node.receiver!, lookupType: lookupType) : null,
         name: node.name,
         args: node.args.map((a) => inferKeys(a, lookupType: lookupType)).toList(),
       );

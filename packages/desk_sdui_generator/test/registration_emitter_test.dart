@@ -307,6 +307,27 @@ void _dummy() {}
       expect(code, contains('(recv as num).toStringAsFixed('));
       expect(code, contains("args['arg0'] as int"));
     });
+
+    test('Theme.of (static) produces registerFunction, not registerMethod', () {
+      final method = _methodElement(materialResult, 'Theme', 'of');
+      final receiverType =
+          (method.enclosingElement as InterfaceElement).thisType;
+      final code = emitter.emitMethod(method, receiverType: receiverType);
+      expect(code, contains("rt.registerFunction('Theme.of'"));
+      expect(code, contains('(args) => Theme.of(args['));
+      expect(code, isNot(contains('(recv as Theme)')));
+      expect(code, isNot(contains('rt.registerMethod')));
+    });
+
+    test('MediaQuery.sizeOf (static) produces registerFunction', () {
+      final method = _methodElement(materialResult, 'MediaQuery', 'sizeOf');
+      final receiverType =
+          (method.enclosingElement as InterfaceElement).thisType;
+      final code = emitter.emitMethod(method, receiverType: receiverType);
+      expect(code, contains("rt.registerFunction('MediaQuery.sizeOf'"));
+      expect(code, contains('(args) => MediaQuery.sizeOf(args['));
+      expect(code, isNot(contains('(recv as')));
+    });
   });
 
   // -------------------------------------------------------------------------

@@ -576,9 +576,11 @@ final class MethodCallNode extends IrNode {
     required this.args,
   });
 
-  final IrNode receiver;
+  final IrNode? receiver;
 
   /// Receiver-type-keyed handler name, e.g. `'String.toUpperCase'`.
+  /// For static methods (receiver is null), this is the qualified function name,
+  /// e.g. `'Theme.of'`.
   final String name;
   final List<IrNode> args;
 
@@ -593,7 +595,7 @@ final class MethodCallNode extends IrNode {
   int get hashCode => Object.hash(receiver, name, Object.hashAll(args));
 
   @override
-  String toString() => 'MethodCallNode($receiver.$name(${args.length} args))';
+  String toString() => 'MethodCallNode(${receiver ?? 'null'}.$name(${args.length} args))';
 }
 
 /// Value-type constructor invocation: `name(args)`. Resolved at runtime via

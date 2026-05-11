@@ -6,6 +6,7 @@
   Act,
   CueMotion,
   CounterController,
+  Theme,
 ])
 library;
 

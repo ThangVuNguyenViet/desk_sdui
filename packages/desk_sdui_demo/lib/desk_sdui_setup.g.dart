@@ -10,12 +10,14 @@ import 'package:desk_sdui_demo/screens/counter_burst.dart' show counter_burstBin
 import 'package:desk_sdui_demo/screens/counter_minimal.dart' show counter_minimalBinding;
 import 'package:desk_sdui_demo/screens/counter_record.dart' show counter_recordBinding;
 import 'package:desk_sdui_demo/screens/counter_stress.dart' show counter_stressBinding;
+import 'package:desk_sdui_demo/screens/themed_counter.dart' show themed_counterBinding;
 import 'package:desk_sdui_demo/screens/counter_actions.sdui_reg.g.dart' show registerCounter_actionsDependencies;
 import 'package:desk_sdui_demo/screens/counter_bouncy.sdui_reg.g.dart' show registerCounter_bouncyDependencies;
 import 'package:desk_sdui_demo/screens/counter_burst.sdui_reg.g.dart' show registerCounter_burstDependencies;
 import 'package:desk_sdui_demo/screens/counter_minimal.sdui_reg.g.dart' show registerCounter_minimalDependencies;
 import 'package:desk_sdui_demo/screens/counter_record.sdui_reg.g.dart' show registerCounter_recordDependencies;
 import 'package:desk_sdui_demo/screens/counter_stress.sdui_reg.g.dart' show registerCounter_stressDependencies;
+import 'package:desk_sdui_demo/screens/themed_counter.sdui_reg.g.dart' show registerThemed_counterDependencies;
 
 void registerSduiCatalog(Runtime rt) {
   rt.registerWidget('Align', (args) => Align(key: args['key'] as Key?, alignment: args['alignment'] as AlignmentGeometry? ?? Alignment.center, widthFactor: args['widthFactor'] as double?, heightFactor: args['heightFactor'] as double?, child: args['child'] as Widget?));
@@ -68,6 +70,7 @@ void registerSduiCatalog(Runtime rt) {
   rt.registerWidget('TextButton', (args) => TextButton(key: args['key'] as Key?, onPressed: args['onPressed'] as void Function()?, onLongPress: args['onLongPress'] as void Function()?, onHover: args['onHover'] as void Function(bool)?, onFocusChange: args['onFocusChange'] as void Function(bool)?, style: args['style'] as ButtonStyle?, focusNode: args['focusNode'] as FocusNode?, autofocus: args['autofocus'] as bool? ?? false, clipBehavior: args['clipBehavior'] as Clip?, statesController: args['statesController'] as WidgetStatesController?, isSemanticButton: args['isSemanticButton'] as bool? ?? true, child: args['child'] as Widget));
   rt.registerWidget('PageView', (args) => PageView(key: args['key'] as Key?, scrollDirection: args['scrollDirection'] as Axis? ?? Axis.horizontal, reverse: args['reverse'] as bool? ?? false, controller: args['controller'] as PageController?, physics: args['physics'] as ScrollPhysics?, pageSnapping: args['pageSnapping'] as bool? ?? true, onPageChanged: args['onPageChanged'] as void Function(int)?, children: (args['children'] as List?)?.cast<Widget>() ?? const [], dragStartBehavior: args['dragStartBehavior'] as DragStartBehavior? ?? DragStartBehavior.start, allowImplicitScrolling: args['allowImplicitScrolling'] as bool? ?? false, restorationId: args['restorationId'] as String?, clipBehavior: args['clipBehavior'] as Clip? ?? Clip.hardEdge, hitTestBehavior: args['hitTestBehavior'] as HitTestBehavior? ?? HitTestBehavior.opaque, scrollBehavior: args['scrollBehavior'] as ScrollBehavior?, padEnds: args['padEnds'] as bool? ?? true));
   rt.registerWidget('Cue', (args) => Cue(key: args['key'] as Key?, debugLabel: args['debugLabel'] as String?, acts: args['acts'] as List<Act>?, controller: args['controller'] as CueController, child: args['child'] as Widget));
+  rt.registerWidget('Theme', (args) => Theme(key: args['key'] as Key?, data: args['data'] as ThemeData, child: args['child'] as Widget));
   rt.registerValueBuilder('Act.scale', (args) => Act.scale(from: args['from'] as double, to: args['to'] as double, motion: args['motion'] as CueMotion?, reverse: args['reverse'] as ReverseBehavior<double>, delay: args['delay'] as Duration, alignment: args['alignment'] as AlignmentGeometry));
   rt.registerValueBuilder('Act.zoomIn', (args) => Act.zoomIn(motion: args['motion'] as CueMotion?, delay: args['delay'] as Duration, reverse: args['reverse'] as ReverseBehavior<double>, alignment: args['alignment'] as AlignmentGeometry));
   rt.registerValueBuilder('Act.zoomOut', (args) => Act.zoomOut(motion: args['motion'] as CueMotion?, delay: args['delay'] as Duration, reverse: args['reverse'] as ReverseBehavior<double>, alignment: args['alignment'] as AlignmentGeometry));
@@ -167,5 +170,7 @@ void registerAllScreens(Runtime rt) {
   registerCounter_recordDependencies(rt);
   rt.registerScreen(counter_stressBinding);
   registerCounter_stressDependencies(rt);
+  rt.registerScreen(themed_counterBinding);
+  registerThemed_counterDependencies(rt);
   registerSduiCatalog(rt);
 }

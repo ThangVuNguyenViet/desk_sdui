@@ -150,6 +150,13 @@ Object? _resolveArg(
       return resolveNode(context, node, input, runtime);
 
     case MethodCallNode(:final receiver, :final name, :final args):
+      if (receiver == null) {
+        final resolvedArgs = <String, Object?>{};
+        for (var i = 0; i < args.length; i++) {
+          resolvedArgs['arg$i'] = _resolveArg(context, args[i], input, runtime);
+        }
+        return runtime.invokeFunction(name, resolvedArgs);
+      }
       final resolvedReceiver = _resolveArg(context, receiver, input, runtime);
       final resolvedArgs = <String, Object?>{};
       for (var i = 0; i < args.length; i++) {

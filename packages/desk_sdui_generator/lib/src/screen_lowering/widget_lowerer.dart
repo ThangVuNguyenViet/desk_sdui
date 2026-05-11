@@ -138,6 +138,27 @@ IrNode _lowerArg(Expression a, {Object? Function(InstanceCreationExpression)? co
       _isCallbackParam(paramName)) {
     return lowerClosure(a);
   }
+  // Static method call with a parameter reference as receiver, e.g.
+  // `Theme.of(context)`, `MediaQuery.sizeOf(context)`.
+  // Lowered to MethodCallNode with receiver: null (flat callable) so the
+  // runtime dispatches via the function path, not instance-method path.
+  if (a is MethodInvocation &&
+      a.target is SimpleIdentifier &&
+      _isUppercase((a.target as SimpleIdentifier).name) &&
+      a.argumentList.arguments.isNotEmpty &&
+      a.argumentList.arguments.first is SimpleIdentifier) {
+    final className = (a.target as SimpleIdentifier).name;
+    final methodName = a.methodName.name;
+    final allArgs = <IrNode>[];
+    for (final arg in a.argumentList.arguments) {
+      allArgs.add(_lowerArg(arg as Expression, constEvaluator: constEvaluator));
+    }
+    return MethodCallNode(
+      receiver: null,
+      name: '$className.$methodName',
+      args: allArgs,
+    );
+  }
   // Qualified static-factory / named-constructor call without `const` keyword:
   // e.g. `BorderRadius.circular(26)`, `EdgeInsets.all(8)`.
   // The unresolved parser produces a MethodInvocation with a SimpleIdentifier
@@ -184,6 +205,68 @@ IrNode _lowerArg(Expression a, {Object? Function(InstanceCreationExpression)? co
   }
   if (a is MethodInvocation) {
     return lowerClosure(a);
+  }
+  // PropertyAccess chains like `Theme.of(context).colorScheme.primary`
+  // need recursive lowering through _lowerArg (not lowerExpression) so
+  // that embedded MethodInvocations are handled correctly.
+  if (a is PropertyAccess) {
+    final target = _lowerArg(a.target!, constEvaluator: constEvaluator);
+    final bucket = coreTypeBucket(a.target!.staticType);
+    if (target is RefNode && bucket == null) {
+      return RefNode([...target.path, a.propertyName.name]);
+    }
+    if (bucket != null) {
+      return GetterNode(
+        receiver: target,
+        name: '$bucket.${a.propertyName.name}',
+      );
+    }
+    return MemberAccessNode(target: target, name: a.propertyName.name);
+  }
+  if (a is PrefixedIdentifier) {
+    if (a.identifier.name == 'length') {
+      return LengthOfNode(_lowerArg(a.prefix, constEvaluator: constEvaluator));
+    }
+    final target = _lowerArg(a.prefix, constEvaluator: constEvaluator);
+    final bucket = coreTypeBucket(a.prefix.staticType);
+    if (target is RefNode && bucket == null) {
+      return RefNode([...target.path, a.identifier.name]);
+    }
+    if (bucket != null) {
+      return GetterNode(
+        receiver: target,
+        name: '$bucket.${a.identifier.name}',
+      );
+    }
+    return MemberAccessNode(target: target, name: a.identifier.name);
+  }
+  if (a is IndexExpression) {
+    return IndexAccessNode(
+      target: _lowerArg(a.target!, constEvaluator: constEvaluator),
+      key: _lowerArg(a.index, constEvaluator: constEvaluator),
+    );
+  }
+  if (a is BinaryExpression) {
+    return lowerExpression(a);
+  }
+  if (a is ConditionalExpression) {
+    return lowerExpression(a);
+  }
+  if (a is PrefixExpression) {
+    return lowerExpression(a);
+  }
+  if (a is StringInterpolation) {
+    return lowerExpression(a);
+  }
+  if (a is IntegerLiteral ||
+      a is DoubleLiteral ||
+      a is BooleanLiteral ||
+      a is NullLiteral ||
+      a is SimpleStringLiteral) {
+    return lowerExpression(a);
+  }
+  if (a is SimpleIdentifier) {
+    return RefNode([a.name]);
   }
   return lowerExpression(a);
 }

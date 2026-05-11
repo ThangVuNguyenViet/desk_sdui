@@ -51,7 +51,7 @@ class _SduiScreenState extends State<SduiScreen> {
               const SizedBox.shrink();
         }
         final binding = widget.runtime.screenFor(widget.name);
-        final input = _composeInput(binding, widget.inputs);
+        final input = _composeInput(binding, widget.inputs, context);
         return resolveNode(
           ctx,
           snap.data!.root,
@@ -65,8 +65,12 @@ class _SduiScreenState extends State<SduiScreen> {
   Map<String, Object?> _composeInput(
     ScreenBinding? binding,
     Map<String, Object?> userInputs,
+    BuildContext context,
   ) {
-    final input = <String, Object?>{...userInputs};
+    final input = <String, Object?>{
+      'context': context,
+      ...userInputs,
+    };
     if (binding != null) {
       final methods = <String, Function>{};
       for (final entry in userInputs.entries) {

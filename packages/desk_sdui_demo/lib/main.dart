@@ -16,7 +16,8 @@ enum _Variant {
   bouncy('counter_bouncy', 'Bouncy', 0),
   burst('counter_burst', 'Burst', 24),
   stress('counter_stress', 'Stress', 500),
-  actions('counter_actions', 'Actions', 0);
+  actions('counter_actions', 'Actions', 0),
+  themed('themed_counter', 'Themed', 0);
 
   const _Variant(this.screenName, this.label, this.chipCount);
   final String screenName;
@@ -29,6 +30,7 @@ class _DemoAppState extends State<DemoApp> {
   int value = 0;
   _Variant variant = _Variant.bouncy;
   late final CounterController _counterController;
+  bool _darkMode = true;
 
   @override
   void initState() {
@@ -40,16 +42,26 @@ class _DemoAppState extends State<DemoApp> {
 
   void _bump(int delta) => setState(() => value += delta);
   void _reset() => setState(() => value = 0);
+  void _toggleTheme() => setState(() => _darkMode = !_darkMode);
 
   @override
   Widget build(BuildContext context) {
     final chips = List<int>.generate(variant.chipCount, (i) => i);
     return MaterialApp(
       title: 'desk_sdui — counter',
-      theme: ThemeData(useMaterial3: true, brightness: Brightness.dark),
+      theme: ThemeData(
+        useMaterial3: true,
+        brightness: _darkMode ? Brightness.dark : Brightness.light,
+      ),
       home: Scaffold(
         appBar: AppBar(
           title: const Text('desk_sdui — counter'),
+          actions: [
+            IconButton(
+              icon: Icon(_darkMode ? Icons.light_mode : Icons.dark_mode),
+              onPressed: _toggleTheme,
+            ),
+          ],
           bottom: PreferredSize(
             preferredSize: const Size.fromHeight(56),
             child: Padding(
@@ -65,7 +77,7 @@ class _DemoAppState extends State<DemoApp> {
             ),
           ),
         ),
-        body: variant == _Variant.actions
+        body: variant == _Variant.actions || variant == _Variant.themed
             ? SduiScreen(
                 runtime: rt,
                 name: variant.screenName,
@@ -78,7 +90,8 @@ class _DemoAppState extends State<DemoApp> {
                   'data': {'value': value, 'chips': chips},
                 },
               ),
-        floatingActionButton: variant == _Variant.actions
+        floatingActionButton: variant == _Variant.actions ||
+                variant == _Variant.themed
             ? null
             : Row(
                 mainAxisSize: MainAxisSize.min,

@@ -111,4 +111,80 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('done'), findsOneWidget);
   });
+
+  testWidgets('SduiScreen injects BuildContext as reserved context key',
+      (tester) async {
+    BuildContext? capturedContext;
+    final rt = Runtime();
+    rt.registerWidget('CaptureContext', (args) {
+      capturedContext = args['ctx'] as BuildContext?;
+      return const SizedBox();
+    });
+    rt.registerScreen(
+      const ScreenBinding(
+        name: 'ctx_test',
+        ir: IrTree(
+          name: 'ctx_test',
+          version: 1,
+          root: WidgetNode(
+            name: 'CaptureContext',
+            args: {'ctx': RefNode(['context'])},
+          ),
+        ),
+        inputs: [],
+      ),
+    );
+    await tester.pumpWidget(
+      MaterialApp(home: SduiScreen(name: 'ctx_test', runtime: rt)),
+    );
+    await tester.pumpAndSettle();
+    expect(capturedContext, isNotNull);
+    expect(capturedContext, isA<BuildContext>());
+  });
+
+  testWidgets('SduiScreen host-supplied context overrides auto-injected',
+      (tester) async {
+    BuildContext? capturedContext;
+    final overrideContext =
+        _FakeBuildContext('host-override-context');
+    final rt = Runtime();
+    rt.registerWidget('CaptureContext', (args) {
+      capturedContext = args['ctx'] as BuildContext?;
+      return const SizedBox();
+    });
+    rt.registerScreen(
+      const ScreenBinding(
+        name: 'ctx_override',
+        ir: IrTree(
+          name: 'ctx_override',
+          version: 1,
+          root: WidgetNode(
+            name: 'CaptureContext',
+            args: {'ctx': RefNode(['context'])},
+          ),
+        ),
+        inputs: [],
+      ),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: SduiScreen(
+          name: 'ctx_override',
+          runtime: rt,
+          inputs: {'context': overrideContext},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(capturedContext, same(overrideContext));
+  });
+}
+
+class _FakeBuildContext implements BuildContext {
+  _FakeBuildContext(this._label);
+  final String _label;
+  @override
+  dynamic noSuchMethod(Invocation i) => super.noSuchMethod(i);
+  @override
+  String toString() => _label;
 }

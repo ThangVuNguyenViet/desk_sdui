@@ -136,4 +136,26 @@ void main() {
     final ir = lowerArg('const Color(0xFF2D5F2D)') as WidgetNode;
     expect(ir.name, 'Color');
   });
+
+  // ── Static method call tests ────────────────────────────────────────────
+  // Regression for: Theme.of(context) lowered with context as receiver instead
+  // of as a flat callable (receiver: null).
+
+  test('Theme.of(context) → MethodCallNode with null receiver', () {
+    final ir = lowerArg('Theme.of(context)') as MethodCallNode;
+    expect(ir.name, 'Theme.of');
+    expect(ir.receiver, isNull,
+        reason: 'Static methods must have null receiver (flat callable)');
+    expect(ir.args, hasLength(1));
+    expect(ir.args.first, isA<RefNode>());
+    expect((ir.args.first as RefNode).path, ['context']);
+  });
+
+  test('MediaQuery.sizeOf(context) → MethodCallNode with null receiver', () {
+    final ir = lowerArg('MediaQuery.sizeOf(context)') as MethodCallNode;
+    expect(ir.name, 'MediaQuery.sizeOf');
+    expect(ir.receiver, isNull);
+    expect(ir.args, hasLength(1));
+    expect((ir.args.first as RefNode).path, ['context']);
+  });
 }

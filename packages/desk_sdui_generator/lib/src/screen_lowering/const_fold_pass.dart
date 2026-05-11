@@ -128,7 +128,7 @@ IrNode _foldChildren(IrNode node) {
       return StringInterpNode(newParts);
     case MethodCallNode():
       return MethodCallNode(
-        receiver: constFold(node.receiver),
+        receiver: node.receiver != null ? constFold(node.receiver!) : null,
         name: node.name,
         args: node.args.map(constFold).toList(),
       );

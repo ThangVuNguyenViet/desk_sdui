@@ -155,6 +155,10 @@ IrNode reactiveHoist(IrNode node) {
         {...leftPaths, ...rightPaths},
       );
 
+    case GetterNode():
+      final (receiver, paths) = _hoist(node.receiver);
+      return (GetterNode(receiver: receiver, name: node.name), paths);
+
     case MemberAccessNode():
       final (target, paths) = _hoist(node.target);
       return (MemberAccessNode(target: target, name: node.name), paths);

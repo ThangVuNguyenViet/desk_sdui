@@ -127,6 +127,12 @@ IrNode inferKeys(IrNode node, {TypeLookup? lookupType}) {
         right: inferKeys(node.right, lookupType: lookupType),
       );
 
+    case GetterNode():
+      return GetterNode(
+        receiver: inferKeys(node.receiver, lookupType: lookupType),
+        name: node.name,
+      );
+
     case MemberAccessNode():
       return MemberAccessNode(
         target: inferKeys(node.target, lookupType: lookupType),

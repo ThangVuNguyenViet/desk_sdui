@@ -97,6 +97,11 @@ IrNode _foldChildren(IrNode node) {
         left: constFold(node.left),
         right: constFold(node.right),
       );
+    case GetterNode():
+      return GetterNode(
+        receiver: constFold(node.receiver),
+        name: node.name,
+      );
     case MemberAccessNode():
       return MemberAccessNode(
         target: constFold(node.target),
@@ -158,6 +163,7 @@ bool _isPureLiteral(IrNode node) {
     case LogicOpNode():
     case NotOpNode():
     case CoalesceOpNode():
+    case GetterNode():
     case MemberAccessNode():
     case IndexAccessNode():
     case LengthOfNode():

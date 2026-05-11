@@ -82,6 +82,8 @@ String _emitNode(IrNode node) {
       return 'NotOpNode(${_emitNode(node.operand)})';
     case CoalesceOpNode():
       return 'CoalesceOpNode(left: ${_emitNode(node.left)}, right: ${_emitNode(node.right)})';
+    case GetterNode():
+      return 'GetterNode(receiver: ${_emitNode(node.receiver)}, name: ${_dartString(node.name)})';
     case MemberAccessNode():
       return 'MemberAccessNode(target: ${_emitNode(node.target)}, name: ${_dartString(node.name)})';
     case IndexAccessNode():

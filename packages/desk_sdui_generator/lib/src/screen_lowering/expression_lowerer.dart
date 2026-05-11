@@ -1,4 +1,5 @@
 import 'package:analyzer/dart/ast/ast.dart';
+import 'package:analyzer/dart/element/type.dart';
 import 'package:desk_sdui_annotation/desk_sdui_annotation.dart';
 import '../diagnostics.dart';
 
@@ -30,8 +31,15 @@ IrNode lowerExpression(Expression expr) {
       return LengthOfNode(lowerExpression(expr.prefix));
     }
     final target = lowerExpression(expr.prefix);
-    if (target is RefNode) {
+    final bucket = _coreTypeBucket(expr.prefix.staticType);
+    if (target is RefNode && bucket == null) {
       return RefNode([...target.path, expr.identifier.name]);
+    }
+    if (bucket != null) {
+      return GetterNode(
+        receiver: target,
+        name: '$bucket.${expr.identifier.name}',
+      );
     }
     return MemberAccessNode(target: target, name: expr.identifier.name);
   }
@@ -41,8 +49,15 @@ IrNode lowerExpression(Expression expr) {
       return LengthOfNode(lowerExpression(expr.target!));
     }
     final target = lowerExpression(expr.target!);
-    if (target is RefNode) {
+    final bucket = _coreTypeBucket(expr.target!.staticType);
+    if (target is RefNode && bucket == null) {
       return RefNode([...target.path, expr.propertyName.name]);
+    }
+    if (bucket != null) {
+      return GetterNode(
+        receiver: target,
+        name: '$bucket.${expr.propertyName.name}',
+      );
     }
     return MemberAccessNode(target: target, name: expr.propertyName.name);
   }
@@ -123,4 +138,35 @@ IrNode lowerExpression(Expression expr) {
   }
 
   throw LoweringError('unsupported expression: ${expr.runtimeType}', expr);
+}
+
+/// Returns the core-type bucket name used as the GetterNode key prefix
+/// (e.g. 'String', 'Iterable', 'List', 'Map', 'num', 'int', 'double', 'bool',
+/// 'DateTime', 'Duration'). Returns null when the type is not a recognized
+/// core type (in that case the expression-lowerer should keep folding into
+/// RefNode or emit MemberAccessNode as before).
+String? _coreTypeBucket(DartType? type) {
+  if (type == null || type is DynamicType || type is InvalidType) return null;
+  final el = type.element;
+  if (el == null) return null;
+  final lib = el.library?.identifier ?? '';
+  if (!lib.startsWith('dart:core') && !lib.startsWith('dart:async')) return null;
+  final name = el.name;
+  if (name == null) return null;
+  // Direct buckets. `List`/`Set` route to themselves; subtypes resolve via
+  // the runtime `Iterable.*` registration at dispatch time (callers fall
+  // back through DartType.allSupertypes inspection — handled below).
+  const direct = {
+    'String', 'List', 'Set', 'Map', 'Iterable',
+    'num', 'int', 'double', 'bool', 'DateTime', 'Duration',
+  };
+  if (direct.contains(name)) return name;
+  // Fallback: walk supertypes for Iterable<T>, Map<K,V>, num.
+  if (type is InterfaceType) {
+    for (final sup in type.allSupertypes) {
+      final n = sup.element.name;
+      if (direct.contains(n)) return n;
+    }
+  }
+  return null;
 }

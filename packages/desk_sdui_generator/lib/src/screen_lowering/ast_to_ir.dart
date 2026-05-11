@@ -155,6 +155,8 @@ void _collectRefs(
     case CoalesceOpNode():
       _collectRefs(node.left, widgetRefs, methodRefs, fnRefs);
       _collectRefs(node.right, widgetRefs, methodRefs, fnRefs);
+    case GetterNode():
+      _collectRefs(node.receiver, widgetRefs, methodRefs, fnRefs);
     case MemberAccessNode():
       _collectRefs(node.target, widgetRefs, methodRefs, fnRefs);
     case IndexAccessNode():

@@ -91,6 +91,11 @@ IrNode _demoteAllConst(IrNode node) {
         left: _demoteAllConst(node.left),
         right: _demoteAllConst(node.right),
       );
+    case GetterNode():
+      return GetterNode(
+        receiver: _demoteAllConst(node.receiver),
+        name: node.name,
+      );
     case MemberAccessNode():
       return MemberAccessNode(
         target: _demoteAllConst(node.target),

@@ -1,9 +1,9 @@
-# desk_sdui — `compileToIr` package
+# desk_sdui — expose `compileToIr` from the generator package
 
-**Goal:** Ship a Dart package that exposes a single function: given a Dart `@Screen` source string (plus its data model class and a `@RegisterForSdui` declaration), return the resulting `.sdui.json` IR or a structured list of build errors.
+**Goal:** Add a top-level function to the existing `desk_sdui_generator` package that takes a Dart source string and returns the corresponding `.sdui.json` IR (or structured build errors). No new package. No CLI. No transport. The server just imports `desk_sdui_generator` and calls the function.
 
 ```dart
-import 'package:desk_sdui_build/desk_sdui_build.dart';
+import 'package:desk_sdui_generator/desk_sdui_generator.dart';
 
 final result = await compileToIr(
   screenSource: '@Screen("counter") Widget counter(D d) => Text("${d.value}");',
@@ -12,65 +12,90 @@ final result = await compileToIr(
 );
 
 switch (result) {
-  case CompileSuccess(:final ir):     // Map<String, Object?> = the IR JSON
+  case CompileSuccess(:final ir):     // Map<String, Object?>
   case CompileFailure(:final errors): // List<CompileError>
 }
 ```
 
-**Why:** `build_runner` needs the full Dart SDK and a project on disk — it can't run inside a Flutter web/mobile app. By shipping the compile as a plain Dart function, any Dart-capable host (server, CLI, CI script, Cloud Function, designer tool backend) can use desk_sdui's Dart→IR pipeline without inventing its own protocol.
+**Why:** The generator already implements Dart → IR via `source_gen`. The only reason `build_runner` is involved today is asset wiring. A server that already runs Dart can skip `build_runner` entirely and invoke the lowering pass directly. Shipping this as a function on the existing package is strictly less surface than a new package or CLI.
 
-**Out of our scope:** how the host invokes this function (HTTP handler / CLI binary / subprocess / FaaS handler), how the host sandboxes untrusted callers, how the host authenticates, how the host scales. Those are deploy-shape choices that vary per integration.
-
-**Prereq:** Bundles + diagnostic merged into main (at `f720e91`).
-
-**Repo:** new package `packages/desk_sdui_build/` inside `desk_sdui`.
+**Prereq:** Bundles + diagnostic merged into main. Generator analyzes clean, all tests pass.
 
 **Acceptance:**
 
 1. `compileToIr(screenSource: <valid>)` returns an IR byte-identical to what an in-tree `build_runner` invocation produces for the same source.
 2. `compileToIr(screenSource: <references unregistered widget>)` returns `CompileFailure` with structured errors naming the screen and the missing widget.
 3. `compileToIr(screenSource: <analyzer error>)` returns `CompileFailure` with structured analyzer diagnostics.
-4. The function is self-contained: no network, no env-var requirements, no caller-provided pubspec. The host imports the package and calls the function.
+4. Adds zero new dependencies to `desk_sdui_generator`.
 
 ---
 
-## Task 1 — Pick the implementation path
+## Task 1 — Extract the lowering pass from its `BuildStep` harness
 
-Two viable approaches; pick one based on a 30-minute spike.
+The existing `desk_sdui_generator` has a `Generator` subclass whose `generate(LibraryReader, BuildStep)` is the entry point invoked by `build_runner`. The `BuildStep` is used for asset I/O, neighbor reading, and progress logs.
 
-**Path A: subprocess `build_runner`.** Function writes the caller's sources into a temp directory containing a pre-baked template project (bundled as package assets), spawns `dart run build_runner build`, reads the IR from disk, returns. Pros: trivially correct — same pipeline as today. Cons: slow (~1-3s per call), requires a Dart SDK on PATH at runtime.
+**Step 1 — Audit the `BuildStep` usage** inside the lowering pass. Map each call site to:
+- **Asset I/O** (`buildStep.writeAsString`, `buildStep.readAsString`) — restructure so the lowering returns a value instead of writing.
+- **Resolution** (`buildStep.resolver.libraryFor`) — replace with a direct `AnalysisContext` lookup.
+- **Logging** — keep, route through a `Logger` field passed in.
 
-**Path B: direct lowering via `analyzer` + `source_gen`.** Function constructs an in-memory `AnalysisContext` over the caller's Dart source, hands the resolved library to the existing generator's `Generator` subclass, returns the produced IR. Pros: fast (~100ms), no subprocess, no SDK on PATH. Cons: requires extracting the generator's lowering pass from its `BuildStep` harness; analyzer needs a synthesized package_config + Flutter SDK pointer.
+**Step 2 — Refactor.** Extract the lowering into a pure function that takes a resolved `LibraryElement` and returns an `IrResult` value. The existing `Generator.generate` wrapper becomes a thin adapter that calls the pure function and writes the result via `BuildStep`. The `build_runner` path is unchanged; the new pure function becomes the substrate for `compileToIr`.
 
-**Spike step:** in the existing generator, find where `Generator.generate(LibraryReader, BuildStep)` is called. Confirm whether the `BuildStep` is used for anything beyond resolving the library (writing outputs, reading neighbors, etc.). If it's just library resolution + emit, Path B is feasible. Otherwise default to Path A.
+**Step 3 — Verify** existing tests still pass and the demo regen byte-identical:
 
-Commit the spike finding as a one-paragraph addendum to this plan, then proceed.
+```
+cd packages/desk_sdui_generator && dart analyze && dart test
+cd ../desk_sdui_demo && dart run build_runner build --delete-conflicting-outputs
+git diff --stat -- 'packages/desk_sdui_demo/lib/screens/*.sdui.g.dart'
+```
+
+Expected: zero diff.
 
 ---
 
-## Task 2 — Implement
+## Task 2 — Implement `compileToIr`
 
-`packages/desk_sdui_build/lib/desk_sdui_build.dart` exposes `compileToIr` and the `CompileResult` / `CompileSuccess` / `CompileFailure` / `CompileError` types. Internals follow whichever path Task 1 selected.
+Public entry point in `packages/desk_sdui_generator/lib/desk_sdui_generator.dart`:
 
-**Tests:**
-- A known-good source → asserts the returned IR matches a golden produced by the in-tree `build_runner` pipeline on the same input.
-- Unregistered-widget source → asserts the structured diagnostic.
-- Analyzer-error source → asserts structured analyzer diagnostics.
+```dart
+Future<CompileResult> compileToIr({
+  required String screenSource,
+  String? dataModelSource,
+  String? coverageSource,
+});
+```
 
-**Verify:** `cd packages/desk_sdui_build && dart analyze && dart test` clean.
+Internals:
+
+1. Write the source strings into an in-memory `OverlayResourceProvider` rooted at a synthetic path.
+2. Construct an `AnalysisContext` over that overlay (re-using the host's `package_config.json` — analyzer auto-discovers it).
+3. Resolve the synthetic library.
+4. Invoke the pure lowering function from Task 1.
+5. Return `CompileSuccess(ir: ...)` or `CompileFailure(errors: ...)`.
+
+**Verify:**
+- Known-good source → IR matches a golden produced by `build_runner` on the same input.
+- Unregistered widget → structured `CompileFailure` with expected message.
+- Syntax error → structured analyzer diagnostics.
+
+---
+
+## Task 3 — Document the host pattern
+
+Add a `## Server-side compilation` section to `packages/desk_sdui_generator/README.md` showing the `compileToIr` call. ~30 lines. No CLI, no scaffolded "starter" server.
 
 ---
 
 ## Out of scope
 
-- Any transport (HTTP, gRPC, CLI). The host decides.
-- Any sandboxing. The host decides.
-- Per-call dependency overrides. v0 bundles a fixed dependency set (desk_sdui + flutter + the common widget libs). Callers needing more reach modify the package's bundled template (Path A) or extend the synthesized package_config (Path B), then re-publish.
-- Multi-screen / multi-file requests. One `@Screen` per call.
-- Streaming or partial results. The IR is whole-document.
+- A new package. The function lives in `desk_sdui_generator` because that's where the lowering already is.
+- A CLI. Anyone wanting one writes ~30 lines against the function.
+- Sandboxing. Host concern.
+- Per-call dependency overrides. The host's pubspec is the dependency surface.
+- Multi-screen / multi-file requests.
 
 ## Open questions
 
-1. **Flutter SDK requirement.** Both paths likely need Flutter on the host (analyzer must resolve `package:flutter/widgets.dart`). If Path B turns out to need an env-var or a hardcoded path, document the requirement.
-2. **Generator's hardcoded `cue` import** (band-aid from the counter-demo plan). The package inherits it. Cleanup is queued separately.
-3. **Memory pressure.** Each `compileToIr` call on Path B holds an `AnalysisContext` in memory. If the host is a long-running server, contexts should be pooled or recycled. v0 leaves it to the host.
+1. **Does the existing `BuildStep`-coupled generator depend on `build_runner`'s caching, or is it purely transient state?** If transient, Task 1 is mechanical. If there's caching coupling, surface it during the audit.
+2. **`AnalysisContextCollection` with an overlay** — has to find the host's `package_config.json` to resolve `package:desk_sdui_annotation/...`. Confirm this works when called from a host that declares `desk_sdui_generator` as a dependency.
+3. **Generator's hardcoded `cue` import band-aid** still rides on this. Cleanup queued separately.

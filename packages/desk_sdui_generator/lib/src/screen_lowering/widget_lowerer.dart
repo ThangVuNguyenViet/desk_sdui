@@ -267,7 +267,7 @@ IrNode _lowerArg(Expression a, {Object? Function(InstanceCreationExpression)? co
     return lowerExpression(a);
   }
   if (a is SimpleIdentifier) {
-    return RefNode([a.name]);
+    return lowerExpression(a);
   }
   // Dot-shorthand constructor invocation: `.all(8)`, `.only(top: 16)`
   // The analyzer resolves these to the declaring class's constructor.

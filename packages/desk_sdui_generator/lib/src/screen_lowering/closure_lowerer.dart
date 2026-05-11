@@ -80,10 +80,10 @@ IrNode _lowerCallArg(
 ) {
   if (arg is SimpleIdentifier) {
     final paramIndex = params.indexWhere((p) => p.name?.lexeme == arg.name);
-    if (paramIndex >= 0) {
+    if (paramIndex >= 0 && arg.name != '_') {
       return RefNode(['_callback_arg_$paramIndex']);
     }
-    return RefNode([arg.name]);
+    return lowerExpression(arg);
   }
   if (arg is IntegerLiteral || arg is StringLiteral || arg is BooleanLiteral) {
     return lowerExpression(arg);

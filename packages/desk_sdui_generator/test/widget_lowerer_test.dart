@@ -82,6 +82,20 @@ void main() {
     expect(ir.body, isA<WidgetNode>());
   });
 
+  test('for-element with wildcard loop var → ForNode', () {
+    final ir = lowerInList('for (final _ in items) Text("x")') as ForNode;
+    expect(ir.variable, '_');
+    expect((ir.source as RefNode).path, ['items']);
+    expect(ir.body, isA<WidgetNode>());
+  });
+
+  test('for-element wildcard body ref → LiteralNode(null)', () {
+    final ir = lowerInList('for (final _ in items) Text(_)') as ForNode;
+    expect(ir.variable, '_');
+    final body = ir.body as WidgetNode;
+    expect((body.args['data']! as LiteralNode).value, isNull);
+  });
+
   test('nested widget in args', () {
     final ir = lowerWidget("Column(children: [Text('hi')])") as WidgetNode;
     expect(ir.name, 'Column');

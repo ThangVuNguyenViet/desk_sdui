@@ -53,4 +53,22 @@ void main() {
       throwsA(isA<LoweringError>()),
     );
   });
+
+  test('(_) => controller.foo() → EventNode, wildcard ignored', () {
+    final ir = lower('(_) => controller.foo()') as EventNode;
+    expect(ir.target, ['controller', 'foo']);
+    expect(ir.args, isEmpty);
+  });
+
+  test('(_, value) => controller.foo(value) → EventNode, wildcard skipped', () {
+    final ir = lower('(_, value) => controller.foo(value)') as EventNode;
+    expect(ir.target, ['controller', 'foo']);
+    expect((ir.args['arg0']! as RefNode).path, ['_callback_arg_1']);
+  });
+
+  test('(value, _) => controller.foo(value) → EventNode, trailing wildcard', () {
+    final ir = lower('(value, _) => controller.foo(value)') as EventNode;
+    expect(ir.target, ['controller', 'foo']);
+    expect((ir.args['arg0']! as RefNode).path, ['_callback_arg_0']);
+  });
 }

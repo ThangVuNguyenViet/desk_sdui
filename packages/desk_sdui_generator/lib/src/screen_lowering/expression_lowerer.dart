@@ -26,6 +26,10 @@ IrNode lowerExpression(Expression expr) {
     return StringInterpNode(parts);
   }
 
+  if (expr is SimpleIdentifier && expr.name == '_') {
+    return const LiteralNode(null);
+  }
+
   if (expr is SimpleIdentifier) {
     return RefNode([expr.name]);
   }

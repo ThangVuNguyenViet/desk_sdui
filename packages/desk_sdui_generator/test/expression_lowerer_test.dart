@@ -122,4 +122,10 @@ void main() {
     expect((left.right as RefNode).path, ['b']);
     expect((ir.right as RefNode).path, ['c']);
   });
+
+  test('wildcard identifier → LiteralNode(null)', () {
+    final ir = lower('_');
+    expect(ir, isA<LiteralNode>());
+    expect((ir as LiteralNode).value, isNull);
+  });
 }

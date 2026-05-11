@@ -14,13 +14,13 @@
 'CounterController.increment' : (args) => (args[r'$this'] as CounterController).increment(),
 ```
 
-One annotation (`@RegisterForSdui`). One registry (`Map<String, Function>`). The IR node kind dictates what the runtime puts in `args` (including `$this` for methods).
+One annotation (`@Register`). One registry (`Map<String, Function>`). The IR node kind dictates what the runtime puts in `args` (including `$this` for methods).
 
 **Prereq:** `catalog-rename` merged.
 
 **Acceptance:**
 
-1. `@RegisterForSdui([CounterController, ...])` causes the generator to emit `"CounterController.increment"` and `"CounterController.decrement"` entries in the unified registry.
+1. `@Register([CounterController, ...])` causes the generator to emit `"CounterController.increment"` and `"CounterController.decrement"` entries in the unified registry.
 2. A new `counter_actions` demo screen with working +/- buttons proves the path end-to-end.
 3. The `MethodBinding(invoke: () {})` stub is removed from `_buildMethods` in `ir_emitter_dart.dart`; the generated binding no longer carries `MethodBinding` entries for VM methods.
 4. `_composeInput` in `sdui_screen.dart` composes `__methods__` at materialization time by walking `inputs.entries` and looking up `"${input.runtimeType}.${methodName}"` for each method the screen references.
@@ -35,7 +35,7 @@ One annotation (`@RegisterForSdui`). One registry (`Map<String, Function>`). The
 
 Today's emitter already produces per-method entries for value types whose methods are reached by screen-body walks (the existing `collected.methods` loop emits `emitMethod(method, receiverType: ...)`). Extend the *source* of methods to include:
 
-- **All public instance methods of classes registered in `@RegisterForSdui([...])`** — regardless of whether any current screen body references them. This is the new behavior: an explicit "I registered T" entry expands to all of T's methods, ready for IR-driven dispatch.
+- **All public instance methods of classes registered in `@Register([...])`** — regardless of whether any current screen body references them. This is the new behavior: an explicit "I registered T" entry expands to all of T's methods, ready for IR-driven dispatch.
 
 Discovery rules:
 - Walk `class.methods` (analyzer 13 element API).
@@ -149,11 +149,11 @@ Add a diagnostic parallel to today's widget diagnostic:
 
 For each `@Screen` function:
 - For each input parameter `(name, Type)`, collect the method names referenced via `EventNode([name, methodName])`.
-- Check the registered set: is `Type` in any `@RegisterForSdui([...])`? If not, fail:
+- Check the registered set: is `Type` in any `@Register([...])`? If not, fail:
 
 ```
 Screen "counter_actions" uses input "vm" of type CounterController but CounterController is not registered.
-Add CounterController to a @RegisterForSdui list.
+Add CounterController to a @Register list.
 ```
 
 - For each referenced method, check if `"Type.methodName"` will be emitted (i.e. the discovery pass in Task 1 includes it). If not:
@@ -215,7 +215,7 @@ Widget counterActions(CounterController vm) => Center(
 Register `CounterController` in `sdui_catalog.dart`:
 
 ```dart
-@RegisterForSdui([
+@Register([
   ...kCommonWidgets,
   ...kCommonMaterialWidgets,
   Cue, Act, CueMotion, PageView,

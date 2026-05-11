@@ -1,16 +1,16 @@
-# desk_sdui — library-level `@RegisterForSdui`
+# desk_sdui — library-level `@Register`
 
-**Goal:** Allow `@RegisterForSdui([...])` to be placed as a *library-level* annotation, eliminating the carrier-class boilerplate.
+**Goal:** Allow `@Register([...])` to be placed as a *library-level* annotation, eliminating the carrier-class boilerplate.
 
 Before:
 ```dart
-@RegisterForSdui([Text, Column, ElevatedButton])
+@Register([Text, Column, ElevatedButton])
 class _SduiCatalog {}
 ```
 
 After (preferred):
 ```dart
-@RegisterForSdui([Text, Column, ElevatedButton])
+@Register([Text, Column, ElevatedButton])
 library;
 ```
 
@@ -22,7 +22,7 @@ The carrier-class form continues to work — this is purely additive.
 
 **Acceptance:**
 
-1. A library declared with `@RegisterForSdui([...]) library;` is detected by the generator and contributes types identically to the class form.
+1. A library declared with `@Register([...]) library;` is detected by the generator and contributes types identically to the class form.
 2. Both library-level and class-level forms can coexist in the same package; the union of their types is registered.
 3. The diagnostic ("widget X is referenced but not registered") works against the combined set.
 4. Existing carrier-class catalogs continue to work unchanged.
@@ -46,7 +46,7 @@ for (final annotated in libReader.annotatedWith(_catalogChecker)) {
 `LibraryReader.annotatedWith` from `source_gen` only walks top-level *declarations*, not the library directive itself. Add a parallel scan for library-level annotations — alongside the class-level loop:
 
 ```dart
-// Library-level @RegisterForSdui (Dart 3.0+).
+// Library-level @Register (Dart 3.0+).
 for (final meta in lib.metadata.annotations) {
   final obj = meta.computeConstantValue();
   if (obj == null) continue;
@@ -66,7 +66,7 @@ Notes:
 
 **File:** `packages/desk_sdui_generator/test/register_for_sdui_test.dart`
 
-Add a new test group `library-level @RegisterForSdui`:
+Add a new test group `library-level @Register`:
 
 1. **Test:** library-level annotation only — types are picked up.
 2. **Test:** library-level + class-level coexist — union is registered.
@@ -80,7 +80,7 @@ Reuse the test harness already in this file (`_resolveSource`, `collectTypesFrom
 
 **File:** `packages/desk_sdui_annotation/lib/src/annotations.dart`
 
-Update the dartdoc on `RegisterForSdui` to show both forms. The preferred form is library-level; the class form is documented as the alternative pattern:
+Update the dartdoc on `Register` to show both forms. The preferred form is library-level; the class form is documented as the alternative pattern:
 
 ```dart
 /// ## Usage
@@ -88,14 +88,14 @@ Update the dartdoc on `RegisterForSdui` to show both forms. The preferred form i
 /// Preferred (library-level, Dart 3.0+):
 ///
 /// ```dart
-/// @RegisterForSdui([Text, Column, ElevatedButton])
+/// @Register([Text, Column, ElevatedButton])
 /// library;
 /// ```
 ///
 /// Alternative (carrier class — for files that don't own the library directive):
 ///
 /// ```dart
-/// @RegisterForSdui([Text, Column, ElevatedButton])
+/// @Register([Text, Column, ElevatedButton])
 /// class _SduiCatalog {}
 /// ```
 ///
@@ -112,7 +112,7 @@ Update the dartdoc on `RegisterForSdui` to show both forms. The preferred form i
 Convert from class form to library form. Note: `library;` directive must precede imports.
 
 ```dart
-@RegisterForSdui([
+@Register([
   ...kCommonWidgets,
   ...kCommonMaterialWidgets,
   PageView,
@@ -158,5 +158,5 @@ Clean.
 ## Out of scope
 
 - Removing the class-form support. Both forms coexist permanently.
-- Renaming `@RegisterForSdui`.
+- Renaming `@Register`.
 - Multi-file aggregation rules beyond simple union.

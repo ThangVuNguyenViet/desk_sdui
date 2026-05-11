@@ -1,0 +1,1 @@
+{"name":"counter_record","version":1,"root":{"$type":"widget","name":"Center","args":{"child":{"$type":"widget","name":"Text","args":{"data":{"$type":"interp","parts":[{"$type":"ref","path":["data","value"]}]},"style":{"$type":"widget","name":"TextStyle","args":{"fontSize":{"$type":"literal","value":96},"fontWeight":{"$type":"ref","path":["FontWeight","w800"]}}}}}}}}

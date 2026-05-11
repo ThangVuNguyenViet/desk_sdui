@@ -345,6 +345,13 @@ class _TypeVisitor extends RecursiveAstVisitor<void> {
 
   /// Recursively records library URIs for [type] and its type arguments.
   void _recordDartTypeLibraries(DartType type) {
+    // Unwrap extension types to their representation type so the backing
+    // type's library is recorded (e.g. ChefView → Map<String, Object?>).
+    final unwrapped = _unwrapExtensionType(type);
+    if (unwrapped != type) {
+      _recordDartTypeLibraries(unwrapped);
+      return;
+    }
     final element = type.element;
     if (element != null) {
       _recordElementLibrary(element);
@@ -354,5 +361,24 @@ class _TypeVisitor extends RecursiveAstVisitor<void> {
         _recordDartTypeLibraries(arg);
       }
     }
+    // Record library URIs for record field types.
+    if (type is RecordType) {
+      for (final field in type.positionalFields) {
+        _recordDartTypeLibraries(field.type);
+      }
+      for (final field in type.namedFields) {
+        _recordDartTypeLibraries(field.type);
+      }
+    }
+  }
+
+  /// If [t] is an extension type, returns its representation type; otherwise
+  /// returns [t] unchanged. This makes extension-type-backed parameters
+  /// transparent to the rest of the type collector.
+  DartType _unwrapExtensionType(DartType t) {
+    if (t is InterfaceType && t.element is ExtensionTypeElement) {
+      return (t.element as ExtensionTypeElement).representation.type;
+    }
+    return t;
   }
 }

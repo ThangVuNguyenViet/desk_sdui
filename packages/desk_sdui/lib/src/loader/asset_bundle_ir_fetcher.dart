@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/services.dart';
 import 'ir_fetcher.dart';
 
@@ -7,7 +9,7 @@ class AssetBundleIrFetcher implements IrFetcher {
   final String prefix;
 
   @override
-  Future<List<int>> fetch(String name) async {
+  Future<Uint8List> fetch(String name) async {
     final key = '$prefix/$name.sdui.json';
     final data = await bundle.load(key);
     return data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);

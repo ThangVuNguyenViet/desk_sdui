@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:crypto/crypto.dart';
 import 'package:desk_sdui_annotation/desk_sdui_annotation.dart';
 import 'package:flutter/foundation.dart';
@@ -78,7 +80,7 @@ typedef SduiValueBuilder = Object? Function(Map<String, Object?> args);
 typedef SduiFunctionHandler = Object? Function(Map<String, Object?> args);
 
 abstract class IrFetcher {
-  Future<List<int>> fetch(String name);
+  Future<Uint8List> fetch(String name);
 }
 
 class Runtime {
@@ -202,7 +204,7 @@ class Runtime {
     throw StateError('No source produced IR for "$name"');
   }
 
-  IrTree _decodeAndCache(String name, List<int> bytes) {
+  IrTree _decodeAndCache(String name, Uint8List bytes) {
     final hash = sha1.convert(bytes).toString();
     final key = '$name:$hash';
     final hit = _cache[key];

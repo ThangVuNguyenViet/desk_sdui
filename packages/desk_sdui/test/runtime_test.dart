@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -108,11 +109,11 @@ void main() {
 
 class _FakeFetcher implements IrFetcher {
   _FakeFetcher(this._data, {this.onFetch});
-  final Map<String, List<int>> _data;
+  final Map<String, Uint8List> _data;
   final void Function(String)? onFetch;
 
   @override
-  Future<List<int>> fetch(String name) async {
+  Future<Uint8List> fetch(String name) async {
     onFetch?.call(name);
     final bytes = _data[name];
     if (bytes == null) throw StateError('not found: $name');

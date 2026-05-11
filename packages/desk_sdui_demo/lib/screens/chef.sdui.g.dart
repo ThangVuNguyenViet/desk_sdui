@@ -13,7 +13,7 @@ ScreenBinding get chefBinding => ScreenBinding(
             name: 'SingleChildScrollView',
             args: {
               'padding': WidgetNode(
-                name: 'only',
+                name: 'EdgeInsets.only',
                 args: {'top': ConstNode(102), 'bottom': ConstNode(130)},
               ),
               'child': WidgetNode(
@@ -28,7 +28,7 @@ ScreenBinding get chefBinding => ScreenBinding(
                       name: 'Padding',
                       args: {
                         'padding': WidgetNode(
-                          name: 'fromLTRB',
+                          name: 'EdgeInsets.fromLTRB',
                           args: {
                             'arg0': ConstNode(24),
                             'arg1': ConstNode(10),
@@ -100,7 +100,7 @@ ScreenBinding get chefBinding => ScreenBinding(
                       name: 'Container',
                       args: {
                         'margin': WidgetNode(
-                          name: 'fromLTRB',
+                          name: 'EdgeInsets.fromLTRB',
                           args: {
                             'arg0': ConstNode(20),
                             'arg1': ConstNode(0),
@@ -116,7 +116,7 @@ ScreenBinding get chefBinding => ScreenBinding(
                           name: 'Padding',
                           args: {
                             'padding': WidgetNode(
-                              name: 'fromLTRB',
+                              name: 'EdgeInsets.fromLTRB',
                               args: {
                                 'arg0': ConstNode(24),
                                 'arg1': ConstNode(28),
@@ -187,9 +187,9 @@ ScreenBinding get chefBinding => ScreenBinding(
                                         WidgetNode(
                                           name: 'ClipRRect',
                                           args: {
-                                            'borderRadius': EventNode(
-                                              ['BorderRadius', 'circular'],
-                                              args: {'arg0': LiteralNode(26)},
+                                            'borderRadius': WidgetNode(
+                                              name: 'BorderRadius.circular',
+                                              args: {'arg0': ConstNode(26)},
                                             ),
                                             'child': WidgetNode(
                                               name: 'SizedBox',
@@ -354,7 +354,7 @@ ScreenBinding get chefBinding => ScreenBinding(
                         name: 'Padding',
                         args: {
                           'padding': WidgetNode(
-                            name: 'fromLTRB',
+                            name: 'EdgeInsets.fromLTRB',
                             args: {
                               'arg0': ConstNode(24),
                               'arg1': ConstNode(0),
@@ -394,7 +394,7 @@ ScreenBinding get chefBinding => ScreenBinding(
                                             name: 'Container',
                                             args: {
                                               'padding': WidgetNode(
-                                                name: 'symmetric',
+                                                name: 'EdgeInsets.symmetric',
                                                 args: {
                                                   'horizontal': ConstNode(8),
                                                   'vertical': ConstNode(3),
@@ -411,13 +411,11 @@ ScreenBinding get chefBinding => ScreenBinding(
                                                       ),
                                                     },
                                                   ),
-                                                  'borderRadius': EventNode(
-                                                    [
-                                                      'BorderRadius',
-                                                      'circular',
-                                                    ],
+                                                  'borderRadius': WidgetNode(
+                                                    name:
+                                                        'BorderRadius.circular',
                                                     args: {
-                                                      'arg0': LiteralNode(999),
+                                                      'arg0': ConstNode(999),
                                                     },
                                                   ),
                                                 },
@@ -463,7 +461,7 @@ ScreenBinding get chefBinding => ScreenBinding(
                                       name: 'Padding',
                                       args: {
                                         'padding': WidgetNode(
-                                          name: 'only',
+                                          name: 'EdgeInsets.only',
                                           args: {'top': ConstNode(4)},
                                         ),
                                         'child': WidgetNode(
@@ -621,7 +619,8 @@ ScreenBinding get chefBinding => ScreenBinding(
                                                       name: 'Container',
                                                       args: {
                                                         'padding': WidgetNode(
-                                                          name: 'symmetric',
+                                                          name:
+                                                              'EdgeInsets.symmetric',
                                                           args: {
                                                             'horizontal':
                                                                 ConstNode(14),
@@ -641,18 +640,17 @@ ScreenBinding get chefBinding => ScreenBinding(
                                                                     ),
                                                               },
                                                             ),
-                                                            'borderRadius': EventNode(
-                                                              [
-                                                                'BorderRadius',
-                                                                'circular',
-                                                              ],
-                                                              args: {
-                                                                'arg0':
-                                                                    LiteralNode(
-                                                                      999,
-                                                                    ),
-                                                              },
-                                                            ),
+                                                            'borderRadius':
+                                                                WidgetNode(
+                                                                  name:
+                                                                      'BorderRadius.circular',
+                                                                  args: {
+                                                                    'arg0':
+                                                                        ConstNode(
+                                                                          999,
+                                                                        ),
+                                                                  },
+                                                                ),
                                                           },
                                                         ),
                                                         'child': WidgetNode(
@@ -734,7 +732,7 @@ ScreenBinding get chefBinding => ScreenBinding(
                       name: 'Padding',
                       args: {
                         'padding': WidgetNode(
-                          name: 'fromLTRB',
+                          name: 'EdgeInsets.fromLTRB',
                           args: {
                             'arg0': ConstNode(24),
                             'arg1': ConstNode(34),
@@ -781,7 +779,7 @@ ScreenBinding get chefBinding => ScreenBinding(
                 name: 'Container',
                 args: {
                   'padding': WidgetNode(
-                    name: 'fromLTRB',
+                    name: 'EdgeInsets.fromLTRB',
                     args: {
                       'arg0': ConstNode(20),
                       'arg1': ConstNode(56),
@@ -859,10 +857,6 @@ ScreenBinding get chefBinding => ScreenBinding(
     InputBinding(name: 'data', read: (v) => v as dynamic),
     InputBinding(name: 'controller', read: (v) => v as dynamic),
   ],
-  methods: [
-    MethodBinding(name: 'BorderRadius.circular', invoke: () {}),
-    MethodBinding(name: 'BorderRadius.circular', invoke: () {}),
-    MethodBinding(name: 'BorderRadius.circular', invoke: () {}),
-  ],
+  methods: const [],
   reactives: const [],
 );

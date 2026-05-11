@@ -117,6 +117,7 @@ class ScreenGenerator extends GeneratorForAnnotation<Screen> {
     // `Colors`. Hide it to avoid the ambiguity while still getting `Matrix4`.
     const importBlock = '''
 import 'dart:ui';
+import 'package:cue/cue.dart';
 import 'package:desk_sdui/desk_sdui.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -131,7 +132,8 @@ import 'package:vector_math/vector_math_64.dart' hide Colors;''';
         'unnecessary_const, '
         'unused_import, '
         'directives_ordering, '
-        'always_use_package_imports';
+        'always_use_package_imports, '
+        'instantiate_abstract_class';
 
     final registrationFile = '''
 // GENERATED CODE — DO NOT MODIFY BY HAND

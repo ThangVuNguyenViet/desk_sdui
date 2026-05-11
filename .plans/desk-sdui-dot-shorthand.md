@@ -118,6 +118,59 @@ git add -A && git commit -m "feat(generator): lower dot-shorthand expressions"
 - Lowering dot-shorthand in *non*-ValueCtor positions (e.g. `.foo` resolved to a getter on the context type). If the analyzer reports such cases, add an additional `if (expr is DotShorthandPropertyAccess && expr.element is GetterElement)` branch — but flag as a deviation per the SDD process.
 - Dot-shorthand in patterns. Patterns are not in any current @Screen body.
 
+---
+
+## CRITICAL: end-to-end runtime check (after a prior dispatch found a gap)
+
+A previous opencode dispatch resolved the owner name via `element.enclosingElement.name` (the **declaring class**). For `.all(8)` in an `EdgeInsetsGeometry` slot, the analyzer's element resolves to `EdgeInsetsGeometry.all` — but the registry only generates a builder for `EdgeInsets.all` (the concrete constructor), so the IR fails to materialize at runtime.
+
+**The lowered IR name MUST match the qualified form's name.** `.all(8)` in an `EdgeInsetsGeometry` parameter slot must lower to `EdgeInsets.all` (the concrete static type at the call site), NOT `EdgeInsetsGeometry.all` (the declaring class). The qualified form `EdgeInsets.all(8)` lowers to `'EdgeInsets.all'`; the shorthand `.all(8)` must lower to the same string.
+
+**Use `expr.staticType` from the dot-shorthand AST node** (the context-resolved type at the call site), via the `_dotShorthandOwnerName` helper shown in Task 1. Do NOT use `element.enclosingElement.name`. If `staticType` is null or unresolvable, throw `LoweringError` rather than falling back.
+
+### Task 4 — End-to-end demo screen (REQUIRED)
+
+The previous attempt passed unit tests but the runtime path was never exercised. Add a real demo screen that uses dot-shorthand in a typed context, and verify the generated `.sdui_reg.g.dart` contains a builder matching the IR's name.
+
+**File (new):** `packages/desk_sdui_demo/lib/screens/counter_shorthand.dart`
+
+```dart
+import 'package:desk_sdui/desk_sdui.dart';
+import 'package:desk_sdui_demo/screens/counter_minimal.dart' show CounterData;
+import 'package:flutter/material.dart';
+
+part 'counter_shorthand.sdui.g.dart';
+
+@Screen('counter_shorthand')
+Widget counterShorthand(CounterData data) => Padding(
+      padding: .all(16),
+      child: Center(
+        child: Text(
+          '${data.value}',
+          style: const TextStyle(fontSize: 96, fontWeight: FontWeight.w800),
+        ),
+      ),
+    );
+```
+
+After `dart run build_runner build --delete-conflicting-outputs`:
+
+1. Inspect `lib/screens/counter_shorthand.sdui.json` — the `padding` field must be `{"$type":"widget","name":"EdgeInsets.all","args":{"arg0":{"$type":"literal","value":16}}}`. The name must be `EdgeInsets.all`, NOT `EdgeInsetsGeometry.all`.
+2. Inspect `lib/screens/counter_shorthand.sdui_reg.g.dart` — must contain `rt.registerValueBuilder('EdgeInsets.all', ...)`. If it doesn't, the registry's reachability walker isn't picking up the type — fix the walker.
+3. Demo app, when run, must render the screen with no `value builder not registered` runtime errors.
+
+### Task 5 — Smoke verify
+
+```
+cd packages/desk_sdui_demo
+dart run build_runner build --delete-conflicting-outputs
+grep 'EdgeInsets.all' lib/screens/counter_shorthand.sdui.json           # must hit
+grep 'EdgeInsetsGeometry.all' lib/screens/counter_shorthand.sdui.json   # must miss
+grep "registerValueBuilder('EdgeInsets.all'" lib/screens/counter_shorthand.sdui_reg.g.dart   # must hit
+```
+
+If any of these fail, the lowering is still wrong. Do NOT commit.
+
 ## Verify commands (full suite)
 
 ```

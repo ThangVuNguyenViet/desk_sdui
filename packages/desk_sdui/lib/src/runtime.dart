@@ -64,6 +64,10 @@ typedef SduiWidgetBuilder = Widget Function(Map<String, Object?> args);
 typedef SduiMethodHandler = Object? Function(
     Object? receiver, Map<String, Object?> args);
 
+/// Resolves a getter call `receiver.name` to a value. Registered against the
+/// qualified handler name, e.g. `'String.isNotEmpty'`.
+typedef SduiGetterHandler = Object? Function(Object? receiver);
+
 /// Handles a subscript access: `receiver[key]`.
 typedef SduiSubscriptHandler = Object? Function(Object? receiver, Object? key);
 
@@ -109,6 +113,7 @@ class Runtime {
   final Map<String, SduiWidgetBuilder> _sduiWidgets = {};
   final Map<String, Object?> _constants = {};
   final Map<String, SduiMethodHandler> _methods = {};
+  final Map<String, SduiGetterHandler> _getters = {};
   final Map<String, SduiSubscriptHandler> _subscripts = {};
   final Map<String, SduiValueBuilder> _valueBuilders = {};
   final Map<String, SduiFunctionHandler> _functions = {};
@@ -139,6 +144,9 @@ class Runtime {
   void registerMethod(String name, SduiMethodHandler handler) =>
       _methods[name] = handler;
 
+  void registerGetter(String name, SduiGetterHandler handler) =>
+      _getters[name] = handler;
+
   void registerSubscript(String name, SduiSubscriptHandler handler) =>
       _subscripts[name] = handler;
 
@@ -167,6 +175,10 @@ class Runtime {
   /// registered. Used by resolve.dart to dispatch [MethodCallNode].
   SduiMethodHandler? resolveMethodHandler(String name) => _methods[name];
 
+  /// Returns the registered [SduiGetterHandler] for [name], or null if not
+  /// registered. Used by resolve.dart to dispatch [GetterNode].
+  SduiGetterHandler? resolveGetter(String name) => _getters[name];
+
   /// Returns the registered [SduiValueBuilder] for [name], or null if not
   /// registered. Used by resolve.dart to dispatch [ValueCtorNode].
   SduiValueBuilder? resolveValueBuilder(String name) => _valueBuilders[name];
@@ -174,6 +186,10 @@ class Runtime {
   Object? invokeMethod(
           String name, Object? receiver, Map<String, Object?> args) =>
       _methods[name]?.call(receiver, args);
+
+  Object? invokeGetter(String name, Object? receiver) =>
+      _getters[name]?.call(receiver);
+
   Object? invokeSubscript(String name, Object? receiver, Object? key) =>
       _subscripts[name]?.call(receiver, key);
   Object? invokeValueBuilder(String name, Map<String, Object?> args) =>

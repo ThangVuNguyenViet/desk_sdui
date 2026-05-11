@@ -127,6 +127,15 @@ class RegistryBuilder implements Builder {
         final partial = collectTypesFromAnnotation(el, annotation);
         catalogTypes.unionWith(partial);
       }
+
+      // Collect library-level @Register (Dart 3.0+).
+      for (final meta in lib.metadata.annotations) {
+        final obj = meta.computeConstantValue();
+        if (obj == null) continue;
+        if (!_catalogChecker.isExactlyType(obj.type!)) continue;
+        final partial = collectTypesFromAnnotation(lib, obj);
+        catalogTypes.unionWith(partial);
+      }
     }
 
     // Diagnostic: for each screen, fail the build if any widget type referenced

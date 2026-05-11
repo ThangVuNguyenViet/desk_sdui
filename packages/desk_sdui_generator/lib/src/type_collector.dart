@@ -95,7 +95,7 @@ CollectedTypes collectTypes(FunctionDeclaration screen) {
 /// Returns an empty [CollectedTypes] when the annotation has no elements or
 /// any element cannot be resolved to a [ClassElement].
 CollectedTypes collectTypesFromAnnotation(
-  ClassElement annotated,
+  Element annotated,
   DartObject annotation,
 ) {
   final collected = CollectedTypes();

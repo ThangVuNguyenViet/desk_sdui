@@ -27,17 +27,30 @@ class Screen {
 ///
 /// This is needed for **network-only screens** — screens whose IR is fetched
 /// at runtime and therefore never appear in static `@Screen` function bodies.
-/// Place this annotation on any private sentinel class (e.g. `_SduiCatalog`)
-/// in a file that is part of your app's build:
+///
+/// ## Usage
+///
+/// Preferred (library-level, Dart 3.0+):
 ///
 /// ```dart
-/// @Register([PageView, SliverList, CupertinoButton])
-/// class _SduiCatalog {}
+/// @Register([Text, Column, ElevatedButton])
+/// library;
+/// ```
 ///
-/// `desk_sdui_generator` discovers all classes annotated with
-/// `@Register` and emits a `registerSduiCatalog(rt)` call (invoked
-/// automatically from `registerAllScreens`) that registers each listed type
-/// exactly as if it had been found in a `@Screen` body.
+/// Alternative (carrier class — for files that don't own the library directive):
+///
+/// ```dart
+/// @Register([Text, Column, ElevatedButton])
+/// class _SduiCatalog {}
+/// ```
+///
+/// Both forms produce the same registry contribution. Multiple catalogs in
+/// the same package are unioned.
+///
+/// `desk_sdui_generator` discovers all `@Register` annotations and emits a
+/// `registerSduiCatalog(rt)` call (invoked automatically from
+/// `registerAllScreens`) that registers each listed type exactly as if it
+/// had been found in a `@Screen` body.
 @immutable
 class Register {
   const Register(this.types);

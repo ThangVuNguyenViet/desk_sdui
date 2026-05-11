@@ -26,7 +26,7 @@ import 'package:desk_sdui_annotation/desk_sdui_annotation.dart';
 
 const _demoPackageRoot =
     // ignore: lines_longer_than_80_chars
-    '/Users/vietthangvunguyen/Workspace/dart_desk_workspace/desk_sdui-wt-register/packages/desk_sdui_demo';
+    '/Users/vietthangvunguyen/Workspace/dart_desk_workspace/desk_sdui-wt-liblevel/packages/desk_sdui_demo';
 
 /// Resolve a Dart source string in the desk_sdui_demo context and return the
 /// [ResolvedUnitResult].
@@ -268,6 +268,122 @@ class _Cov {}
         expect(output, contains('registerChefDependencies(rt)'));
         expect(output, contains("rt.registerWidget('SizedBox'"));
         expect(output, contains('registerSduiCatalog(rt)'));
+      },
+    );
+  });
+
+  // -------------------------------------------------------------------------
+  // Library-level @Register
+  // -------------------------------------------------------------------------
+
+  group('library-level @Register', () {
+    test(
+      'library-level annotation only — types are picked up',
+      () async {
+        const source = '''
+@Register([PageView])
+library;
+
+import 'package:flutter/material.dart';
+import 'package:desk_sdui_annotation/desk_sdui_annotation.dart';
+''';
+
+        final result = await _resolveSource(source);
+        final lib = result.libraryElement;
+        final checker = TypeChecker.typeNamed(Register, inPackage: 'desk_sdui_annotation');
+
+        final collected = CollectedTypes();
+        for (final meta in lib.metadata.annotations) {
+          final obj = meta.computeConstantValue();
+          if (obj == null) continue;
+          if (!checker.isExactlyType(obj.type!)) continue;
+          final partial = collectTypesFromAnnotation(lib, obj);
+          collected.unionWith(partial);
+        }
+
+        expect(
+          collected.widgets.map((e) => e.name),
+          contains('PageView'),
+          reason: 'PageView must be found from library-level annotation',
+        );
+      },
+    );
+
+    test(
+      'library-level + class-level coexist — union is registered',
+      () async {
+        const source = '''
+@Register([PageView])
+library;
+
+import 'package:flutter/material.dart';
+import 'package:desk_sdui_annotation/desk_sdui_annotation.dart';
+
+@Register([SizedBox])
+class _Catalog {}
+''';
+
+        final result = await _resolveSource(source);
+        final lib = result.libraryElement;
+        final libReader = LibraryReader(lib);
+        final checker = TypeChecker.typeNamed(Register, inPackage: 'desk_sdui_annotation');
+
+        final collected = CollectedTypes();
+
+        for (final annotated in libReader.annotatedWith(checker)) {
+          final el = annotated.element;
+          if (el is! ClassElement) continue;
+          final annotation = annotated.annotation.objectValue;
+          final partial = collectTypesFromAnnotation(el, annotation);
+          collected.unionWith(partial);
+        }
+
+        for (final meta in lib.metadata.annotations) {
+          final obj = meta.computeConstantValue();
+          if (obj == null) continue;
+          if (!checker.isExactlyType(obj.type!)) continue;
+          final partial = collectTypesFromAnnotation(lib, obj);
+          collected.unionWith(partial);
+        }
+
+        expect(
+          collected.widgets.map((e) => e.name),
+          containsAll(['PageView', 'SizedBox']),
+          reason: 'Both library-level and class-level types must be present',
+        );
+      },
+    );
+
+    test(
+      'collectTypesFromAnnotation accepts Element (library)',
+      () async {
+        const source = '''
+@Register([EdgeInsets])
+library;
+
+import 'package:flutter/material.dart';
+import 'package:desk_sdui_annotation/desk_sdui_annotation.dart';
+''';
+
+        final result = await _resolveSource(source);
+        final lib = result.libraryElement;
+        final checker = TypeChecker.typeNamed(Register, inPackage: 'desk_sdui_annotation');
+
+        CollectedTypes? collected;
+        for (final meta in lib.metadata.annotations) {
+          final obj = meta.computeConstantValue();
+          if (obj == null) continue;
+          if (!checker.isExactlyType(obj.type!)) continue;
+          collected = collectTypesFromAnnotation(lib, obj);
+          break;
+        }
+
+        expect(collected, isNotNull);
+        expect(
+          collected!.valueTypes.map((e) => e.name),
+          contains('EdgeInsets'),
+          reason: 'EdgeInsets must be found as a value type',
+        );
       },
     );
   });

@@ -14,13 +14,6 @@ class InputBinding<T> {
   final T Function(Object? input) read;
 }
 
-/// A method exposed to the IR (e.g. `vm.removeItem`).
-class MethodBinding {
-  const MethodBinding({required this.name, required this.invoke});
-  final String name;
-  final Function invoke;
-}
-
 /// A reactive source exposed to the IR (e.g. `vm.showPromoCode` of type
 /// `Signal<bool>`). The runtime subscribes via `ListenableBuilder`.
 class ReactiveBinding {
@@ -35,14 +28,21 @@ class ScreenBinding {
     required this.name,
     required this.ir,
     required this.inputs,
-    this.methods = const [],
+    this.methodRefs = const {},
     this.reactives = const [],
   });
   final String name;
   final IrTree ir;
   final List<InputBinding<Object?>> inputs;
-  final List<MethodBinding> methods;
+
+  /// Method references indexed by input name.
+  /// e.g. `{'vm': ['increment', 'decrement']}`
+  final Map<String, List<String>> methodRefs;
   final List<ReactiveBinding> reactives;
+
+  /// Returns the method names referenced for a given input slot.
+  List<String> referencedMethodsFor(String inputName) =>
+      methodRefs[inputName] ?? const [];
 }
 
 typedef WidgetBuilderFn = Widget Function(
@@ -118,6 +118,10 @@ class Runtime {
   final Map<String, SduiValueBuilder> _valueBuilders = {};
   final Map<String, SduiFunctionHandler> _functions = {};
 
+  // Unified callable registry — everything keyed by "TypeName.MemberName"
+  // (or just "TypeName" for unnamed ctors), with optional receiver via $this.
+  final Map<String, Function> _callables = {};
+
   void registerScreen(ScreenBinding binding) {
     _screens[binding.name] = binding;
   }
@@ -159,6 +163,15 @@ class Runtime {
   void registerFn(String name, Function fn) {
     _fns[name] = fn;
   }
+
+  /// Unified registration entry point — everything is a callable keyed by
+  /// `"TypeName.MemberName"` (or just `"TypeName"` for unnamed ctors).
+  void register(String name, Function fn) {
+    _callables[name] = fn;
+  }
+
+  /// Look up a callable by its unified key.
+  Function? callableFor(String name) => _callables[name];
 
   ScreenBinding? screenFor(String name) => _screens[name];
   WidgetBuilderFn? widgetFor(String name) => _widgets[name];

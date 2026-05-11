@@ -1,5 +1,6 @@
 import 'package:desk_sdui/desk_sdui.dart';
 import 'package:desk_sdui_demo/desk_sdui_setup.g.dart';
+import 'package:desk_sdui_demo/screens/counter_actions.dart';
 import 'package:flutter/material.dart';
 
 void main() => runApp(const DemoApp());
@@ -14,7 +15,8 @@ enum _Variant {
   minimal('counter_minimal', 'Minimal', 0),
   bouncy('counter_bouncy', 'Bouncy', 0),
   burst('counter_burst', 'Burst', 24),
-  stress('counter_stress', 'Stress', 500);
+  stress('counter_stress', 'Stress', 500),
+  actions('counter_actions', 'Actions', 0);
 
   const _Variant(this.screenName, this.label, this.chipCount);
   final String screenName;
@@ -26,12 +28,14 @@ class _DemoAppState extends State<DemoApp> {
   late final Runtime rt;
   int value = 0;
   _Variant variant = _Variant.bouncy;
+  late final CounterController _counterController;
 
   @override
   void initState() {
     super.initState();
     rt = Runtime();
     registerAllScreens(rt);
+    _counterController = CounterController();
   }
 
   void _bump(int delta) => setState(() => value += delta);
@@ -61,36 +65,44 @@ class _DemoAppState extends State<DemoApp> {
             ),
           ),
         ),
-        body: SduiScreen(
-          runtime: rt,
-          name: variant.screenName,
-          inputs: {
-            'data': {'value': value, 'chips': chips},
-          },
-        ),
-        floatingActionButton: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            FloatingActionButton(
-              heroTag: 'dec',
-              onPressed: () => _bump(-1),
-              child: const Icon(Icons.remove),
-            ),
-            const SizedBox(width: 8),
-            FloatingActionButton.extended(
-              heroTag: 'reset',
-              onPressed: _reset,
-              label: const Text('Reset'),
-              icon: const Icon(Icons.refresh),
-            ),
-            const SizedBox(width: 8),
-            FloatingActionButton(
-              heroTag: 'inc',
-              onPressed: () => _bump(1),
-              child: const Icon(Icons.add),
-            ),
-          ],
-        ),
+        body: variant == _Variant.actions
+            ? SduiScreen(
+                runtime: rt,
+                name: variant.screenName,
+                inputs: {'vm': _counterController},
+              )
+            : SduiScreen(
+                runtime: rt,
+                name: variant.screenName,
+                inputs: {
+                  'data': {'value': value, 'chips': chips},
+                },
+              ),
+        floatingActionButton: variant == _Variant.actions
+            ? null
+            : Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  FloatingActionButton(
+                    heroTag: 'dec',
+                    onPressed: () => _bump(-1),
+                    child: const Icon(Icons.remove),
+                  ),
+                  const SizedBox(width: 8),
+                  FloatingActionButton.extended(
+                    heroTag: 'reset',
+                    onPressed: _reset,
+                    label: const Text('Reset'),
+                    icon: const Icon(Icons.refresh),
+                  ),
+                  const SizedBox(width: 8),
+                  FloatingActionButton(
+                    heroTag: 'inc',
+                    onPressed: () => _bump(1),
+                    child: const Icon(Icons.add),
+                  ),
+                ],
+              ),
       ),
     );
   }

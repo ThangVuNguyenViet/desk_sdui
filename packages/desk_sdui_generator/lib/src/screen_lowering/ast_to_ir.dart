@@ -19,7 +19,10 @@ class ScreenLowerResult {
   final IrNode root;
   final List<({String name, String type})> params;
   final List<String> reactiveParams;
-  final List<List<String>> methodRefs;
+
+  /// Method references indexed by input name.
+  /// e.g. `{'vm': ['increment', 'decrement']}`
+  final Map<String, List<String>> methodRefs;
   final Set<String> widgetRefs;
   final Set<String> fnRefs;
 
@@ -71,7 +74,7 @@ ScreenLowerResult lowerScreen(FunctionDeclaration fn, ScreenAnnotationData ann) 
 
   final reactiveParams = <String>[];
   final widgetRefs = <String>{};
-  final methodRefs = <List<String>>[];
+  final methodRefs = <String, List<String>>{};
   final fnRefs = <String>{};
 
   _collectRefs(rootIr, widgetRefs, methodRefs, fnRefs);
@@ -90,7 +93,7 @@ ScreenLowerResult lowerScreen(FunctionDeclaration fn, ScreenAnnotationData ann) 
 void _collectRefs(
   IrNode node,
   Set<String> widgetRefs,
-  List<List<String>> methodRefs,
+  Map<String, List<String>> methodRefs,
   Set<String> fnRefs,
 ) {
   switch (node) {
@@ -137,7 +140,14 @@ void _collectRefs(
     case SpreadNode():
       _collectRefs(node.source, widgetRefs, methodRefs, fnRefs);
     case EventNode():
-      methodRefs.add(node.target);
+      if (node.target.length >= 2) {
+        final inputName = node.target.first;
+        final methodName = node.target.last;
+        methodRefs.putIfAbsent(inputName, () => []);
+        if (!methodRefs[inputName]!.contains(methodName)) {
+          methodRefs[inputName]!.add(methodName);
+        }
+      }
       for (final arg in node.args.values) {
         _collectRefs(arg, widgetRefs, methodRefs, fnRefs);
       }

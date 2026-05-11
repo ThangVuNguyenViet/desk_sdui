@@ -86,6 +86,6 @@ ScreenBinding get counter_burstBinding => ScreenBinding(
     ),
   ),
   inputs: [InputBinding(name: 'data', read: (v) => v as dynamic)],
-  methods: const [],
+  methodRefs: const {},
   reactives: const [],
 );

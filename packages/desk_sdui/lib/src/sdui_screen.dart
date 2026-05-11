@@ -69,8 +69,16 @@ class _SduiScreenState extends State<SduiScreen> {
     final input = <String, Object?>{...userInputs};
     if (binding != null) {
       final methods = <String, Function>{};
-      for (final m in binding.methods) {
-        methods[m.name] = m.invoke;
+      for (final entry in userInputs.entries) {
+        final value = entry.value;
+        if (value == null) continue;
+        final typeName = value.runtimeType.toString();
+        for (final methodName in binding.referencedMethodsFor(entry.key)) {
+          final fn = widget.runtime.callableFor('$typeName.$methodName');
+          if (fn == null) continue;
+          methods['${entry.key}.$methodName'] =
+              () => fn({r'$this': value});
+        }
       }
       input['__methods__'] = methods;
 

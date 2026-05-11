@@ -27,6 +27,6 @@ ScreenBinding get counter_minimalBinding => ScreenBinding(
     ),
   ),
   inputs: [InputBinding(name: 'data', read: (v) => v as dynamic)],
-  methods: const [],
+  methodRefs: const {},
   reactives: const [],
 );

@@ -4,11 +4,13 @@ import 'package:desk_sdui/desk_sdui.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:desk_sdui_demo/screens/counter_actions.dart' show counter_actionsBinding;
 import 'package:desk_sdui_demo/screens/counter_bouncy.dart' show counter_bouncyBinding;
 import 'package:desk_sdui_demo/screens/counter_burst.dart' show counter_burstBinding;
 import 'package:desk_sdui_demo/screens/counter_minimal.dart' show counter_minimalBinding;
 import 'package:desk_sdui_demo/screens/counter_record.dart' show counter_recordBinding;
 import 'package:desk_sdui_demo/screens/counter_stress.dart' show counter_stressBinding;
+import 'package:desk_sdui_demo/screens/counter_actions.sdui_reg.g.dart' show registerCounter_actionsDependencies;
 import 'package:desk_sdui_demo/screens/counter_bouncy.sdui_reg.g.dart' show registerCounter_bouncyDependencies;
 import 'package:desk_sdui_demo/screens/counter_burst.sdui_reg.g.dart' show registerCounter_burstDependencies;
 import 'package:desk_sdui_demo/screens/counter_minimal.sdui_reg.g.dart' show registerCounter_minimalDependencies;
@@ -132,9 +134,29 @@ void registerSduiCatalog(Runtime rt) {
   rt.registerValueBuilder('CueMotion.effect', (args) => CueMotion.effect(mass: args['mass'] as double, stiffness: args['stiffness'] as double, dampingRatio: args['dampingRatio'] as double, tolerance: args['tolerance'] as Tolerance, snapToEnd: args['snapToEnd'] as bool));
   rt.registerValueBuilder('CueMotion.effectSlow', (args) => CueMotion.effectSlow(mass: args['mass'] as double, stiffness: args['stiffness'] as double, dampingRatio: args['dampingRatio'] as double, tolerance: args['tolerance'] as Tolerance, snapToEnd: args['snapToEnd'] as bool));
   rt.registerValueBuilder('CueMotion.effectFast', (args) => CueMotion.effectFast(mass: args['mass'] as double, stiffness: args['stiffness'] as double, dampingRatio: args['dampingRatio'] as double, tolerance: args['tolerance'] as Tolerance, snapToEnd: args['snapToEnd'] as bool));
+  rt.registerValueBuilder('CounterController', (args) => CounterController());
+  // Methods for Act
+  {
+  rt.registerMethod('Act.resolve', (recv, args) => (recv as Act).resolve(args['arg0'] as ActContext));
+  rt.registerMethod('Act.buildAnimation', (recv, args) => (recv as Act).buildAnimation(args['arg0'] as CueTimeline, args['arg1'] as ActContext));
+  rt.registerMethod('Act.applyInternal', (recv, args) => (recv as Act).applyInternal(args['arg0'] as BuildContext, args['arg1'] as CueAnimation<Object?>, args['arg2'] as Widget));
+  }
+  // Methods for CueMotion
+  {
+  rt.registerMethod('CueMotion.build', (recv, args) => (recv as CueMotion).build(args['arg0'] as SimulationBuildData));
+  rt.registerMethod('CueMotion.buildBase', (recv, args) => (recv as CueMotion).buildBase(forward: args['forward'] as bool? ?? true, phase: args['phase'] as int?));
+  rt.registerMethod('CueMotion.delayed', (recv, args) => (recv as CueMotion).delayed(args['arg0'] as Duration));
+  }
+  // Methods for CounterController
+  {
+  rt.registerMethod('CounterController.increment', (recv, args) => (recv as CounterController).increment());
+  rt.registerMethod('CounterController.decrement', (recv, args) => (recv as CounterController).decrement());
+  }
 }
 void registerAllScreens(Runtime rt) {
   registerCoreAccessors(rt);
+  rt.registerScreen(counter_actionsBinding);
+  registerCounter_actionsDependencies(rt);
   rt.registerScreen(counter_bouncyBinding);
   registerCounter_bouncyDependencies(rt);
   rt.registerScreen(counter_burstBinding);

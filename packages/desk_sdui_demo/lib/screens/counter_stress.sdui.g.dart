@@ -67,6 +67,6 @@ ScreenBinding get counter_stressBinding => ScreenBinding(
     ),
   ),
   inputs: [InputBinding(name: 'data', read: (v) => v as dynamic)],
-  methods: const [],
+  methodRefs: const {},
   reactives: const [],
 );

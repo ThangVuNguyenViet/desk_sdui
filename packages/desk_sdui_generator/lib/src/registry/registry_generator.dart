@@ -8,6 +8,7 @@ import 'package:source_gen/source_gen.dart';
 import 'package:desk_sdui_annotation/desk_sdui_annotation.dart';
 import '../registration_emitter.dart';
 import '../type_collector.dart';
+import '../screen_lowering/ast_to_ir.dart';
 
 class _ScreenInfo {
   _ScreenInfo({
@@ -16,6 +17,8 @@ class _ScreenInfo {
     required this.registrationFn,
     required this.sourceUri,
     this.referencedWidgetNames = const {},
+    this.inputMethodRefs = const {},
+    this.inputTypeNames = const {},
   });
   final String name;
   final String bindingSymbol;
@@ -24,6 +27,14 @@ class _ScreenInfo {
 
   /// Widget type names referenced in this screen's body (simple class names).
   final Set<String> referencedWidgetNames;
+
+  /// Method references indexed by input name.
+  /// e.g. `{'vm': ['increment', 'decrement']}`
+  final Map<String, List<String>> inputMethodRefs;
+
+  /// Input parameter name → type name (simple class name).
+  /// e.g. `{'vm': 'CounterController'}`
+  final Map<String, String> inputTypeNames;
 }
 
 /// Public test-surface data class that mirrors [_ScreenInfo].
@@ -78,6 +89,8 @@ class RegistryBuilder implements Builder {
         // diagnostic comparison against the @Register registered set.
         // We must use the RESOLVED AST so that ClassElements are populated.
         var referencedWidgetNames = <String>{};
+        var inputMethodRefs = <String, List<String>>{};
+        var inputTypeNames = <String, String>{};
         if (el is TopLevelFunctionElement) {
           try {
             final session = el.session;
@@ -96,6 +109,37 @@ class RegistryBuilder implements Builder {
                         .map((e) => e.name)
                         .whereType<String>()
                         .toSet();
+
+                    // Collect param types.
+                    for (final p
+                        in fnDecl.functionExpression.parameters!.parameters) {
+                      final paramName = p.name!.lexeme;
+                      final typeAnnotation = p.type;
+                      String paramType = 'dynamic';
+                      if (typeAnnotation != null) {
+                        final type = typeAnnotation.type;
+                        if (type != null) {
+                          paramType = type.getDisplayString();
+                          // Strip nullability suffix for matching.
+                          if (paramType.endsWith('?')) {
+                            paramType = paramType.substring(0, paramType.length - 1);
+                          }
+                        }
+                      }
+                      inputTypeNames[paramName] = paramType;
+                    }
+
+                    // Lower the screen to collect method refs.
+                    try {
+                      final screenResult = lowerScreen(
+                        fnDecl,
+                        ScreenAnnotationData(name: name),
+                      );
+                      inputMethodRefs = screenResult.methodRefs;
+                    } catch (_) {
+                      // If lowering fails, skip method diagnostic for this
+                      // screen.
+                    }
                   }
                 }
               }
@@ -116,6 +160,8 @@ class RegistryBuilder implements Builder {
           registrationFn: 'register${capitalizedName}Dependencies',
           sourceUri: input.uri,
           referencedWidgetNames: referencedWidgetNames,
+          inputMethodRefs: inputMethodRefs,
+          inputTypeNames: inputTypeNames,
         ));
       }
 
@@ -164,6 +210,72 @@ class RegistryBuilder implements Builder {
         'Add them to a @Register list or import one of the bundles '
         'from package:desk_sdui/widget_bundles.dart.\n'
         '$details',
+      );
+    }
+
+    // Diagnostic: for each screen, check that input types with method refs
+    // are registered and that their methods exist.
+    final registeredValueTypeNames = catalogTypes.valueTypes
+        .map((e) => e.name)
+        .whereType<String>()
+        .toSet();
+    final registeredMethodMap = <String, Set<String>>{};
+    for (final valueType in catalogTypes.valueTypes) {
+      final methods = <String>{};
+      final skippedNames = {
+        'toString',
+        'hashCode',
+        'noSuchMethod',
+        'runtimeType',
+        '==',
+        'dispose',
+      };
+      for (final method in valueType.methods) {
+        if (method.isStatic) continue;
+        if (method.isPrivate) continue;
+        final methodName = method.name;
+        if (methodName == null) continue;
+        if (skippedNames.contains(methodName)) continue;
+        if (methodName.startsWith('_')) continue;
+        methods.add(methodName);
+      }
+      registeredMethodMap[valueType.name!] = methods;
+    }
+
+    final methodErrors = <String>[];
+    for (final screen in screens) {
+      for (final entry in screen.inputMethodRefs.entries) {
+        final inputName = entry.key;
+        final methodNames = entry.value;
+        final typeName = screen.inputTypeNames[inputName];
+        if (typeName == null) continue;
+
+        if (!registeredValueTypeNames.contains(typeName)) {
+          methodErrors.add(
+            'Screen "${screen.name}" uses input "$inputName" of type '
+            '$typeName but $typeName is not registered.\n'
+            'Add $typeName to a @Register list.',
+          );
+          continue;
+        }
+
+        final availableMethods = registeredMethodMap[typeName] ?? const {};
+        for (final methodName in methodNames) {
+          if (!availableMethods.contains(methodName)) {
+            final sorted = availableMethods.toList()..sort();
+            methodErrors.add(
+              'Screen "${screen.name}" references method "$inputName.$methodName" '
+              'but $typeName has no public method "$methodName".\n'
+              'Available methods on $typeName: ${sorted.join(', ')}.',
+            );
+          }
+        }
+      }
+    }
+    if (methodErrors.isNotEmpty) {
+      throw StateError(
+        'desk_sdui method registration diagnostic failed.\n'
+        '${methodErrors.join('\n')}',
       );
     }
 
@@ -275,11 +387,29 @@ $registrations$catalogCall
         ct.functions.isEmpty) {
       return '';
     }
-    final registrations = RegistrationEmitter()
+    final emitter = RegistrationEmitter();
+    final registrations = emitter
         .emitAll(ct)
         .split('\n')
         .map((l) => '  $l')
         .join('\n');
-    return '\nvoid registerSduiCatalog(Runtime rt) {\n$registrations\n}';
+
+    // Also emit methods for all registered non-Widget classes.
+    final classMethodBlocks = <String>[];
+    for (final valueType in ct.valueTypes) {
+      classMethodBlocks.add(
+        emitter
+            .emitMethodsForClass(valueType)
+            .split('\n')
+            .map((l) => '  $l')
+            .join('\n'),
+      );
+    }
+    // Also emit methods for widget classes that might have callable methods
+    // (though typically widgets don't, this handles edge cases).
+    // Skip for now — only valueTypes need method emission per the plan.
+
+    final allRegistrations = [registrations, ...classMethodBlocks].join('\n');
+    return '\nvoid registerSduiCatalog(Runtime rt) {\n$allRegistrations\n}';
   }
 }

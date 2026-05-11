@@ -105,6 +105,50 @@ class RegistrationEmitter {
     return "rt.registerFunction('${fn.name}', (args) => ${fn.name}($argsCode));";
   }
 
+  /// Emit all public instance methods for a registered non-Widget class.
+  ///
+  /// Discovery rules:
+  /// - Walk [cls].methods (analyzer element API).
+  /// - Keep public methods (name doesn't start with '_').
+  /// - Skip inherited Object members (toString, hashCode, ==, noSuchMethod, runtimeType).
+  /// - Skip dispose if present (lifecycle, not callable).
+  /// - Skip getters/setters (only methods).
+  /// - Skip static methods (those are emitted as functions, not methods).
+  String emitMethodsForClass(ClassElement cls) {
+    final lines = <String>[]
+        ..add('// Methods for ${cls.name}')
+        ..add('{');
+
+    final skippedNames = {
+      'toString',
+      'hashCode',
+      'noSuchMethod',
+      'runtimeType',
+      '==',
+      'dispose',
+    };
+
+    for (final method in cls.methods) {
+      if (method.isStatic) continue;
+      if (method.isPrivate) continue;
+      final methodName = method.name;
+      if (methodName == null) continue;
+      if (skippedNames.contains(methodName)) continue;
+      if (methodName.startsWith('_')) continue;
+
+      final qualifiedName = '${cls.name}.$methodName';
+      final params = method.formalParameters;
+      final callArgs = _buildCallArgList(params);
+      lines.add(
+        "rt.registerMethod('$qualifiedName', "
+        "(recv, args) => (recv as ${cls.name}).$methodName($callArgs));",
+      );
+    }
+
+    lines.add('}');
+    return lines.join('\n');
+  }
+
   /// Emit all registrations from a [CollectedTypes] set.
   ///
   /// Returns multi-line Dart code (one registration statement per line).

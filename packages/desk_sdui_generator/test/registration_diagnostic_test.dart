@@ -25,9 +25,12 @@ import 'package:desk_sdui_annotation/desk_sdui_annotation.dart';
 // Shared setup
 // ---------------------------------------------------------------------------
 
-const _demoPackageRoot =
-    // ignore: lines_longer_than_80_chars
-    '/Users/vietthangvunguyen/Workspace/dart_desk_workspace/desk_sdui-wt-register/packages/desk_sdui_demo';
+/// Resolves to `<repo>/packages/desk_sdui_demo` relative to the package root
+/// (which is `Directory.current` when running `dart test` in this package).
+/// Follows the checkout / worktree automatically.
+final String _demoPackageRoot = p.normalize(
+  p.join(Directory.current.path, '..', 'desk_sdui_demo'),
+);
 
 /// Resolve a Dart source string in the desk_sdui_demo context and return the
 /// [ResolvedUnitResult].

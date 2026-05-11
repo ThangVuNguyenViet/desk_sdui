@@ -52,7 +52,7 @@ IrNode lowerWidgetInstance(InstanceCreationExpression expr, {Object? Function(In
     if (a is NamedArgument) {
       final name = a.name.lexeme;
       final value =
-          _lowerArg(a.argumentExpression, constEvaluator: constEvaluator);
+          _lowerArg(a.argumentExpression, constEvaluator: constEvaluator, paramName: name);
       if (name == 'key') {
         key = value;
       } else {
@@ -63,7 +63,7 @@ IrNode lowerWidgetInstance(InstanceCreationExpression expr, {Object? Function(In
           ? positionalParams[positionalIndex]
           : 'arg$positionalIndex';
       args[paramName] =
-          _lowerArg(a.argumentExpression, constEvaluator: constEvaluator);
+          _lowerArg(a.argumentExpression, constEvaluator: constEvaluator, paramName: paramName);
       positionalIndex++;
     }
   }
@@ -83,7 +83,7 @@ IrNode lowerWidgetInvocation(MethodInvocation expr, {Object? Function(InstanceCr
     if (a is NamedArgument) {
       final name = a.name.lexeme;
       final value =
-          _lowerArg(a.argumentExpression, constEvaluator: constEvaluator);
+          _lowerArg(a.argumentExpression, constEvaluator: constEvaluator, paramName: name);
       if (name == 'key') {
         key = value;
       } else {
@@ -94,7 +94,7 @@ IrNode lowerWidgetInvocation(MethodInvocation expr, {Object? Function(InstanceCr
           ? positionalParams[positionalIndex]
           : 'arg$positionalIndex';
       args[paramName] =
-          _lowerArg(a.argumentExpression, constEvaluator: constEvaluator);
+          _lowerArg(a.argumentExpression, constEvaluator: constEvaluator, paramName: paramName);
       positionalIndex++;
     }
   }
@@ -118,7 +118,7 @@ IrNode lowerListElement(CollectionElement el) {
   throw LoweringError('unsupported collection element: ${el.runtimeType}', el);
 }
 
-IrNode _lowerArg(Expression a, {Object? Function(InstanceCreationExpression)? constEvaluator}) {
+IrNode _lowerArg(Expression a, {Object? Function(InstanceCreationExpression)? constEvaluator, String? paramName}) {
   if (a is FunctionExpression) {
     return lowerClosure(a);
   }
@@ -130,6 +130,12 @@ IrNode _lowerArg(Expression a, {Object? Function(InstanceCreationExpression)? co
     if (name.isNotEmpty && name[0] == name[0].toUpperCase()) {
       return lowerWidgetInvocation(a, constEvaluator: constEvaluator);
     }
+    return lowerClosure(a);
+  }
+  // Handle method tear-offs in callback positions: `onPressed: vm.increment`
+  if ((a is PrefixedIdentifier || a is PropertyAccess) &&
+      paramName != null &&
+      _isCallbackParam(paramName)) {
     return lowerClosure(a);
   }
   // Qualified static-factory / named-constructor call without `const` keyword:
@@ -269,6 +275,13 @@ bool _isConstFoldable(String ctor) {
 }
 
 bool _isUppercase(String s) => s.isNotEmpty && s[0] == s[0].toUpperCase();
+
+/// Returns true if [paramName] looks like a Flutter callback parameter
+/// (starts with 'on' followed by an uppercase letter, e.g. 'onPressed').
+bool _isCallbackParam(String paramName) =>
+    paramName.length > 2 &&
+    paramName.startsWith('on') &&
+    paramName[2] == paramName[2].toUpperCase();
 
 List<String> _extractPatternNames(DartPattern pat) {
   final names = <String>[];

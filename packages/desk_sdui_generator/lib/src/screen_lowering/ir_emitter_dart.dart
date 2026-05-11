@@ -16,7 +16,7 @@ ScreenBinding get ${safeName}Binding => ScreenBinding(
     root: ${_emitNode(result.root)},
   ),
   inputs: ${_buildInputs(result)},
-  methods: ${_buildMethods(result)},
+  methodRefs: ${_buildMethodRefs(result)},
   reactives: ${_buildReactives(result)},
 );
 ''';
@@ -125,9 +125,13 @@ String _buildInputs(ScreenLowerResult result) {
   return '[${result.params.map((p) => 'InputBinding(name: ${_dartString(p.name)}, read: (v) => v as ${p.type})').join(', ')}]';
 }
 
-String _buildMethods(ScreenLowerResult result) {
-  if (result.methodRefs.isEmpty) return 'const []';
-  return '[${result.methodRefs.map((m) => 'MethodBinding(name: ${_dartString(m.join('.'))}, invoke: () {})').join(', ')}]';
+String _buildMethodRefs(ScreenLowerResult result) {
+  if (result.methodRefs.isEmpty) return 'const {}';
+  final entries = result.methodRefs.entries.map((e) {
+    final methods = e.value.map(_dartString).join(', ');
+    return '${_dartString(e.key)}: [$methods]';
+  }).join(', ');
+  return '{$entries}';
 }
 
 String _buildReactives(ScreenLowerResult result) {

@@ -26,9 +26,10 @@ Object? resolveRef(List<String> path, Map<String, Object?> input) {
       current = current[i];
       continue;
     }
-    // Try dynamic property access on arbitrary objects
-    current = _getProperty(current, seg);
-    if (current == null) return null;
+    throw StateError(
+      'resolveRef: cannot traverse segment "$seg" into ${current.runtimeType} '
+      '(expected Map or List). Input contract is Map<String, Object?>.',
+    );
   }
   return current;
 }
@@ -236,107 +237,3 @@ BoxShape _resolveBoxShape(String name) => switch (name) {
   'rectangle' => BoxShape.rectangle,
   _ => BoxShape.rectangle,
 };
-
-Object? _getProperty(Object obj, String name) {
-  switch (obj) {
-    case _:
-      // Use dynamic dispatch to access properties
-      return _dynamicGet(obj, name);
-  }
-}
-
-Object? _dynamicGet(Object obj, String name) {
-  // Since Flutter doesn't support mirrors, we use a workaround:
-  // Convert the object to a map-like structure via JSON or explicit handling.
-  // For now, we handle known data types explicitly.
-  // This is a Phase 3 fix-up: proper reflection would be ideal.
-  return _tryGet(obj, name);
-}
-
-Object? _tryGet(Object obj, String name) {
-  // Attempt to access common property patterns on data objects
-  // This handles the demo data classes (ChefData, HomeData, etc.)
-  final dynamic d = obj;
-  try {
-    return _accessProperty(d, name);
-  } catch (_) {
-    return null;
-  }
-}
-
-Object? _accessProperty(dynamic obj, String name) {
-  switch (name) {
-    case 'headline':
-      return obj.headline;
-    case 'bio':
-      return obj.bio;
-    case 'pullQuote':
-      return obj.pullQuote;
-    case 'chefName':
-      return obj.chefName;
-    case 'chefRole':
-      return obj.chefRole;
-    case 'chefRoleUpper':
-      return obj.chefRoleUpper;
-    case 'chefPortraitUrl':
-      return obj.chefPortraitUrl;
-    case 'refreshCadence':
-      return obj.refreshCadence;
-    case 'dishes':
-      return obj.dishes;
-    case 'numberLabel':
-      return obj.numberLabel;
-    case 'name':
-      return obj.name;
-    case 'description':
-      return obj.description;
-    case 'price':
-      return obj.price;
-    case 'priceLabel':
-      return obj.priceLabel;
-    case 'imageUrl':
-      return obj.imageUrl;
-    case 'greeting':
-      return obj.greeting;
-    case 'points':
-      return obj.points;
-    case 'bannerImageUrl':
-      return obj.bannerImageUrl;
-    case 'backgroundImageUrl':
-      return obj.backgroundImageUrl;
-    case 'featuredItems':
-      return obj.featuredItems;
-    case 'categories':
-      return obj.categories;
-    case 'recentOrders':
-      return obj.recentOrders;
-    case 'orderAgainText':
-      return obj.orderAgainText;
-    case 'startOrderLabel':
-      return obj.startOrderLabel;
-    case 'showCategories':
-      return obj.showCategories;
-    case 'showRecentOrders':
-      return obj.showRecentOrders;
-    case 'showFeatured':
-      return obj.showFeatured;
-    case 'id':
-      return obj.id;
-    case 'restaurantName':
-      return obj.restaurantName;
-    case 'items':
-      return obj.items;
-    case 'total':
-      return obj.total;
-    case 'date':
-      return obj.date;
-    case 'isNotEmpty':
-      return obj.isNotEmpty;
-    case 'isEmpty':
-      return obj.isEmpty;
-    case 'length':
-      return obj.length;
-    default:
-      return null;
-  }
-}

@@ -26,6 +26,7 @@ const List<Type> kCommonWidgets = <Type>[
   RotatedBox, Text, Transform,
   GestureDetector, InkWell,
   Builder, Divider, Visibility,
+  EdgeInsetsGeometry,
 ];
 
 /// Material design widgets from `package:flutter/material.dart`.

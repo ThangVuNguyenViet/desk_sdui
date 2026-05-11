@@ -1,4 +1,5 @@
 import 'package:analyzer/dart/ast/ast.dart';
+import 'package:analyzer/dart/element/element.dart';
 import 'package:desk_sdui_annotation/desk_sdui_annotation.dart';
 import '../diagnostics.dart';
 import 'expression_lowerer.dart';
@@ -268,6 +269,33 @@ IrNode _lowerArg(Expression a, {Object? Function(InstanceCreationExpression)? co
   if (a is SimpleIdentifier) {
     return RefNode([a.name]);
   }
+  // Dot-shorthand constructor invocation: `.all(8)`, `.only(top: 16)`
+  // The analyzer resolves these to the declaring class's constructor.
+  if (a is DotShorthandConstructorInvocation) {
+    final owner = _enclosingTypeName(a.constructorName.element);
+    if (owner == null) {
+      throw LoweringError('dot-shorthand constructor on unresolved element', a);
+    }
+    final args = _lowerDotShorthandArgs(a.argumentList, constEvaluator);
+    return WidgetNode(name: '$owner.${a.constructorName.name}', args: args);
+  }
+  // Dot-shorthand method/factory invocation: `.smooth()`, `.scale(1.5)`
+  if (a is DotShorthandInvocation) {
+    final owner = _enclosingTypeName(a.memberName.element);
+    if (owner == null) {
+      throw LoweringError('dot-shorthand invocation on unresolved element', a);
+    }
+    final args = _lowerDotShorthandArgs(a.argumentList, constEvaluator);
+    return WidgetNode(name: '$owner.${a.memberName.name}', args: args);
+  }
+  // Dot-shorthand property access: `.zero`, `.infinity`
+  if (a is DotShorthandPropertyAccess) {
+    final owner = _enclosingTypeName(a.propertyName.element);
+    if (owner == null) {
+      throw LoweringError('dot-shorthand property on unresolved element', a);
+    }
+    return WidgetNode(name: '$owner.${a.propertyName.name}', args: const {});
+  }
   return lowerExpression(a);
 }
 
@@ -377,4 +405,26 @@ List<String> _extractPatternNames(DartPattern pat) {
     }
   }
   return names;
+}
+
+String? _enclosingTypeName(Element? element) {
+  if (element == null) return null;
+  final enclosing = element.enclosingElement;
+  if (enclosing is InterfaceElement) return enclosing.name;
+  return null;
+}
+
+Map<String, IrNode> _lowerDotShorthandArgs(
+  ArgumentList argList,
+  Object? Function(InstanceCreationExpression)? constEvaluator,
+) {
+  final args = <String, IrNode>{};
+  for (final a in argList.arguments) {
+    if (a is NamedArgument) {
+      args[a.name.lexeme] = _lowerArg(a.argumentExpression, constEvaluator: constEvaluator);
+    } else {
+      args['arg${args.length}'] = _lowerArg(a as Expression, constEvaluator: constEvaluator);
+    }
+  }
+  return args;
 }

@@ -132,6 +132,15 @@ class RegistrationEmitter {
       'runtimeType',
       '==',
       'dispose',
+      '-',
+      '*',
+      '/',
+      '~/',
+      '%',
+      '[]',
+      '[]=',
+      'unary-',
+      '+',
     };
 
     for (final method in cls.methods) {

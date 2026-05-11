@@ -9,6 +9,7 @@ import 'package:desk_sdui_demo/screens/counter_bouncy.dart' show counter_bouncyB
 import 'package:desk_sdui_demo/screens/counter_burst.dart' show counter_burstBinding;
 import 'package:desk_sdui_demo/screens/counter_minimal.dart' show counter_minimalBinding;
 import 'package:desk_sdui_demo/screens/counter_record.dart' show counter_recordBinding;
+import 'package:desk_sdui_demo/screens/counter_shorthand.dart' show counter_shorthandBinding;
 import 'package:desk_sdui_demo/screens/counter_stress.dart' show counter_stressBinding;
 import 'package:desk_sdui_demo/screens/themed_counter.dart' show themed_counterBinding;
 import 'package:desk_sdui_demo/screens/counter_actions.sdui_reg.g.dart' show registerCounter_actionsDependencies;
@@ -16,6 +17,7 @@ import 'package:desk_sdui_demo/screens/counter_bouncy.sdui_reg.g.dart' show regi
 import 'package:desk_sdui_demo/screens/counter_burst.sdui_reg.g.dart' show registerCounter_burstDependencies;
 import 'package:desk_sdui_demo/screens/counter_minimal.sdui_reg.g.dart' show registerCounter_minimalDependencies;
 import 'package:desk_sdui_demo/screens/counter_record.sdui_reg.g.dart' show registerCounter_recordDependencies;
+import 'package:desk_sdui_demo/screens/counter_shorthand.sdui_reg.g.dart' show registerCounter_shorthandDependencies;
 import 'package:desk_sdui_demo/screens/counter_stress.sdui_reg.g.dart' show registerCounter_stressDependencies;
 import 'package:desk_sdui_demo/screens/themed_counter.sdui_reg.g.dart' show registerThemed_counterDependencies;
 
@@ -71,6 +73,13 @@ void registerSduiCatalog(Runtime rt) {
   rt.registerWidget('PageView', (args) => PageView(key: args['key'] as Key?, scrollDirection: args['scrollDirection'] as Axis? ?? Axis.horizontal, reverse: args['reverse'] as bool? ?? false, controller: args['controller'] as PageController?, physics: args['physics'] as ScrollPhysics?, pageSnapping: args['pageSnapping'] as bool? ?? true, onPageChanged: args['onPageChanged'] as void Function(int)?, children: (args['children'] as List?)?.cast<Widget>() ?? const [], dragStartBehavior: args['dragStartBehavior'] as DragStartBehavior? ?? DragStartBehavior.start, allowImplicitScrolling: args['allowImplicitScrolling'] as bool? ?? false, restorationId: args['restorationId'] as String?, clipBehavior: args['clipBehavior'] as Clip? ?? Clip.hardEdge, hitTestBehavior: args['hitTestBehavior'] as HitTestBehavior? ?? HitTestBehavior.opaque, scrollBehavior: args['scrollBehavior'] as ScrollBehavior?, padEnds: args['padEnds'] as bool? ?? true));
   rt.registerWidget('Cue', (args) => Cue(key: args['key'] as Key?, debugLabel: args['debugLabel'] as String?, acts: args['acts'] as List<Act>?, controller: args['controller'] as CueController, child: args['child'] as Widget));
   rt.registerWidget('Theme', (args) => Theme(key: args['key'] as Key?, data: args['data'] as ThemeData, child: args['child'] as Widget));
+  rt.registerValueBuilder('EdgeInsetsGeometry.all', (args) => EdgeInsetsGeometry.all(args['arg0'] as double));
+  rt.registerValueBuilder('EdgeInsetsGeometry.only', (args) => EdgeInsetsGeometry.only(left: args['left'] as double, right: args['right'] as double, top: args['top'] as double, bottom: args['bottom'] as double));
+  rt.registerValueBuilder('EdgeInsetsGeometry.directional', (args) => EdgeInsetsGeometry.directional(start: args['start'] as double, end: args['end'] as double, top: args['top'] as double, bottom: args['bottom'] as double));
+  rt.registerValueBuilder('EdgeInsetsGeometry.symmetric', (args) => EdgeInsetsGeometry.symmetric(vertical: args['vertical'] as double, horizontal: args['horizontal'] as double));
+  rt.registerValueBuilder('EdgeInsetsGeometry.fromLTRB', (args) => EdgeInsetsGeometry.fromLTRB(args['arg0'] as double, args['arg1'] as double, args['arg2'] as double, args['arg3'] as double));
+  rt.registerValueBuilder('EdgeInsetsGeometry.fromViewPadding', (args) => EdgeInsetsGeometry.fromViewPadding(args['arg0'] as ViewPadding, args['arg1'] as double));
+  rt.registerValueBuilder('EdgeInsetsGeometry.fromSTEB', (args) => EdgeInsetsGeometry.fromSTEB(args['arg0'] as double, args['arg1'] as double, args['arg2'] as double, args['arg3'] as double));
   rt.registerValueBuilder('Act.scale', (args) => Act.scale(from: args['from'] as double, to: args['to'] as double, motion: args['motion'] as CueMotion?, reverse: args['reverse'] as ReverseBehavior<double>, delay: args['delay'] as Duration, alignment: args['alignment'] as AlignmentGeometry));
   rt.registerValueBuilder('Act.zoomIn', (args) => Act.zoomIn(motion: args['motion'] as CueMotion?, delay: args['delay'] as Duration, reverse: args['reverse'] as ReverseBehavior<double>, alignment: args['alignment'] as AlignmentGeometry));
   rt.registerValueBuilder('Act.zoomOut', (args) => Act.zoomOut(motion: args['motion'] as CueMotion?, delay: args['delay'] as Duration, reverse: args['reverse'] as ReverseBehavior<double>, alignment: args['alignment'] as AlignmentGeometry));
@@ -138,6 +147,16 @@ void registerSduiCatalog(Runtime rt) {
   rt.registerValueBuilder('CueMotion.effectSlow', (args) => CueMotion.effectSlow(mass: args['mass'] as double, stiffness: args['stiffness'] as double, dampingRatio: args['dampingRatio'] as double, tolerance: args['tolerance'] as Tolerance, snapToEnd: args['snapToEnd'] as bool));
   rt.registerValueBuilder('CueMotion.effectFast', (args) => CueMotion.effectFast(mass: args['mass'] as double, stiffness: args['stiffness'] as double, dampingRatio: args['dampingRatio'] as double, tolerance: args['tolerance'] as Tolerance, snapToEnd: args['snapToEnd'] as bool));
   rt.registerValueBuilder('CounterController', (args) => CounterController());
+  // Methods for EdgeInsetsGeometry
+  {
+  rt.registerMethod('EdgeInsetsGeometry.along', (recv, args) => (recv as EdgeInsetsGeometry).along(args['arg0'] as Axis));
+  rt.registerMethod('EdgeInsetsGeometry.inflateSize', (recv, args) => (recv as EdgeInsetsGeometry).inflateSize(args['arg0'] as Size));
+  rt.registerMethod('EdgeInsetsGeometry.deflateSize', (recv, args) => (recv as EdgeInsetsGeometry).deflateSize(args['arg0'] as Size));
+  rt.registerMethod('EdgeInsetsGeometry.subtract', (recv, args) => (recv as EdgeInsetsGeometry).subtract(args['arg0'] as EdgeInsetsGeometry));
+  rt.registerMethod('EdgeInsetsGeometry.add', (recv, args) => (recv as EdgeInsetsGeometry).add(args['arg0'] as EdgeInsetsGeometry));
+  rt.registerMethod('EdgeInsetsGeometry.clamp', (recv, args) => (recv as EdgeInsetsGeometry).clamp(args['arg0'] as EdgeInsetsGeometry, args['arg1'] as EdgeInsetsGeometry));
+  rt.registerMethod('EdgeInsetsGeometry.resolve', (recv, args) => (recv as EdgeInsetsGeometry).resolve(args['arg0'] as TextDirection?));
+  }
   // Methods for Act
   {
   rt.registerMethod('Act.resolve', (recv, args) => (recv as Act).resolve(args['arg0'] as ActContext));
@@ -168,6 +187,8 @@ void registerAllScreens(Runtime rt) {
   registerCounter_minimalDependencies(rt);
   rt.registerScreen(counter_recordBinding);
   registerCounter_recordDependencies(rt);
+  rt.registerScreen(counter_shorthandBinding);
+  registerCounter_shorthandDependencies(rt);
   rt.registerScreen(counter_stressBinding);
   registerCounter_stressDependencies(rt);
   rt.registerScreen(themed_counterBinding);

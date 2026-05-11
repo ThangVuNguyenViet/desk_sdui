@@ -1,7 +1,11 @@
-import 'package:analyzer/dart/ast/ast.dart';
+import 'dart:io';
+
+import 'package:analyzer/dart/analysis/results.dart';
 import 'package:analyzer/dart/analysis/utilities.dart';
+import 'package:analyzer/dart/ast/ast.dart';
 import 'package:desk_sdui_annotation/desk_sdui_annotation.dart';
 import 'package:desk_sdui_generator/src/screen_lowering/widget_lowerer.dart';
+import 'package:path/path.dart' as p;
 import 'package:test/test.dart';
 
 void main() {
@@ -157,5 +161,56 @@ void main() {
     expect(ir.receiver, isNull);
     expect(ir.args, hasLength(1));
     expect((ir.args.first as RefNode).path, ['context']);
+  });
+
+  // ── Dot-shorthand tests ─────────────────────────────────────────────────
+  // These require full resolution (parseString won't produce DotShorthand* nodes).
+
+  const _demoPackageRoot =
+      '/Users/vietthangvunguyen/Workspace/dart_desk_workspace/desk_sdui/packages/desk_sdui_demo';
+
+  Future<ResolvedUnitResult> _resolveSource(String source) async {
+    final dir = Directory(p.join(_demoPackageRoot, 'lib'));
+    final tempFile = File(
+      p.join(
+        dir.path,
+        '_wl_temp_${DateTime.now().microsecondsSinceEpoch}.dart',
+      ),
+    );
+    tempFile.writeAsStringSync(source);
+    try {
+      final result = await resolveFile(path: tempFile.path);
+      if (result is! ResolvedUnitResult) {
+        throw StateError('resolveFile returned ${result.runtimeType}');
+      }
+      return result;
+    } finally {
+      if (tempFile.existsSync()) tempFile.deleteSync();
+    }
+  }
+
+  test('dot-shorthand .all() lowers to EdgeInsetsGeometry.all', () async {
+    final result = await _resolveSource('''
+import 'package:flutter/material.dart';
+Widget s() => Padding(padding: .all(8), child: SizedBox());
+''');
+    final func = result.unit.declarations.whereType<FunctionDeclaration>().first;
+    final body = func.functionExpression.body as ExpressionFunctionBody;
+    final expr = body.expression;
+    final WidgetNode ir;
+    if (expr is InstanceCreationExpression) {
+      ir = lowerWidgetInstance(expr) as WidgetNode;
+    } else if (expr is MethodInvocation) {
+      ir = lowerWidgetInvocation(expr) as WidgetNode;
+    } else {
+      throw Exception('Expected widget expression, got ${expr.runtimeType}');
+    }
+    final paddingArg = ir.args['padding'];
+    expect(paddingArg, isA<WidgetNode>());
+    expect((paddingArg as WidgetNode).name, 'EdgeInsetsGeometry.all',
+        reason:
+            'Dot-shorthand .all() in an EdgeInsetsGeometry slot must lower to '
+            'EdgeInsetsGeometry.all (the analyzer\'s resolved element)');
+    expect((paddingArg.args['arg0'] as LiteralNode).value, 8);
   });
 }

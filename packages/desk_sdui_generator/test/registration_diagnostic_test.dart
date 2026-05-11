@@ -105,7 +105,7 @@ import 'package:flutter/material.dart';
 
 Widget buildTest() => Stack(children: [Text('hi')]);
 ''';
-        const coverageSource = '''
+        const catalogSource = '''
 import 'package:flutter/material.dart';
 import 'package:desk_sdui_annotation/desk_sdui_annotation.dart';
 
@@ -122,7 +122,7 @@ class _Cov {}
             .whereType<String>()
             .toSet();
 
-        final registered = await _registeredWidgetNames(coverageSource);
+        final registered = await _registeredWidgetNames(catalogSource);
         final missing = _missingWidgets(
           referenced: referencedWidgetNames,
           registered: registered,
@@ -144,7 +144,7 @@ import 'package:flutter/material.dart';
 
 Widget buildTest() => Stack(children: [Text('hi')]);
 ''';
-        const coverageSource = '''
+        const catalogSource = '''
 import 'package:flutter/material.dart';
 import 'package:desk_sdui_annotation/desk_sdui_annotation.dart';
 
@@ -160,7 +160,7 @@ class _Cov {}
             .whereType<String>()
             .toSet();
 
-        final registered = await _registeredWidgetNames(coverageSource);
+        final registered = await _registeredWidgetNames(catalogSource);
         final missing = _missingWidgets(
           referenced: referencedWidgetNames,
           registered: registered,
@@ -181,7 +181,7 @@ class _Cov {}
         // because collectTypesFromAnnotation uses DartObject.toListValue().
         // The spread `[...kCommon]` resolves to the same flat DartObject list
         // as an inline literal; we test the const-reference chain here.
-        const coverageSource = '''
+        const catalogSource = '''
 import 'package:flutter/material.dart';
 import 'package:desk_sdui_annotation/desk_sdui_annotation.dart';
 
@@ -191,7 +191,7 @@ const _top = <Type>[Column, Row];
 class _Cov {}
 ''';
 
-        final registered = await _registeredWidgetNames(coverageSource);
+        final registered = await _registeredWidgetNames(catalogSource);
 
         expect(
           registered,
@@ -207,16 +207,16 @@ class _Cov {}
   // -------------------------------------------------------------------------
 
   group('RegistryBuilder — emitRegistryForTest unchanged', () {
-    test('no @RegisterForSdui → no registerSduiCoverage emitted', () {
+    test('no @RegisterForSdui → no registerSduiCatalog emitted', () {
       final output = RegistryBuilder().emitRegistryForTest(
         screens: [],
         packageName: 'desk_sdui_demo',
       );
-      expect(output, isNot(contains('registerSduiCoverage')));
+      expect(output, isNot(contains('registerSduiCatalog')));
     });
 
     test('screen with @RegisterForSdui([Stack]) → Stack registered', () async {
-      const coverageSource = '''
+      const catalogSource = '''
 import 'package:flutter/material.dart';
 import 'package:desk_sdui_annotation/desk_sdui_annotation.dart';
 
@@ -224,22 +224,22 @@ import 'package:desk_sdui_annotation/desk_sdui_annotation.dart';
 class _Cov {}
 ''';
 
-      final result = await _resolveSource(coverageSource);
+      final result = await _resolveSource(catalogSource);
       final libReader = LibraryReader(result.libraryElement);
       const checker =
           TypeChecker.typeNamed(RegisterForSdui, inPackage: 'desk_sdui_annotation');
-      final coverageTypes = CollectedTypes();
+      final catalogTypes = CollectedTypes();
       for (final annotated in libReader.annotatedWith(checker)) {
         final el = annotated.element;
         if (el is! ClassElement) continue;
         final dartObj = annotated.annotation.objectValue;
-        coverageTypes.unionWith(collectTypesFromAnnotation(el, dartObj));
+        catalogTypes.unionWith(collectTypesFromAnnotation(el, dartObj));
       }
 
       final output = RegistryBuilder().emitRegistryForTest(
         screens: [],
         packageName: 'desk_sdui_demo',
-        coverageTypes: coverageTypes,
+        catalogTypes: catalogTypes,
       );
 
       expect(output, contains("rt.registerWidget('Stack'"));

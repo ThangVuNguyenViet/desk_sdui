@@ -27,16 +27,16 @@ class Screen {
 ///
 /// This is needed for **network-only screens** — screens whose IR is fetched
 /// at runtime and therefore never appear in static `@Screen` function bodies.
-/// Place this annotation on any private sentinel class (e.g. `_SduiCoverage`)
+/// Place this annotation on any private sentinel class (e.g. `_SduiCatalog`)
 /// in a file that is part of your app's build:
 ///
 /// ```dart
 /// @RegisterForSdui([PageView, SliverList, CupertinoButton])
-/// class _SduiCoverage {}
+/// class _SduiCatalog {}
 /// ```
 ///
 /// `desk_sdui_generator` discovers all classes annotated with
-/// `@RegisterForSdui` and emits a `registerSduiCoverage(rt)` call (invoked
+/// `@RegisterForSdui` and emits a `registerSduiCatalog(rt)` call (invoked
 /// automatically from `registerAllScreens`) that registers each listed type
 /// exactly as if it had been found in a `@Screen` body.
 @immutable

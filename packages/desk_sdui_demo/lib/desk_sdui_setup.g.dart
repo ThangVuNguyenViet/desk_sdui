@@ -15,7 +15,7 @@ import 'package:desk_sdui_demo/screens/counter_minimal.sdui_reg.g.dart' show reg
 import 'package:desk_sdui_demo/screens/counter_record.sdui_reg.g.dart' show registerCounter_recordDependencies;
 import 'package:desk_sdui_demo/screens/counter_stress.sdui_reg.g.dart' show registerCounter_stressDependencies;
 
-void registerSduiCoverage(Runtime rt) {
+void registerSduiCatalog(Runtime rt) {
   rt.registerWidget('Align', (args) => Align(key: args['key'] as Key?, alignment: args['alignment'] as AlignmentGeometry? ?? Alignment.center, widthFactor: args['widthFactor'] as double?, heightFactor: args['heightFactor'] as double?, child: args['child'] as Widget?));
   rt.registerWidget('AspectRatio', (args) => AspectRatio(key: args['key'] as Key?, aspectRatio: args['aspectRatio'] as double, child: args['child'] as Widget?));
   rt.registerWidget('Center', (args) => Center(key: args['key'] as Key?, widthFactor: args['widthFactor'] as double?, heightFactor: args['heightFactor'] as double?, child: args['child'] as Widget?));
@@ -145,5 +145,5 @@ void registerAllScreens(Runtime rt) {
   registerCounter_recordDependencies(rt);
   rt.registerScreen(counter_stressBinding);
   registerCounter_stressDependencies(rt);
-  registerSduiCoverage(rt);
+  registerSduiCatalog(rt);
 }

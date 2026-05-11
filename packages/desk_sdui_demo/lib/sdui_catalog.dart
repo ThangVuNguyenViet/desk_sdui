@@ -11,4 +11,4 @@ import 'package:flutter/material.dart';
   Act,
   CueMotion,
 ])
-class SduiCoverage {}
+class SduiCatalog {}

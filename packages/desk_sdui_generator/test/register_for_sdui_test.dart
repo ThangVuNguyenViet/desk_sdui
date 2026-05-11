@@ -1,4 +1,4 @@
-/// Tests for [collectTypesFromAnnotation] and the [RegistryBuilder] coverage
+/// Tests for [collectTypesFromAnnotation] and the [RegistryBuilder] catalog
 /// path that handles `@RegisterForSdui([T1, T2, ...])` annotations.
 ///
 /// We use the same resolved-AST fixture pattern as other tests in this package:
@@ -162,10 +162,10 @@ class _Cov {}
   });
 
   // -------------------------------------------------------------------------
-  // RegistryBuilder emitRegistryForTest with coverageTypes
+  // RegistryBuilder emitRegistryForTest with catalogTypes
   // -------------------------------------------------------------------------
 
-  group('RegistryBuilder — coverage registration', () {
+  group('RegistryBuilder — catalog registration', () {
     test(
       '@RegisterForSdui([PageView]) → generated output contains rt.registerWidget(\'PageView\')',
       () async {
@@ -184,35 +184,35 @@ class _Cov {}
         final annotated = libReader.annotatedWith(checker).first;
         final el = annotated.element as ClassElement;
         final dartObj = annotated.annotation.objectValue;
-        final coverageTypes = collectTypesFromAnnotation(el, dartObj);
+        final catalogTypes = collectTypesFromAnnotation(el, dartObj);
 
         final builder = RegistryBuilder();
         final output = builder.emitRegistryForTest(
           screens: [],
           packageName: 'desk_sdui_demo',
-          coverageTypes: coverageTypes,
+          catalogTypes: catalogTypes,
         );
 
         expect(
           output,
           contains("rt.registerWidget('PageView'"),
-          reason: 'PageView must be registered via coverage block',
+          reason: 'PageView must be registered via catalog block',
         );
         expect(
           output,
-          contains('registerSduiCoverage(rt)'),
-          reason: 'registerSduiCoverage must be called from registerAllScreens',
+          contains('registerSduiCatalog(rt)'),
+          reason: 'registerSduiCatalog must be called from registerAllScreens',
         );
         expect(
           output,
-          contains('void registerSduiCoverage(Runtime rt)'),
-          reason: 'registerSduiCoverage function must be emitted',
+          contains('void registerSduiCatalog(Runtime rt)'),
+          reason: 'registerSduiCatalog function must be emitted',
         );
       },
     );
 
     test(
-      'no @RegisterForSdui → registerSduiCoverage not emitted',
+      'no @RegisterForSdui → registerSduiCatalog not emitted',
       () {
         final builder = RegistryBuilder();
         final output = builder.emitRegistryForTest(
@@ -222,15 +222,15 @@ class _Cov {}
 
         expect(
           output,
-          isNot(contains('registerSduiCoverage')),
+          isNot(contains('registerSduiCatalog')),
           reason:
-              'No coverage annotation → no registerSduiCoverage in output',
+              'No catalog annotation → no registerSduiCatalog in output',
         );
       },
     );
 
     test(
-      'coverage + screen → both screen registrations and coverage block present',
+      'catalog + screen → both screen registrations and catalog block present',
       () async {
         const source = '''
 import 'package:flutter/material.dart';
@@ -247,7 +247,7 @@ class _Cov {}
         final annotated = libReader.annotatedWith(checker).first;
         final el = annotated.element as ClassElement;
         final dartObj = annotated.annotation.objectValue;
-        final coverageTypes = collectTypesFromAnnotation(el, dartObj);
+        final catalogTypes = collectTypesFromAnnotation(el, dartObj);
 
         final builder = RegistryBuilder();
         final output = builder.emitRegistryForTest(
@@ -261,13 +261,13 @@ class _Cov {}
             ),
           ],
           packageName: 'desk_sdui_demo',
-          coverageTypes: coverageTypes,
+          catalogTypes: catalogTypes,
         );
 
         expect(output, contains('rt.registerScreen(chefBinding)'));
         expect(output, contains('registerChefDependencies(rt)'));
         expect(output, contains("rt.registerWidget('SizedBox'"));
-        expect(output, contains('registerSduiCoverage(rt)'));
+        expect(output, contains('registerSduiCatalog(rt)'));
       },
     );
   });

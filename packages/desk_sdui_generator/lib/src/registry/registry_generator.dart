@@ -45,7 +45,7 @@ class ScreenInfoForTest {
 class RegistryBuilder implements Builder {
   static const _checker =
       TypeChecker.typeNamed(Screen, inPackage: 'desk_sdui_annotation');
-  static const _coverageChecker =
+  static const _catalogChecker =
       TypeChecker.typeNamed(RegisterForSdui, inPackage: 'desk_sdui_annotation');
 
   @override
@@ -56,7 +56,7 @@ class RegistryBuilder implements Builder {
   @override
   Future<void> build(BuildStep step) async {
     final screens = <_ScreenInfo>[];
-    final coverageTypes = CollectedTypes();
+    final catalogTypes = CollectedTypes();
 
     await for (final input in step.findAssets(Glob('lib/**.dart'))) {
       if (input.path.endsWith('.sdui.g.dart')) continue;
@@ -105,7 +105,7 @@ class RegistryBuilder implements Builder {
             // diagnostic for this screen rather than breaking the build.
             log.warning(
               'registration diagnostic: failed to resolve body for screen '
-              '"$name" ($e). Skipping coverage check for this screen.\n$st',
+              '"$name" ($e). Skipping catalog check for this screen.\n$st',
             );
           }
         }
@@ -120,18 +120,18 @@ class RegistryBuilder implements Builder {
       }
 
       // Collect @RegisterForSdui annotated classes.
-      for (final annotated in libReader.annotatedWith(_coverageChecker)) {
+      for (final annotated in libReader.annotatedWith(_catalogChecker)) {
         final el = annotated.element;
         if (el is! ClassElement) continue;
         final annotation = annotated.annotation.objectValue;
         final partial = collectTypesFromAnnotation(el, annotation);
-        coverageTypes.unionWith(partial);
+        catalogTypes.unionWith(partial);
       }
     }
 
     // Diagnostic: for each screen, fail the build if any widget type referenced
     // in its body is not listed in any @RegisterForSdui annotation.
-    final registeredWidgetNames = coverageTypes.widgets
+    final registeredWidgetNames = catalogTypes.widgets
         .map((e) => e.name)
         .whereType<String>()
         .toSet();
@@ -161,7 +161,7 @@ class RegistryBuilder implements Builder {
     final source = _emitRegistry(
       screens,
       step.inputId.package,
-      coverageTypes: coverageTypes,
+      catalogTypes: catalogTypes,
     );
     await step.writeAsString(
       AssetId(step.inputId.package, 'lib/desk_sdui_setup.g.dart'),
@@ -175,7 +175,7 @@ class RegistryBuilder implements Builder {
   String emitRegistryForTest({
     required List<ScreenInfoForTest> screens,
     required String packageName,
-    CollectedTypes? coverageTypes,
+    CollectedTypes? catalogTypes,
   }) {
     return _emitRegistry(
       screens
@@ -189,14 +189,14 @@ class RegistryBuilder implements Builder {
           )
           .toList(),
       packageName,
-      coverageTypes: coverageTypes,
+      catalogTypes: catalogTypes,
     );
   }
 
   String _emitRegistry(
     List<_ScreenInfo> screens,
     String packageName, {
-    CollectedTypes? coverageTypes,
+    CollectedTypes? catalogTypes,
   }) {
     // Build two separate import maps:
     //  1. Source URI → binding symbol (the ScreenBinding getter lives in the
@@ -234,10 +234,10 @@ class RegistryBuilder implements Builder {
       return '  rt.registerScreen(${s.bindingSymbol});\n  ${s.registrationFn}(rt);';
     }).join('\n');
 
-    // Build optional registerSduiCoverage block.
-    final coverageBlock = _emitCoverageBlock(coverageTypes);
-    final coverageCall = coverageBlock.isNotEmpty ? '\n  registerSduiCoverage(rt);' : '';
-    final flutterImport = coverageBlock.isNotEmpty
+    // Build optional registerSduiCatalog block.
+    final catalogBlock = _emitCatalogBlock(catalogTypes);
+    final catalogCall = catalogBlock.isNotEmpty ? '\n  registerSduiCatalog(rt);' : '';
+    final flutterImport = catalogBlock.isNotEmpty
         ? "import 'package:flutter/gestures.dart';\nimport 'package:flutter/material.dart';\nimport 'package:flutter/rendering.dart';\n"
         : '';
 
@@ -246,17 +246,17 @@ class RegistryBuilder implements Builder {
 // ignore_for_file: cast_nullable_to_non_nullable, cascade_invocations, prefer_const_constructors, lines_longer_than_80_chars, unnecessary_const, unused_import, directives_ordering, always_use_package_imports
 import 'package:desk_sdui/desk_sdui.dart';
 $flutterImport$importLines
-$coverageBlock
+$catalogBlock
 void registerAllScreens(Runtime rt) {
   registerCoreAccessors(rt);
-$registrations$coverageCall
+$registrations$catalogCall
 }
 ''';
   }
 
-  /// Returns the `void registerSduiCoverage(Runtime rt) { ... }` source block
+  /// Returns the `void registerSduiCatalog(Runtime rt) { ... }` source block
   /// when [ct] is non-null and non-empty, or an empty string otherwise.
-  String _emitCoverageBlock(CollectedTypes? ct) {
+  String _emitCatalogBlock(CollectedTypes? ct) {
     if (ct == null) return '';
     if (ct.widgets.isEmpty &&
         ct.valueTypes.isEmpty &&
@@ -271,6 +271,6 @@ $registrations$coverageCall
         .split('\n')
         .map((l) => '  $l')
         .join('\n');
-    return '\nvoid registerSduiCoverage(Runtime rt) {\n$registrations\n}';
+    return '\nvoid registerSduiCatalog(Runtime rt) {\n$registrations\n}';
   }
 }

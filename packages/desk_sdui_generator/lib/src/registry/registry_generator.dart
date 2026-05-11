@@ -1,7 +1,10 @@
+// ignore_for_file: deprecated_member_use
+import 'package:analyzer/dart/analysis/results.dart';
+import 'package:analyzer/dart/ast/ast.dart';
+import 'package:analyzer/dart/element/element.dart';
 import 'package:build/build.dart';
 import 'package:glob/glob.dart';
 import 'package:source_gen/source_gen.dart';
-import 'package:analyzer/dart/element/element.dart';
 import 'package:desk_sdui_annotation/desk_sdui_annotation.dart';
 import '../registration_emitter.dart';
 import '../type_collector.dart';
@@ -12,11 +15,15 @@ class _ScreenInfo {
     required this.bindingSymbol,
     required this.registrationFn,
     required this.sourceUri,
+    this.referencedWidgetNames = const {},
   });
   final String name;
   final String bindingSymbol;
   final String registrationFn;
   final Uri sourceUri;
+
+  /// Widget type names referenced in this screen's body (simple class names).
+  final Set<String> referencedWidgetNames;
 }
 
 /// Public test-surface data class that mirrors [_ScreenInfo].
@@ -61,17 +68,55 @@ class RegistryBuilder implements Builder {
         final el = annotated.element;
         final name = annotated.annotation.read('name').stringValue;
         final safeName = name.replaceAll(RegExp(r'[^a-zA-Z0-9_]'), '_');
-        if (el.name != null) {
-          final capitalizedName = safeName.isEmpty
-              ? safeName
-              : safeName[0].toUpperCase() + safeName.substring(1);
-          screens.add(_ScreenInfo(
-            name: name,
-            bindingSymbol: '${safeName}Binding',
-            registrationFn: 'register${capitalizedName}Dependencies',
-            sourceUri: input.uri,
-          ));
+        if (el.name == null) continue;
+
+        final capitalizedName = safeName.isEmpty
+            ? safeName
+            : safeName[0].toUpperCase() + safeName.substring(1);
+
+        // Resolve the screen body to collect referenced widget types for
+        // diagnostic comparison against the @RegisterForSdui registered set.
+        // We must use the RESOLVED AST so that ClassElements are populated.
+        var referencedWidgetNames = <String>{};
+        if (el is TopLevelFunctionElement) {
+          try {
+            final session = el.session;
+            if (session != null) {
+              final resolvedLibResult =
+                  await session.getResolvedLibraryByElement(el.library);
+              if (resolvedLibResult is ResolvedLibraryResult) {
+                final declResult = resolvedLibResult
+                    .getFragmentDeclaration(el.firstFragment);
+                final fnDecl = declResult?.node;
+                if (fnDecl is FunctionDeclaration) {
+                  final body = fnDecl.functionExpression.body;
+                  if (body is ExpressionFunctionBody) {
+                    final collected = collectTypes(fnDecl);
+                    referencedWidgetNames = collected.widgets
+                        .map((e) => e.name)
+                        .whereType<String>()
+                        .toSet();
+                  }
+                }
+              }
+            }
+          } catch (e, st) {
+            // If AST resolution fails for any reason, log and skip the
+            // diagnostic for this screen rather than breaking the build.
+            log.warning(
+              'registration diagnostic: failed to resolve body for screen '
+              '"$name" ($e). Skipping coverage check for this screen.\n$st',
+            );
+          }
         }
+
+        screens.add(_ScreenInfo(
+          name: name,
+          bindingSymbol: '${safeName}Binding',
+          registrationFn: 'register${capitalizedName}Dependencies',
+          sourceUri: input.uri,
+          referencedWidgetNames: referencedWidgetNames,
+        ));
       }
 
       // Collect @RegisterForSdui annotated classes.
@@ -82,6 +127,35 @@ class RegistryBuilder implements Builder {
         final partial = collectTypesFromAnnotation(el, annotation);
         coverageTypes.unionWith(partial);
       }
+    }
+
+    // Diagnostic: for each screen, fail the build if any widget type referenced
+    // in its body is not listed in any @RegisterForSdui annotation.
+    final registeredWidgetNames = coverageTypes.widgets
+        .map((e) => e.name)
+        .whereType<String>()
+        .toSet();
+    final allMissing = <String, List<String>>{};
+    for (final screen in screens) {
+      final missing =
+          screen.referencedWidgetNames.difference(registeredWidgetNames);
+      if (missing.isNotEmpty) {
+        allMissing[screen.name] = missing.toList()..sort();
+      }
+    }
+    if (allMissing.isNotEmpty) {
+      final details = allMissing.entries.map((e) {
+        final types = e.value.join(', ');
+        return '  Screen "${e.key}" references unregistered widget(s): $types';
+      }).join('\n');
+      throw StateError(
+        'desk_sdui registration diagnostic failed.\n'
+        'The following widget types are referenced in @Screen bodies but are '
+        'not listed in any @RegisterForSdui annotation.\n'
+        'Add them to a @RegisterForSdui list or import one of the bundles '
+        'from package:desk_sdui/widget_bundles.dart.\n'
+        '$details',
+      );
     }
 
     final source = _emitRegistry(

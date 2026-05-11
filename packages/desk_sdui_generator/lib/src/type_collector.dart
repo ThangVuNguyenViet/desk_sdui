@@ -20,12 +20,14 @@ class CollectedTypes {
     Set<MethodElement>? methods,
     Set<DartType>? subscriptables,
     Set<FunctionElement>? functions,
+    Set<String>? extraLibraryUris,
   })  : widgets = widgets ?? {},
         valueTypes = valueTypes ?? {},
         constants = constants ?? {},
         methods = methods ?? {},
         subscriptables = subscriptables ?? {},
-        functions = functions ?? {};
+        functions = functions ?? {},
+        extraLibraryUris = extraLibraryUris ?? {};
 
   /// Widget subclasses constructed in the screen body (e.g. `Column`, `Text`).
   final Set<ClassElement> widgets;
@@ -50,6 +52,14 @@ class CollectedTypes {
   /// Top-level function references (e.g. `min`, `max`).
   final Set<FunctionElement> functions;
 
+  /// Extra library URIs that must be imported in the generated file so that
+  /// types referenced in registration closures (e.g. `DragStartBehavior`,
+  /// `HitTestBehavior`, `ViewPadding`, `ColorSpace`) are in scope.
+  ///
+  /// `dart:core` and the screen's own library are excluded. Duplicates are
+  /// deduplicated by the [Set].
+  final Set<String> extraLibraryUris;
+
   /// Merges [other] into this (in-place union).
   void unionWith(CollectedTypes other) {
     widgets.addAll(other.widgets);
@@ -58,6 +68,7 @@ class CollectedTypes {
     methods.addAll(other.methods);
     subscriptables.addAll(other.subscriptables);
     functions.addAll(other.functions);
+    extraLibraryUris.addAll(other.extraLibraryUris);
   }
 }
 
@@ -131,10 +142,13 @@ class _TypeVisitor extends RecursiveAstVisitor<void> {
         if (name != null) _screenParamNames.add(name);
       }
     }
+    // Record the screen's own library URI so we can exclude it from extras.
+    _ownLibraryUri = _screen.declaredElement?.library.source.uri.toString();
   }
 
   final FunctionDeclaration _screen;
   final _screenParamNames = <String>{};
+  String? _ownLibraryUri;
 
   final collected = CollectedTypes();
 
@@ -154,6 +168,12 @@ class _TypeVisitor extends RecursiveAstVisitor<void> {
         collected.widgets.add(enclosing);
       } else {
         collected.valueTypes.add(enclosing);
+      }
+      // Collect library URIs for the class itself and all its constructor
+      // parameter types so the generated file has the needed imports.
+      _recordElementLibrary(enclosing);
+      if (ctorElement != null) {
+        _recordConstructorParamLibraries(ctorElement);
       }
     }
     super.visitInstanceCreationExpression(node);
@@ -187,6 +207,11 @@ class _TypeVisitor extends RecursiveAstVisitor<void> {
     final methodElement = node.methodName.staticElement;
     if (methodElement is MethodElement) {
       collected.methods.add(methodElement);
+      // Record library URIs for method param types.
+      _recordElementLibrary(methodElement.enclosingElement3);
+      for (final param in methodElement.parameters) {
+        _recordDartTypeLibraries(param.type);
+      }
     }
 
     super.visitMethodInvocation(node);
@@ -205,6 +230,8 @@ class _TypeVisitor extends RecursiveAstVisitor<void> {
       final propElement = node.identifier.staticElement;
       if (propElement != null) {
         collected.constants.add(propElement);
+        _recordElementLibrary(prefixElement);
+        _recordElementLibrary(propElement);
       }
     }
     super.visitPrefixedIdentifier(node);
@@ -219,6 +246,8 @@ class _TypeVisitor extends RecursiveAstVisitor<void> {
         final propElement = node.propertyName.staticElement;
         if (propElement != null) {
           collected.constants.add(propElement);
+          _recordElementLibrary(targetElement);
+          _recordElementLibrary(propElement);
         }
       }
     }
@@ -291,5 +320,39 @@ class _TypeVisitor extends RecursiveAstVisitor<void> {
       if (supertype.element.name == 'Widget') return true;
     }
     return false;
+  }
+
+  /// Records the library URI for [element] into [CollectedTypes.extraLibraryUris],
+  /// skipping `dart:core` and the screen's own library.
+  void _recordElementLibrary(Element element) {
+    final uri = element.library?.source.uri.toString();
+    if (uri == null) return;
+    if (uri == 'dart:core') return;
+    if (uri == _ownLibraryUri) return;
+    collected.extraLibraryUris.add(uri);
+  }
+
+  /// Records library URIs for all parameter types declared by [ctor].
+  ///
+  /// This covers types like `DragStartBehavior`, `HitTestBehavior`, etc. that
+  /// are referenced in the emitted registration closure for a constructor but
+  /// aren't the constructor's own class.
+  void _recordConstructorParamLibraries(ConstructorElement ctor) {
+    for (final param in ctor.parameters) {
+      _recordDartTypeLibraries(param.type);
+    }
+  }
+
+  /// Recursively records library URIs for [type] and its type arguments.
+  void _recordDartTypeLibraries(DartType type) {
+    final element = type.element;
+    if (element != null) {
+      _recordElementLibrary(element);
+    }
+    if (type is InterfaceType) {
+      for (final arg in type.typeArguments) {
+        _recordDartTypeLibraries(arg);
+      }
+    }
   }
 }

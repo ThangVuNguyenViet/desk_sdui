@@ -300,7 +300,7 @@ void _dummy() {}
       final code = emitter.emitMethod(method, receiverType: receiverType);
       expect(code, contains("rt.registerMethod('num.toStringAsFixed'"));
       expect(code, contains('(recv as num).toStringAsFixed('));
-      expect(code, contains('args[0] as int'));
+      expect(code, contains("args['arg0'] as int"));
     });
   });
 
@@ -315,7 +315,7 @@ void _dummy() {}
       final code = emitter.emitValueBuilder(ctor);
       expect(code, contains("rt.registerValueBuilder('EdgeInsets.all'"));
       expect(code, contains('(args) => EdgeInsets.all('));
-      expect(code, contains('args[0] as double'));
+      expect(code, contains("args['arg0'] as double"));
     });
 
     test('TextStyle unnamed ctor (named params with defaults) produces builder',

@@ -23,7 +23,7 @@ void main() {
             bindingSymbol: 'chefBinding',
             registrationFn: 'registerChefDependencies',
             sourceUri: Uri.parse(
-                'package:desk_sdui_demo/screens/chef.sdui.g.dart'),
+                'package:desk_sdui_demo/screens/chef.dart'),
           ),
         ],
         packageName: 'desk_sdui_demo',
@@ -35,7 +35,8 @@ void main() {
           reason: 'Must call per-screen dependency registration');
     });
 
-    test('import show clause includes both binding and registration fn', () {
+    test('import show clause includes binding from source and fn from reg file',
+        () {
       final output = builder.emitRegistryForTest(
         screens: [
           ScreenInfoForTest(
@@ -43,14 +44,18 @@ void main() {
             bindingSymbol: 'chefBinding',
             registrationFn: 'registerChefDependencies',
             sourceUri: Uri.parse(
-                'package:desk_sdui_demo/screens/chef.sdui.g.dart'),
+                'package:desk_sdui_demo/screens/chef.dart'),
           ),
         ],
         packageName: 'desk_sdui_demo',
       );
 
-      expect(output, contains('show chefBinding, registerChefDependencies'),
-          reason: 'show clause must export both symbols');
+      expect(output, contains("show chefBinding"),
+          reason: 'binding symbol must be in source import');
+      expect(output, contains("show registerChefDependencies"),
+          reason: 'registration fn must be in reg file import');
+      expect(output, contains('chef.sdui_reg.g.dart'),
+          reason: 'reg file URI must reference .sdui_reg.g.dart');
     });
 
     test('emits correct calls for multiple screens', () {
@@ -61,14 +66,14 @@ void main() {
             bindingSymbol: 'chefBinding',
             registrationFn: 'registerChefDependencies',
             sourceUri:
-                Uri.parse('package:desk_sdui_demo/screens/chef.sdui.g.dart'),
+                Uri.parse('package:desk_sdui_demo/screens/chef.dart'),
           ),
           ScreenInfoForTest(
             name: 'menu',
             bindingSymbol: 'menuBinding',
             registrationFn: 'registerMenuDependencies',
             sourceUri:
-                Uri.parse('package:desk_sdui_demo/screens/menu.sdui.g.dart'),
+                Uri.parse('package:desk_sdui_demo/screens/menu.dart'),
           ),
         ],
         packageName: 'desk_sdui_demo',
@@ -88,7 +93,7 @@ void main() {
             bindingSymbol: 'aBinding',
             registrationFn: 'registerADependencies',
             sourceUri:
-                Uri.parse('package:desk_sdui_demo/screens/a.sdui.g.dart'),
+                Uri.parse('package:desk_sdui_demo/screens/a.dart'),
           ),
         ],
         packageName: 'desk_sdui_demo',

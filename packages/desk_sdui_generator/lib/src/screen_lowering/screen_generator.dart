@@ -102,17 +102,63 @@ class ScreenGenerator extends GeneratorForAnnotation<Screen> {
     final collected = collectTypes(resolvedFnDecl ?? fnDecl);
     final registrations = RegistrationEmitter().emitAll(collected);
     final capitalizedName = _capitalize(ann.name);
-    final registrationFn = '''
+
+    // The registration function references many Flutter types (DragStartBehavior,
+    // HitTestBehavior, TapMoveDetails, LongPressDownDetails, ViewPadding,
+    // ColorSpace, Matrix4, etc.).  Rather than tracking individual library URIs
+    // (which surface as internal `src/` paths via the analyzer element model),
+    // we emit a fixed set of public barrel imports that collectively cover every
+    // type that any Flutter widget constructor or value-type constructor may
+    // reference.
+    //
+    // Part files cannot carry import directives, so the registration function
+    // lives in a separate standalone file (<screen>.sdui_reg.g.dart).
+    // vector_math exports a `Colors` symbol that conflicts with Flutter's
+    // `Colors`. Hide it to avoid the ambiguity while still getting `Matrix4`.
+    const importBlock = '''
+import 'dart:ui';
+import 'package:desk_sdui/desk_sdui.dart';
+import 'package:flutter/gestures.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
+import 'package:vector_math/vector_math_64.dart' hide Colors;''';
+
+    final ignoreDirective = '// ignore_for_file: '
+        'cast_nullable_to_non_nullable, '
+        'cascade_invocations, '
+        'prefer_const_constructors, '
+        'lines_longer_than_80_chars, '
+        'unnecessary_const, '
+        'unused_import, '
+        'directives_ordering, '
+        'always_use_package_imports';
+
+    final registrationFile = '''
+// GENERATED CODE — DO NOT MODIFY BY HAND
+$ignoreDirective
+$importBlock
+
 void register${capitalizedName}Dependencies(Runtime rt) {
 $registrations
 }
 ''';
-    final formattedRegFn = DartFormatter(languageVersion: DartFormatter.latestLanguageVersion).format(registrationFn);
+    final formattedRegFile = DartFormatter(
+      languageVersion: DartFormatter.latestLanguageVersion,
+    ).format(registrationFile);
 
-    // Strip the `part of` header that DartFormatter may have added (it won't —
-    // the registration snippet has no part directive), then concatenate.
-    // bindingCode already ends with a newline from its own format() call.
-    return '$bindingCode\n$formattedRegFn';
+    // Write registration function to a separate (non-part) file so it can
+    // carry its own import directives (part files cannot).
+    await buildStep.writeAsString(
+      buildStep.inputId.changeExtension('.sdui_reg.g.dart'),
+      formattedRegFile,
+    );
+
+    // The part file (chef.sdui.g.dart) only holds the ScreenBinding + a
+    // forward declaration of the registration function so that callers that
+    // import the part-of library still see the symbol.
+    // The function body lives in the sibling .sdui_reg.g.dart file; we expose
+    // it here as a re-export via the `show` directive in desk_sdui_setup.g.dart.
+    return bindingCode;
   }
 }
 

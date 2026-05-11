@@ -122,21 +122,37 @@ class RegistryBuilder implements Builder {
     String packageName, {
     CollectedTypes? coverageTypes,
   }) {
-    final imports = <String, List<String>>{};
+    // Build two separate import maps:
+    //  1. Source URI → binding symbol (the ScreenBinding getter lives in the
+    //     part-of file, accessed via the parent source library).
+    //  2. Reg URI → registration function (lives in the standalone _reg.g.dart
+    //     file so it can carry its own imports).
+    final bindingImports = <String, List<String>>{};
+    final regImports = <String, List<String>>{};
+
     for (final s in screens) {
-      var uri = s.sourceUri.toString();
-      if (uri.startsWith('package:$packageName/')) {
-        uri = uri.substring('package:$packageName/'.length);
+      var sourceUri = s.sourceUri.toString();
+      if (sourceUri.startsWith('package:$packageName/')) {
+        sourceUri = sourceUri.substring('package:$packageName/'.length);
       }
-      imports.putIfAbsent(uri, () => [])
-        ..add(s.bindingSymbol)
-        ..add(s.registrationFn);
+      // Derive the _reg.g.dart URI by replacing .dart extension.
+      final regUri = sourceUri.endsWith('.dart')
+          ? '${sourceUri.substring(0, sourceUri.length - '.dart'.length)}.sdui_reg.g.dart'
+          : '$sourceUri.sdui_reg.g.dart';
+
+      bindingImports.putIfAbsent(sourceUri, () => []).add(s.bindingSymbol);
+      regImports.putIfAbsent(regUri, () => []).add(s.registrationFn);
     }
 
-    final importLines = imports.entries.map((e) {
+    final bindingImportLines = bindingImports.entries.map((e) {
       final symbols = e.value.join(', ');
       return "import 'package:$packageName/${e.key}' show $symbols;";
-    }).join('\n');
+    });
+    final regImportLines = regImports.entries.map((e) {
+      final symbols = e.value.join(', ');
+      return "import 'package:$packageName/${e.key}' show $symbols;";
+    });
+    final importLines = [...bindingImportLines, ...regImportLines].join('\n');
 
     final registrations = screens.map((s) {
       return '  rt.registerScreen(${s.bindingSymbol});\n  ${s.registrationFn}(rt);';
@@ -151,6 +167,7 @@ class RegistryBuilder implements Builder {
 
     return '''
 // GENERATED CODE — DO NOT MODIFY BY HAND
+// ignore_for_file: cast_nullable_to_non_nullable, cascade_invocations, prefer_const_constructors, lines_longer_than_80_chars, unnecessary_const, unused_import, directives_ordering, always_use_package_imports
 import 'package:desk_sdui/desk_sdui.dart';
 $flutterImport$importLines
 $coverageBlock

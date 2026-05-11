@@ -14,7 +14,7 @@ class _ScreenBuilder extends Builder {
 
   @override
   Map<String, List<String>> get buildExtensions => const {
-    '.dart': ['.sdui.g.dart', '.sdui.json'],
+    '.dart': ['.sdui.g.dart', '.sdui.json', '.sdui_reg.g.dart'],
   };
 
   @override

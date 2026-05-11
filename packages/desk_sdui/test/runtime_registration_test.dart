@@ -25,8 +25,9 @@ void main() {
 
   test('registerMethod then invokeMethod runs the handler', () {
     final rt = Runtime();
-    rt.registerMethod('String.toUpperCase', (recv, _) => (recv as String).toUpperCase());
-    expect(rt.invokeMethod('String.toUpperCase', 'hello', const []), 'HELLO');
+    rt.registerMethod(
+        'String.toUpperCase', (recv, _) => (recv as String).toUpperCase());
+    expect(rt.invokeMethod('String.toUpperCase', 'hello', const {}), 'HELLO');
   });
 
   test('registerSubscript then invokeSubscript runs the handler', () {
@@ -37,8 +38,9 @@ void main() {
 
   test('registerValueBuilder then invokeValueBuilder runs the builder', () {
     final rt = Runtime();
-    rt.registerValueBuilder('EdgeInsets.all', (a) => EdgeInsets.all(a[0] as double));
-    final result = rt.invokeValueBuilder('EdgeInsets.all', const [8.0]);
+    rt.registerValueBuilder(
+        'EdgeInsets.all', (a) => EdgeInsets.all(a['arg0'] as double));
+    final result = rt.invokeValueBuilder('EdgeInsets.all', {'arg0': 8.0});
     expect(result, const EdgeInsets.all(8.0));
   });
 

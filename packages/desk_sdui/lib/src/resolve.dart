@@ -140,8 +140,10 @@ Object? _resolveArg(
 
     case MethodCallNode(:final receiver, :final name, :final args):
       final resolvedReceiver = _resolveArg(context, receiver, input, runtime);
-      final resolvedArgs =
-          args.map((a) => _resolveArg(context, a, input, runtime)).toList();
+      final resolvedArgs = <String, Object?>{};
+      for (var i = 0; i < args.length; i++) {
+        resolvedArgs['arg$i'] = _resolveArg(context, args[i], input, runtime);
+      }
       final handler = runtime.resolveMethodHandler(name);
       if (handler == null) {
         throw StateError(
@@ -152,8 +154,10 @@ Object? _resolveArg(
       return handler(resolvedReceiver, resolvedArgs);
 
     case ValueCtorNode(:final name, :final args):
-      final resolvedArgs =
-          args.map((a) => _resolveArg(context, a, input, runtime)).toList();
+      final resolvedArgs = <String, Object?>{};
+      for (var i = 0; i < args.length; i++) {
+        resolvedArgs['arg$i'] = _resolveArg(context, args[i], input, runtime);
+      }
       final builder = runtime.resolveValueBuilder(name);
       if (builder == null) {
         throw StateError(

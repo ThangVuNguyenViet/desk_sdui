@@ -59,7 +59,7 @@ void main() {
     final rt = Runtime();
     rt.registerValueBuilder(
       'EdgeInsets.all',
-      (args) => EdgeInsets.all(args[0] as double),
+      (args) => EdgeInsets.all(args['arg0'] as double),
     );
     rt.registerWidgetWithContext('PaddingWrapper', (ctx, args) {
       return Padding(
@@ -94,7 +94,7 @@ void main() {
     final rt = Runtime();
     rt.registerValueBuilder(
       'EdgeInsets.all',
-      (args) => EdgeInsets.all(args[0] as double),
+      (args) => EdgeInsets.all(args['arg0'] as double),
     );
     // Register via registerWidget (new codegen path) — uses _sduiWidgets.
     rt.registerWidget('Padding', (args) {

@@ -56,17 +56,26 @@ typedef WidgetBuilderFn = Widget Function(
 typedef SduiWidgetBuilder = Widget Function(Map<String, Object?> args);
 
 /// Handles a method call: `receiver.name(args)`.
+///
+/// [args] is a named-param map. Positional parameters are keyed by their
+/// declaration-order index as `'arg0'`, `'arg1'`, etc.
 typedef SduiMethodHandler = Object? Function(
-    Object? receiver, List<Object?> args);
+    Object? receiver, Map<String, Object?> args);
 
 /// Handles a subscript access: `receiver[key]`.
 typedef SduiSubscriptHandler = Object? Function(Object? receiver, Object? key);
 
-/// Builds a value-type instance from positional args, e.g. EdgeInsets.all.
-typedef SduiValueBuilder = Object? Function(List<Object?> args);
+/// Builds a value-type instance from a named-param map.
+///
+/// Named parameters are keyed by their Dart name. Positional parameters are
+/// keyed by their declaration-order index as `'arg0'`, `'arg1'`, etc.
+typedef SduiValueBuilder = Object? Function(Map<String, Object?> args);
 
 /// Handles a free function call.
-typedef SduiFunctionHandler = Object? Function(List<Object?> args);
+///
+/// [args] is a named-param map. Positional parameters are keyed as `'arg0'`,
+/// `'arg1'`, etc.
+typedef SduiFunctionHandler = Object? Function(Map<String, Object?> args);
 
 abstract class IrFetcher {
   Future<List<int>> fetch(String name);
@@ -160,13 +169,14 @@ class Runtime {
   /// registered. Used by resolve.dart to dispatch [ValueCtorNode].
   SduiValueBuilder? resolveValueBuilder(String name) => _valueBuilders[name];
 
-  Object? invokeMethod(String name, Object? receiver, List<Object?> args) =>
+  Object? invokeMethod(
+          String name, Object? receiver, Map<String, Object?> args) =>
       _methods[name]?.call(receiver, args);
   Object? invokeSubscript(String name, Object? receiver, Object? key) =>
       _subscripts[name]?.call(receiver, key);
-  Object? invokeValueBuilder(String name, List<Object?> args) =>
+  Object? invokeValueBuilder(String name, Map<String, Object?> args) =>
       _valueBuilders[name]?.call(args);
-  Object? invokeFunction(String name, List<Object?> args) =>
+  Object? invokeFunction(String name, Map<String, Object?> args) =>
       _functions[name]?.call(args);
 
   Future<IrTree> load(String name) async {

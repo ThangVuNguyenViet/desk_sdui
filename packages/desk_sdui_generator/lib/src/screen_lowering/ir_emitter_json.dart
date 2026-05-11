@@ -2,14 +2,18 @@ import 'dart:convert';
 
 import 'package:desk_sdui_annotation/desk_sdui_annotation.dart';
 
-List<int> emitJson(IrTree tree) {
+Map<String, Object?> emitJsonMap(IrTree tree) {
   final codec = const JsonIrCodec();
   final demotedRoot = _demoteAllConst(tree.root);
-  final map = <String, Object?>{
+  return <String, Object?>{
     'name': tree.name,
     'version': tree.version,
     'root': codec.encode(demotedRoot),
   };
+}
+
+List<int> emitJson(IrTree tree) {
+  final map = emitJsonMap(tree);
   return utf8.encode(jsonEncode(map));
 }
 

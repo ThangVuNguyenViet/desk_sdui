@@ -36,8 +36,10 @@ class ScreenInfoForTest {
 }
 
 class RegistryBuilder implements Builder {
-  static const _checker = TypeChecker.fromRuntime(Screen);
-  static const _coverageChecker = TypeChecker.fromRuntime(RegisterForSdui);
+  static const _checker =
+      TypeChecker.typeNamed(Screen, inPackage: 'desk_sdui_annotation');
+  static const _coverageChecker =
+      TypeChecker.typeNamed(RegisterForSdui, inPackage: 'desk_sdui_annotation');
 
   @override
   Map<String, List<String>> get buildExtensions => {

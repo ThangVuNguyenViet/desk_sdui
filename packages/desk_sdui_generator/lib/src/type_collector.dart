@@ -19,7 +19,7 @@ class CollectedTypes {
     Set<Element>? constants,
     Set<MethodElement>? methods,
     Set<DartType>? subscriptables,
-    Set<FunctionElement>? functions,
+    Set<TopLevelFunctionElement>? functions,
     Set<String>? extraLibraryUris,
   })  : widgets = widgets ?? {},
         valueTypes = valueTypes ?? {},
@@ -50,7 +50,7 @@ class CollectedTypes {
   final Set<DartType> subscriptables;
 
   /// Top-level function references (e.g. `min`, `max`).
-  final Set<FunctionElement> functions;
+  final Set<TopLevelFunctionElement> functions;
 
   /// Extra library URIs that must be imported in the generated file so that
   /// types referenced in registration closures (e.g. `DragStartBehavior`,
@@ -143,7 +143,7 @@ class _TypeVisitor extends RecursiveAstVisitor<void> {
       }
     }
     // Record the screen's own library URI so we can exclude it from extras.
-    _ownLibraryUri = _screen.declaredElement?.library.source.uri.toString();
+    _ownLibraryUri = _screen.declaredFragment?.element.library.firstFragment.source.uri.toString();
   }
 
   final FunctionDeclaration _screen;
@@ -161,8 +161,8 @@ class _TypeVisitor extends RecursiveAstVisitor<void> {
 
   @override
   void visitInstanceCreationExpression(InstanceCreationExpression node) {
-    final ctorElement = node.constructorName.staticElement;
-    final enclosing = ctorElement?.enclosingElement3;
+    final ctorElement = node.constructorName.element;
+    final enclosing = ctorElement?.enclosingElement;
     if (enclosing is ClassElement) {
       if (_isWidgetSubtype(enclosing)) {
         collected.widgets.add(enclosing);
@@ -189,8 +189,8 @@ class _TypeVisitor extends RecursiveAstVisitor<void> {
 
     if (target == null) {
       // No receiver — could be a top-level function call.
-      final methodElement = node.methodName.staticElement;
-      if (methodElement is FunctionElement) {
+      final methodElement = node.methodName.element;
+      if (methodElement is TopLevelFunctionElement) {
         collected.functions.add(methodElement);
       }
       super.visitMethodInvocation(node);
@@ -204,12 +204,12 @@ class _TypeVisitor extends RecursiveAstVisitor<void> {
     // `() => controller.doSomething()`), which the closure lowerer handles
     // separately and which appear as FunctionExpression nodes, not bare
     // MethodInvocation nodes.
-    final methodElement = node.methodName.staticElement;
+    final methodElement = node.methodName.element;
     if (methodElement is MethodElement) {
       collected.methods.add(methodElement);
       // Record library URIs for method param types.
-      _recordElementLibrary(methodElement.enclosingElement3);
-      for (final param in methodElement.parameters) {
+      _recordElementLibrary(methodElement.enclosingElement!);
+      for (final param in methodElement.formalParameters) {
         _recordDartTypeLibraries(param.type);
       }
     }
@@ -223,11 +223,11 @@ class _TypeVisitor extends RecursiveAstVisitor<void> {
 
   @override
   void visitPrefixedIdentifier(PrefixedIdentifier node) {
-    final prefixElement = node.prefix.staticElement;
+    final prefixElement = node.prefix.element;
     // Interested when the prefix resolves to a class or enum (static access).
     // Both ClassElement and EnumElement are subtypes of InterfaceElement.
     if (prefixElement is InterfaceElement) {
-      final propElement = node.identifier.staticElement;
+      final propElement = node.identifier.element;
       if (propElement != null) {
         collected.constants.add(propElement);
         _recordElementLibrary(prefixElement);
@@ -241,9 +241,9 @@ class _TypeVisitor extends RecursiveAstVisitor<void> {
   void visitPropertyAccess(PropertyAccess node) {
     final target = node.target;
     if (target is SimpleIdentifier) {
-      final targetElement = target.staticElement;
+      final targetElement = target.element;
       if (targetElement is InterfaceElement) {
-        final propElement = node.propertyName.staticElement;
+        final propElement = node.propertyName.element;
         if (propElement != null) {
           collected.constants.add(propElement);
           _recordElementLibrary(targetElement);
@@ -325,7 +325,7 @@ class _TypeVisitor extends RecursiveAstVisitor<void> {
   /// Records the library URI for [element] into [CollectedTypes.extraLibraryUris],
   /// skipping `dart:core` and the screen's own library.
   void _recordElementLibrary(Element element) {
-    final uri = element.library?.source.uri.toString();
+    final uri = element.library?.firstFragment.source.uri.toString();
     if (uri == null) return;
     if (uri == 'dart:core') return;
     if (uri == _ownLibraryUri) return;
@@ -338,7 +338,7 @@ class _TypeVisitor extends RecursiveAstVisitor<void> {
   /// are referenced in the emitted registration closure for a constructor but
   /// aren't the constructor's own class.
   void _recordConstructorParamLibraries(ConstructorElement ctor) {
-    for (final param in ctor.parameters) {
+    for (final param in ctor.formalParameters) {
       _recordDartTypeLibraries(param.type);
     }
   }

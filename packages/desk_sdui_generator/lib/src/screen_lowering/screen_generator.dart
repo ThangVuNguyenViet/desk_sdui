@@ -59,14 +59,15 @@ class ScreenGenerator extends GeneratorForAnnotation<Screen> {
     // Resolve the library first so the lowerer has access to static types
     // (needed to split RefNode paths at core-type boundaries).
     FunctionDeclaration? resolvedFnDecl;
-    if (element is FunctionElement) {
+    if (element is TopLevelFunctionElement) {
       final session = element.session;
       if (session != null) {
         final resolvedLibResult = await session.getResolvedLibraryByElement(
           element.library,
         );
         if (resolvedLibResult is ResolvedLibraryResult) {
-          final declResult = resolvedLibResult.getElementDeclaration(element);
+          final declResult = resolvedLibResult
+              .getFragmentDeclaration(element.firstFragment);
           resolvedFnDecl = declResult?.node as FunctionDeclaration?;
         }
       }

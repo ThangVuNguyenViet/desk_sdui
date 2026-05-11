@@ -22,7 +22,7 @@ class MissingKeyWarningVisitor extends RecursiveAstVisitor<void> {
           ? body.argumentList.arguments
           : (body as MethodInvocation).argumentList.arguments;
       final hasKey = args.any(
-        (a) => a is NamedExpression && a.name.label.name == 'key',
+        (a) => a is NamedArgument && a.name.lexeme == 'key',
       );
       if (!hasKey) {
         warnings.add(AnalysisErrorInfo(

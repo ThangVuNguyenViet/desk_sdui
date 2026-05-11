@@ -10,7 +10,8 @@ Builder screenBuilder(BuilderOptions _) => _ScreenBuilder();
 class _ScreenBuilder extends Builder {
   _ScreenBuilder();
 
-  static const _checker = TypeChecker.fromRuntime(Screen);
+  static const _checker =
+      TypeChecker.typeNamed(Screen, inPackage: 'desk_sdui_annotation');
 
   @override
   Map<String, List<String>> get buildExtensions => const {

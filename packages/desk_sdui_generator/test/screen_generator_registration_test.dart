@@ -6,7 +6,7 @@
 /// and registration emission — using the same resolved-AST trick as the
 /// type_collector_test: a temporary `.dart` file is written into
 /// desk_sdui_demo/lib so that Flutter types are resolvable, resolved with
-/// `resolveFile2`, and then the pipeline is run manually.
+/// `resolveFile`, and then the pipeline is run manually.
 ///
 /// We do *not* run the build_runner here; instead we call the individual
 /// pipeline functions directly and verify the string output.
@@ -19,7 +19,6 @@ import 'package:analyzer/dart/analysis/results.dart';
 import 'package:analyzer/dart/analysis/utilities.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_style/dart_style.dart';
-import 'package:desk_sdui_annotation/desk_sdui_annotation.dart';
 import 'package:desk_sdui_generator/src/registration_emitter.dart';
 import 'package:desk_sdui_generator/src/screen_lowering/ast_to_ir.dart';
 import 'package:desk_sdui_generator/src/screen_lowering/const_fold_pass.dart';
@@ -47,9 +46,9 @@ Future<FunctionDeclaration> _resolveScreen(String source) async {
   );
   tempFile.writeAsStringSync(source);
   try {
-    final result = await resolveFile2(path: tempFile.path);
+    final result = await resolveFile(path: tempFile.path);
     if (result is! ResolvedUnitResult) {
-      throw StateError('resolveFile2 returned ${result.runtimeType}');
+      throw StateError('resolveFile returned ${result.runtimeType}');
     }
     return result.unit.declarations.whereType<FunctionDeclaration>().first;
   } finally {

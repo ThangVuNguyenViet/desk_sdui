@@ -11,7 +11,7 @@ class UnregisteredSymbolVisitor extends RecursiveAstVisitor<void> {
 
   @override
   void visitInstanceCreationExpression(InstanceCreationExpression node) {
-    final name = node.constructorName.type.name2.lexeme;
+    final name = node.constructorName.type.name.lexeme;
     if (!_isBuiltin(name)) {
       errors.add(AnalysisErrorInfo(
         node.offset,

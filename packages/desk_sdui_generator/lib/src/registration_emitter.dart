@@ -31,7 +31,7 @@ class RegistrationEmitter {
   String emitWidget(ClassElement widget) {
     final ctor = _unnamedCtor(widget);
     if (ctor == null) return '// No unnamed constructor for ${widget.name}';
-    final params = ctor.parameters;
+    final params = ctor.formalParameters;
     final argsCode = _buildWidgetArgList(params);
     return "rt.registerWidget('${widget.name}', (args) => ${widget.name}($argsCode));";
   }
@@ -40,7 +40,7 @@ class RegistrationEmitter {
   ///
   /// The qualified name is `ClassName.memberName`.
   String emitConstant(Element constant) {
-    final className = constant.enclosingElement3?.name ?? '';
+    final className = constant.enclosingElement?.name ?? '';
     final memberName = constant.name ?? '';
     final qualifiedName = '$className.$memberName';
     return "rt.registerConstant('$qualifiedName', $qualifiedName);";
@@ -52,9 +52,9 @@ class RegistrationEmitter {
   /// for the cast expression and the qualified registration name.
   String emitMethod(MethodElement method, {required DartType receiverType}) {
     final receiverTypeName = _typeDisplayName(receiverType);
-    final receiverClassName = method.enclosingElement3.name;
+    final receiverClassName = method.enclosingElement!.name;
     final qualifiedName = '$receiverClassName.${method.name}';
-    final params = method.parameters;
+    final params = method.formalParameters;
     final callArgs = _buildCallArgList(params);
     return "rt.registerMethod('$qualifiedName', "
         "(recv, args) => (recv as $receiverTypeName).${method.name}($callArgs));";
@@ -69,9 +69,9 @@ class RegistrationEmitter {
     // Determine the key type from the `[]` operator signature if available.
     String keyTypeName = 'Object?';
     if (type is InterfaceType) {
-      final opElement = type.lookUpMethod2('[]', type.element.library);
+      final opElement = type.lookUpMethod('[]', type.element.library);
       if (opElement != null) {
-        final params = opElement.parameters;
+        final params = opElement.formalParameters;
         if (params.isNotEmpty) {
           keyTypeName = _typeDisplayName(params.first.type);
         }
@@ -87,18 +87,20 @@ class RegistrationEmitter {
   /// Works for both unnamed (`EdgeInsets(...)`) and named (`EdgeInsets.all(...)`)
   /// constructors.
   String emitValueBuilder(ConstructorElement ctor) {
-    final className = ctor.enclosingElement3.name;
-    final ctorName = ctor.name;
+    final className = ctor.enclosingElement.name;
+    final rawCtorName = ctor.name ?? '';
+    // In analyzer 13, the unnamed constructor's name is 'new'; treat it as unnamed.
+    final ctorName = rawCtorName == 'new' ? '' : rawCtorName;
     final qualifiedName = ctorName.isEmpty ? className : '$className.$ctorName';
     final callTarget = ctorName.isEmpty ? className : '$className.$ctorName';
-    final params = ctor.parameters;
+    final params = ctor.formalParameters;
     final argsCode = _buildCallArgList(params);
     return "rt.registerValueBuilder('$qualifiedName', (args) => $callTarget($argsCode));";
   }
 
   /// Emit a `rt.registerFunction(...)` call for a top-level function.
-  String emitFunction(FunctionElement fn) {
-    final params = fn.parameters;
+  String emitFunction(TopLevelFunctionElement fn) {
+    final params = fn.formalParameters;
     final argsCode = _buildCallArgList(params);
     return "rt.registerFunction('${fn.name}', (args) => ${fn.name}($argsCode));";
   }
@@ -119,7 +121,10 @@ class RegistrationEmitter {
         lines.add(emitValueBuilder(unnamed));
       }
       for (final ctor in valueType.constructors) {
-        if (ctor.name.isNotEmpty && !ctor.isPrivate) {
+        final ctorName = ctor.name ?? '';
+        // 'new' is analyzer 13's name for the unnamed ctor (handled above);
+        // skip both the empty/'new' cases here so we only emit named ctors.
+        if (ctorName.isNotEmpty && ctorName != 'new' && !ctor.isPrivate) {
           lines.add(emitValueBuilder(ctor));
         }
       }
@@ -131,7 +136,7 @@ class RegistrationEmitter {
 
     for (final method in collected.methods) {
       final receiverType =
-          (method.enclosingElement3 as InterfaceElement).thisType;
+          (method.enclosingElement! as InterfaceElement).thisType;
       lines.add(emitMethod(method, receiverType: receiverType));
     }
 
@@ -153,7 +158,11 @@ class RegistrationEmitter {
   /// Find the unnamed constructor for [cls], or null if none.
   ConstructorElement? _unnamedCtor(ClassElement cls) {
     for (final ctor in cls.constructors) {
-      if (ctor.name.isEmpty && !ctor.isPrivate) return ctor;
+      // In analyzer 13, the unnamed constructor's name is 'new' (was '' in v7).
+      final ctorName = ctor.name ?? '';
+      if ((ctorName.isEmpty || ctorName == 'new') && !ctor.isPrivate) {
+        return ctor;
+      }
     }
     return null;
   }
@@ -170,7 +179,7 @@ class RegistrationEmitter {
   /// Positional parameters are passed WITHOUT a `name:` label (since they are
   /// positional in the Dart call), but still read from the map using the
   /// declared parameter name as the key.
-  String _buildWidgetArgList(List<ParameterElement> params) {
+  String _buildWidgetArgList(List<FormalParameterElement> params) {
     if (params.isEmpty) return '';
     final parts = <String>[];
     for (final p in params) {
@@ -206,7 +215,7 @@ class RegistrationEmitter {
   /// Named params use `args['name']` map access.
   /// Positional params use `args['arg0']`, `args['arg1']`, etc. — the resolver
   /// indexes positional IR nodes with the same `arg0`, `arg1` keys.
-  String _buildCallArgList(List<ParameterElement> params) {
+  String _buildCallArgList(List<FormalParameterElement> params) {
     if (params.isEmpty) return '';
     final parts = <String>[];
     var positionalIndex = 0;

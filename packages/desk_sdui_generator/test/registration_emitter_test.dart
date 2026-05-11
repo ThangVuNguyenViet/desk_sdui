@@ -4,7 +4,7 @@
 /// We resolve Flutter type elements using the same `resolveScreen` helper
 /// pattern established in `type_collector_test.dart`: write a temp Dart file
 /// into the `desk_sdui_demo/lib` directory (which has a valid Flutter context),
-/// resolve with `resolveFile2`, then extract elements from the resolved unit.
+/// resolve with `resolveFile`, then extract elements from the resolved unit.
 // ignore_for_file: deprecated_member_use
 library;
 
@@ -38,9 +38,9 @@ Future<ResolvedUnitResult> _resolveSource(String source) async {
   );
   tempFile.writeAsStringSync(source);
   try {
-    final result = await resolveFile2(path: tempFile.path);
+    final result = await resolveFile(path: tempFile.path);
     if (result is! ResolvedUnitResult) {
-      throw StateError('resolveFile2 returned ${result.runtimeType}');
+      throw StateError('resolveFile returned ${result.runtimeType}');
     }
     return result;
   } finally {
@@ -59,8 +59,8 @@ Future<FunctionDeclaration> _resolveScreen(String source) async {
 /// Searches all imported libraries (direct only — deep search is slow).
 ClassElement _classElement(ResolvedUnitResult result, String name) {
   final lib = result.libraryElement;
-  for (final imp in lib.importedLibraries) {
-    final el = imp.exportNamespace.get(name);
+  for (final imp in lib.firstFragment.importedLibraries) {
+    final el = imp.exportNamespace.get2(name);
     if (el is ClassElement) return el;
   }
   throw StateError('ClassElement "$name" not found in resolved unit');
@@ -70,8 +70,8 @@ ClassElement _classElement(ResolvedUnitResult result, String name) {
 /// [EnumElement] (which is an [InterfaceElement] but not a [ClassElement]).
 InterfaceElement _interfaceElement(ResolvedUnitResult result, String name) {
   final lib = result.libraryElement;
-  for (final imp in lib.importedLibraries) {
-    final el = imp.exportNamespace.get(name);
+  for (final imp in lib.firstFragment.importedLibraries) {
+    final el = imp.exportNamespace.get2(name);
     if (el is InterfaceElement) return el;
   }
   throw StateError('InterfaceElement "$name" not found in resolved unit');
@@ -99,7 +99,9 @@ ConstructorElement _ctorElement(
 ) {
   final cls = _classElement(result, className);
   for (final c in cls.constructors) {
-    if (c.name == ctorName) return c;
+    // In analyzer 13, the unnamed ctor's name is 'new' (was '' in v7).
+    final name = c.name == 'new' ? '' : (c.name ?? '');
+    if (name == ctorName) return c;
   }
   throw StateError('Constructor "$className.$ctorName" not found');
 }
@@ -115,7 +117,10 @@ Element _staticMemberElement(
   for (final f in iface.fields) {
     if (f.name == memberName) return f;
   }
-  for (final a in iface.accessors) {
+  for (final a in iface.getters) {
+    if (a.name == memberName) return a;
+  }
+  for (final a in iface.setters) {
     if (a.name == memberName) return a;
   }
   throw StateError(
@@ -284,7 +289,7 @@ void _dummy() {}
     test('String.toUpperCase produces registerMethod call', () {
       final method = _methodElement(materialResult, 'String', 'toUpperCase');
       final receiverType =
-          (method.enclosingElement3 as InterfaceElement).thisType;
+          (method.enclosingElement as InterfaceElement).thisType;
       final code = emitter.emitMethod(method, receiverType: receiverType);
       expect(code, contains("rt.registerMethod('String.toUpperCase'"));
       expect(
@@ -296,7 +301,7 @@ void _dummy() {}
     test('num.toStringAsFixed produces positional arg cast', () {
       final method = _methodElement(materialResult, 'num', 'toStringAsFixed');
       final receiverType =
-          (method.enclosingElement3 as InterfaceElement).thisType;
+          (method.enclosingElement as InterfaceElement).thisType;
       final code = emitter.emitMethod(method, receiverType: receiverType);
       expect(code, contains("rt.registerMethod('num.toStringAsFixed'"));
       expect(code, contains('(recv as num).toStringAsFixed('));

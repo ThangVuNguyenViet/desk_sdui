@@ -49,9 +49,10 @@ IrNode lowerWidgetInstance(InstanceCreationExpression expr, {Object? Function(In
 
   var positionalIndex = 0;
   for (final a in expr.argumentList.arguments) {
-    if (a is NamedExpression) {
-      final name = a.name.label.name;
-      final value = _lowerArg(a.expression, constEvaluator: constEvaluator);
+    if (a is NamedArgument) {
+      final name = a.name.lexeme;
+      final value =
+          _lowerArg(a.argumentExpression, constEvaluator: constEvaluator);
       if (name == 'key') {
         key = value;
       } else {
@@ -61,7 +62,8 @@ IrNode lowerWidgetInstance(InstanceCreationExpression expr, {Object? Function(In
       final paramName = positionalIndex < positionalParams.length
           ? positionalParams[positionalIndex]
           : 'arg$positionalIndex';
-      args[paramName] = _lowerArg(a, constEvaluator: constEvaluator);
+      args[paramName] =
+          _lowerArg(a.argumentExpression, constEvaluator: constEvaluator);
       positionalIndex++;
     }
   }
@@ -78,9 +80,10 @@ IrNode lowerWidgetInvocation(MethodInvocation expr, {Object? Function(InstanceCr
 
   var positionalIndex = 0;
   for (final a in expr.argumentList.arguments) {
-    if (a is NamedExpression) {
-      final name = a.name.label.name;
-      final value = _lowerArg(a.expression, constEvaluator: constEvaluator);
+    if (a is NamedArgument) {
+      final name = a.name.lexeme;
+      final value =
+          _lowerArg(a.argumentExpression, constEvaluator: constEvaluator);
       if (name == 'key') {
         key = value;
       } else {
@@ -90,7 +93,8 @@ IrNode lowerWidgetInvocation(MethodInvocation expr, {Object? Function(InstanceCr
       final paramName = positionalIndex < positionalParams.length
           ? positionalParams[positionalIndex]
           : 'arg$positionalIndex';
-      args[paramName] = _lowerArg(a, constEvaluator: constEvaluator);
+      args[paramName] =
+          _lowerArg(a.argumentExpression, constEvaluator: constEvaluator);
       positionalIndex++;
     }
   }
@@ -143,9 +147,10 @@ IrNode _lowerArg(Expression a, {Object? Function(InstanceCreationExpression)? co
     final args = <String, IrNode>{};
     IrNode? key;
     for (final arg in a.argumentList.arguments) {
-      if (arg is NamedExpression) {
-        final argName = arg.name.label.name;
-        final value = _lowerArg(arg.expression, constEvaluator: constEvaluator);
+      if (arg is NamedArgument) {
+        final argName = arg.name.lexeme;
+        final value =
+            _lowerArg(arg.argumentExpression, constEvaluator: constEvaluator);
         if (argName == 'key') {
           key = value;
         } else {
@@ -153,7 +158,8 @@ IrNode _lowerArg(Expression a, {Object? Function(InstanceCreationExpression)? co
         }
       } else {
         final i = args.length;
-        args['arg$i'] = _lowerArg(arg, constEvaluator: constEvaluator);
+        args['arg$i'] =
+            _lowerArg(arg.argumentExpression, constEvaluator: constEvaluator);
       }
     }
     return WidgetNode(name: qualifiedName, args: args, key: key);
@@ -198,7 +204,7 @@ IrNode _lowerCollectionElement(CollectionElement el, {Object? Function(InstanceC
       if (expr.elements.isEmpty) {
         return SpreadNode(ListNode([]));
       }
-      final lowered = expr.elements.map((e) => _lowerCollectionElement(e as CollectionElement, constEvaluator: constEvaluator)).toList();
+      final lowered = expr.elements.map((e) => _lowerCollectionElement(e, constEvaluator: constEvaluator)).toList();
       return SpreadNode(ListNode(lowered));
     }
     return SpreadNode(lowerExpression(expr));

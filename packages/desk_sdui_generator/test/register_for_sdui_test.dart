@@ -3,7 +3,7 @@
 ///
 /// We use the same resolved-AST fixture pattern as other tests in this package:
 /// a temporary Dart file is written into desk_sdui_demo/lib (which has a valid
-/// Flutter + package_config context), resolved with `resolveFile2`, and then
+/// Flutter + package_config context), resolved with `resolveFile`, and then
 /// the relevant code paths are exercised directly without running build_runner.
 // ignore_for_file: deprecated_member_use
 library;
@@ -40,9 +40,9 @@ Future<ResolvedUnitResult> _resolveSource(String source) async {
   );
   tempFile.writeAsStringSync(source);
   try {
-    final result = await resolveFile2(path: tempFile.path);
+    final result = await resolveFile(path: tempFile.path);
     if (result is! ResolvedUnitResult) {
-      throw StateError('resolveFile2 returned ${result.runtimeType}');
+      throw StateError('resolveFile returned ${result.runtimeType}');
     }
     return result;
   } finally {
@@ -76,7 +76,7 @@ class _Cov {}
 
         final result = await _resolveSource(source);
         final libReader = LibraryReader(result.libraryElement);
-        final checker = TypeChecker.fromRuntime(RegisterForSdui);
+        final checker = TypeChecker.typeNamed(RegisterForSdui, inPackage: 'desk_sdui_annotation');
 
         final annotatedList = libReader.annotatedWith(checker).toList();
         expect(annotatedList, hasLength(1), reason: '_Cov must be found');
@@ -114,7 +114,7 @@ class _Cov {}
 
         final result = await _resolveSource(source);
         final libReader = LibraryReader(result.libraryElement);
-        final checker = TypeChecker.fromRuntime(RegisterForSdui);
+        final checker = TypeChecker.typeNamed(RegisterForSdui, inPackage: 'desk_sdui_annotation');
 
         final annotated = libReader.annotatedWith(checker).first;
         final el = annotated.element as ClassElement;
@@ -146,7 +146,7 @@ class _Cov {}
 
         final result = await _resolveSource(source);
         final libReader = LibraryReader(result.libraryElement);
-        final checker = TypeChecker.fromRuntime(RegisterForSdui);
+        final checker = TypeChecker.typeNamed(RegisterForSdui, inPackage: 'desk_sdui_annotation');
 
         final annotated = libReader.annotatedWith(checker).first;
         final el = annotated.element as ClassElement;
@@ -179,7 +179,7 @@ class _Cov {}
 
         final result = await _resolveSource(source);
         final libReader = LibraryReader(result.libraryElement);
-        final checker = TypeChecker.fromRuntime(RegisterForSdui);
+        final checker = TypeChecker.typeNamed(RegisterForSdui, inPackage: 'desk_sdui_annotation');
 
         final annotated = libReader.annotatedWith(checker).first;
         final el = annotated.element as ClassElement;
@@ -242,7 +242,7 @@ class _Cov {}
 
         final result = await _resolveSource(source);
         final libReader = LibraryReader(result.libraryElement);
-        final checker = TypeChecker.fromRuntime(RegisterForSdui);
+        final checker = TypeChecker.typeNamed(RegisterForSdui, inPackage: 'desk_sdui_annotation');
 
         final annotated = libReader.annotatedWith(checker).first;
         final el = annotated.element as ClassElement;

@@ -23,3 +23,7 @@ dev_dependencies:
     path: ../desk_sdui_generator
   build_runner: ^2.4.0
   very_good_analysis: ^7.0.0
+
+dependency_overrides:
+  # Temporary: analyzer ^13 needs meta ^1.18; stable Flutter pins 1.17. Drop when Flutter SDK catches up.
+  meta: ^1.18.0

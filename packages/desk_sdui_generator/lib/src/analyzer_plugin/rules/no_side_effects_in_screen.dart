@@ -53,13 +53,13 @@ class NoSideEffectsIdentifierVisitor extends RecursiveAstVisitor<void> {
 
   void _checkNode(AstNode node, String name) {
     final element = switch (node) {
-      SimpleIdentifier n => n.staticElement,
-      PrefixedIdentifier n => n.staticElement,
+      SimpleIdentifier n => n.element,
+      PrefixedIdentifier n => n.element,
       _ => null,
     };
     if (element == null) return;
     // ignore_for_file: deprecated_member_use
-    final uri = element.library?.source.uri.toString();
+    final uri = element.library?.firstFragment.source.uri.toString();
     if (uri == null) return;
     if (_denylistUris.contains(uri)) {
       errors.add(AnalysisErrorInfo(

@@ -36,7 +36,7 @@ IrNode lowerClosure(Expression expr) {
       final args = <String, IrNode>{};
       final params = expr.parameters?.parameters ?? <FormalParameter>[];
       for (var i = 0; i < inner.argumentList.arguments.length; i++) {
-        final a = inner.argumentList.arguments[i];
+        final a = inner.argumentList.arguments[i].argumentExpression;
         args['arg$i'] = _lowerCallArg(a, params, expr);
       }
       return EventNode(target, args: args.isEmpty ? const {} : args);
@@ -52,7 +52,8 @@ IrNode lowerClosure(Expression expr) {
     if (target != null) {
       final args = <String, IrNode>{};
       for (var i = 0; i < expr.argumentList.arguments.length; i++) {
-        args['arg$i'] = lowerExpression(expr.argumentList.arguments[i]);
+        args['arg$i'] =
+            lowerExpression(expr.argumentList.arguments[i].argumentExpression);
       }
       return EventNode(target, args: args.isEmpty ? const {} : args);
     }

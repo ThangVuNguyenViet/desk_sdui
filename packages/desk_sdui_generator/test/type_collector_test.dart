@@ -5,7 +5,7 @@
 /// --------------------------
 /// The tests write a temporary `.dart` source file into the desk_sdui_demo
 /// package directory (which has Flutter as a dependency and a valid
-/// `.dart_tool/package_config.json`), resolve it with `resolveFile2`, and
+/// `.dart_tool/package_config.json`), resolve it with `resolveFile`, and
 /// extract the first top-level function declaration.  The temp file is deleted
 /// after each test.
 ///
@@ -41,9 +41,9 @@ Future<FunctionDeclaration> resolveScreen(String source) async {
   final tempFile = File(p.join(dir.path, '_type_collector_temp_${DateTime.now().microsecondsSinceEpoch}.dart'));
   tempFile.writeAsStringSync(source);
   try {
-    final result = await resolveFile2(path: tempFile.path);
+    final result = await resolveFile(path: tempFile.path);
     if (result is! ResolvedUnitResult) {
-      throw StateError('resolveFile2 returned ${result.runtimeType}');
+      throw StateError('resolveFile returned ${result.runtimeType}');
     }
     final unit = result.unit;
     final fn = unit.declarations.whereType<FunctionDeclaration>().first;
@@ -136,7 +136,7 @@ import 'package:flutter/material.dart';
 Widget build() => Icon(Icons.menu);
 ''');
       final types = collectTypes(screen);
-      final names = types.constants.map((e) => '${e.enclosingElement3?.name}.${e.name}');
+      final names = types.constants.map((e) => '${e.enclosingElement?.name}.${e.name}');
       expect(names, contains('Icons.menu'));
     });
 
@@ -149,7 +149,7 @@ Widget build() => Column(
 );
 ''');
       final types = collectTypes(screen);
-      final names = types.constants.map((e) => '${e.enclosingElement3?.name}.${e.name}');
+      final names = types.constants.map((e) => '${e.enclosingElement?.name}.${e.name}');
       expect(names, contains('CrossAxisAlignment.start'));
     });
   });
@@ -161,7 +161,7 @@ import 'package:flutter/material.dart';
 Widget build(String name) => Text(name.toUpperCase());
 ''');
       final types = collectTypes(screen);
-      final names = types.methods.map((e) => '${e.enclosingElement3.name}.${e.name}');
+      final names = types.methods.map((e) => '${e.enclosingElement?.name}.${e.name}');
       expect(names, contains('String.toUpperCase'));
     });
 

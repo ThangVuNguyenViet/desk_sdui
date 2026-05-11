@@ -1,4 +1,4 @@
-import 'package:desk_sdui_annotation/desk_sdui_annotation.dart';
+import 'package:desk_sdui/desk_sdui.dart';
 import 'package:flutter/material.dart';
 
 part 'counter_record.sdui.g.dart';

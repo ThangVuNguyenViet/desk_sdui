@@ -21,8 +21,10 @@ final List<Map<String, BindingKind>> _scopeStack = [];
 void pushScope(Map<String, BindingKind> bindings) => _scopeStack.add(bindings);
 
 /// Pop the innermost scope frame. Called after leaving a block body.
+/// Asserts the stack is non-empty so imbalanced push/pop surfaces in dev.
 void popScope() {
-  if (_scopeStack.isNotEmpty) _scopeStack.removeLast();
+  assert(_scopeStack.isNotEmpty, 'popScope called with empty scope stack');
+  _scopeStack.removeLast();
 }
 
 /// Look up the [BindingKind] for [name] by walking the scope stack outwards.
@@ -584,13 +586,12 @@ IrNode _lowerPostfix(PostfixExpression expr) {
   }
 
   final name = operand.name;
-  final delta = op == '++' ? 1 : -1;
   return _buildAssignNode(
     name,
     ArithOpNode(
       op: op == '++' ? ArithOp.add : ArithOp.sub,
       left: RefNode([name]),
-      right: LiteralNode(delta),
+      right: const LiteralNode(1),
     ),
     expr,
   );

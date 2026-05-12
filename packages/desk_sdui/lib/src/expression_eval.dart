@@ -28,6 +28,16 @@ Object? evalExpressionWithEnv(
     case ConstNode(:final value):
       return value;
     case RefNode(:final path):
+      // Fast path: single-segment reads (the overwhelming common case for
+      // local variables `RefNode([name])`) hit the cell directly without
+      // allocating an unwrapped value map.
+      if (path.length == 1) {
+        final cell = env[path[0]];
+        if (cell != null) return cell.value;
+      }
+      // Multi-segment paths (e.g. `data.headline`) or names not in env (e.g.
+      // `Colors.blue` resolving through the runtime constant registry) need
+      // the full unwrapped map.
       return resolveFlutterRef(path, _unwrapEnv(env), runtime);
 
     case CompareOpNode(:final op, :final left, :final right):

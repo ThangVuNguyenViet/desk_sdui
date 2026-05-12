@@ -170,6 +170,34 @@ Widget s() {
       expect(arith.right, const LiteralNode(1));
     });
 
+    // Test 5b: postfix decrement `x--` as statement lowers to AssignNode
+    // with ArithOp.sub and LiteralNode(1). Regression lock for the prior
+    // `LiteralNode(-1)` bug that produced `x + (-1)` ≡ `x - 1` only when
+    // op was sub — silently wrong if anyone ever read RefNode +/-/sub +/-1.
+    test('postfix decrement as statement uses ArithOp.sub with LiteralNode(1)',
+        () async {
+      final fnDecl = await _resolveScreen('''
+import 'package:flutter/material.dart';
+
+Widget s() {
+  var x = 5;
+  x--;
+  return Text('\$x');
+}
+''');
+      final result = _lower(fnDecl);
+      final outerLet = result.root as LetNode;
+      expect(outerLet.name, 'x');
+      final stmtLet = outerLet.body as LetNode;
+      expect(stmtLet.name, '__stmt__');
+      final assign = stmtLet.value as AssignNode;
+      expect(assign.name, 'x');
+      final arith = assign.value as ArithOpNode;
+      expect(arith.op, ArithOp.sub);
+      expect(arith.left, const RefNode(['x']));
+      expect(arith.right, const LiteralNode(1));
+    });
+
     // Test 6: post-increment as expression (final t = x++) is rejected.
     test('rejects post-increment as expression', () async {
       final fnDecl = await _resolveScreen('''

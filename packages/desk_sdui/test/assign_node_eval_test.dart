@@ -17,12 +17,20 @@ void main() {
       expect(xCell.value, 2);
     });
 
-    // Test 2: assignment returns the RHS value (enables `final t = (x = 5)`).
-    test('assignment expression returns the RHS value', () {
-      final xCell = Cell(0);
-      final env = {'x': xCell};
-      const node = AssignNode(name: 'x', value: LiteralNode(42));
-      expect(evalExpressionWithEnv(node, env, rt), 42);
+    // Test 2: `final t = (x = 5); return t;` — assignment-as-expression is
+    // observable via a LetNode that captures the RHS into `t`, then reads it.
+    // This is the lowered shape produced by the @Screen body grammar.
+    test('LetNode(t = AssignNode(x, 5), RefNode([t])) captures RHS into t', () {
+      const node = LetNode(
+        name: 'x',
+        value: LiteralNode(0),
+        body: LetNode(
+          name: 't',
+          value: AssignNode(name: 'x', value: LiteralNode(5)),
+          body: RefNode(['t']),
+        ),
+      );
+      expect(evalExpression(node, {}, rt), 5);
     });
 
     // Test 3: assigning to a non-existent name throws StateError.

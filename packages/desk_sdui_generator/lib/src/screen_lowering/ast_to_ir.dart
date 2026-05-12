@@ -131,7 +131,19 @@ IrNode _lowerBlockBody(BlockFunctionBody body, FunctionDeclaration fn) {
     if (stmt is VariableDeclarationStatement) {
       final decl = stmt.variables;
       for (final v in decl.variables) {
-        bindings[v.name.lexeme] =
+        final name = v.name.lexeme;
+        // Reserve `__`-prefixed names for lowerer-internal shims (e.g.
+        // `__stmt__` from ExpressionStatement sequencing, `__scrut0__` from
+        // switch-expression lowering, `__cas0__` from cascades). User code
+        // must not collide.
+        if (name.startsWith('__')) {
+          throw LoweringError(
+            'Local name "$name" is reserved: names beginning with "__" are '
+            'used internally by the lowerer. Pick a different name.',
+            v,
+          );
+        }
+        bindings[name] =
             decl.isFinal ? BindingKind.finalBinding : BindingKind.varBinding;
       }
     }

@@ -246,6 +246,8 @@ class Runtime {
   Object? invokeFunction(String name, Map<String, Object?> args) =>
       _functions[name]?.call(args);
 
+  bool hasFunction(String name) => _functions.containsKey(name);
+
   Future<IrTree> load(String name) async {
     if (fetcher != null) {
       try {

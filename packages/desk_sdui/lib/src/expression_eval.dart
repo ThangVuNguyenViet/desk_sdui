@@ -66,15 +66,14 @@ Object? evalExpression(
 
     case MethodCallNode(:final receiver, :final name, :final args):
       if (receiver == null) {
+        if (!runtime.hasFunction(name)) {
+          throw StateError('Function "$name" not registered.');
+        }
         final resolvedArgs = <String, Object?>{};
         for (var i = 0; i < args.length; i++) {
           resolvedArgs['arg$i'] = evalExpression(args[i], input, runtime);
         }
-        final result = runtime.invokeFunction(name, resolvedArgs);
-        if (result == null) {
-          throw StateError('Function "$name" not registered or returned null.');
-        }
-        return result;
+        return runtime.invokeFunction(name, resolvedArgs);
       }
       final resolvedReceiver = evalExpression(receiver, input, runtime);
       final resolvedArgs = <String, Object?>{};

@@ -158,6 +158,12 @@ IrNode inferKeys(IrNode node, {TypeLookup? lookupType}) {
     case IsNullCheckNode():
       return IsNullCheckNode(inferKeys(node.operand, lookupType: lookupType));
 
+    case IsTypeNode():
+      return IsTypeNode(
+        receiver: inferKeys(node.receiver, lookupType: lookupType),
+        typeName: node.typeName,
+      );
+
     case StringInterpNode():
       final newParts = <Object>[];
       for (final part in node.parts) {

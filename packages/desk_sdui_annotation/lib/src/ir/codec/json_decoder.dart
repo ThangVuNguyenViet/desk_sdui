@@ -119,6 +119,10 @@ class JsonIrDecoder {
       'isnull' => IsNullCheckNode(
           _decodeNode(map['operand']! as Map<String, Object?>),
         ),
+      'isType' => IsTypeNode(
+          receiver: _decodeNode(map['receiver']! as Map<String, Object?>),
+          typeName: map['typeName']! as String,
+        ),
       'interp' => StringInterpNode(
           (map['parts']! as List).map<Object>((p) {
             if (p is String) return p;

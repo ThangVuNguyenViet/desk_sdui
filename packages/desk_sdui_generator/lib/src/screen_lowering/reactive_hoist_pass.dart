@@ -187,6 +187,10 @@ IrNode reactiveHoist(IrNode node) {
       final (operand, paths) = _hoist(node.operand);
       return (IsNullCheckNode(operand), paths);
 
+    case IsTypeNode():
+      final (receiver, paths) = _hoist(node.receiver);
+      return (IsTypeNode(receiver: receiver, typeName: node.typeName), paths);
+
     case StringInterpNode():
       final newParts = <Object>[];
       final allPaths = <String>{};

@@ -141,6 +141,11 @@ class JsonIrEncoder {
           r'$type': 'isnull',
           'operand': _encodeNode(node.operand),
         },
+      IsTypeNode() => {
+          r'$type': 'isType',
+          'receiver': _encodeNode(node.receiver),
+          'typeName': node.typeName,
+        },
       StringInterpNode() => {
           r'$type': 'interp',
           'parts': node.parts

@@ -94,6 +94,8 @@ String _emitNode(IrNode node) {
       return 'LengthOfNode(${_emitNode(node.target)})';
     case IsNullCheckNode():
       return 'IsNullCheckNode(${_emitNode(node.operand)})';
+    case IsTypeNode():
+      return 'IsTypeNode(receiver: ${_emitNode(node.receiver)}, typeName: ${_dartString(node.typeName)})';
     case StringInterpNode():
       final parts = node.parts.map((p) {
         if (p is IrNode) return _emitNode(p);

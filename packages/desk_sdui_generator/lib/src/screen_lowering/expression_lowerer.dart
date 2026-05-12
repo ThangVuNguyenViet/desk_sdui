@@ -162,6 +162,10 @@ IrNode lowerExpression(Expression expr) {
     return lowerLambda(expr, inActionContext: false);
   }
 
+  if (expr is SwitchExpression) {
+    return _lowerSwitchExpression(expr);
+  }
+
   throw LoweringError('unsupported expression: ${expr.runtimeType}', expr);
 }
 
@@ -242,6 +246,115 @@ bool _containsAwait(Expression expr) {
   if (expr is AwaitExpression) return true;
   // Simple recursive check for common nested shapes.
   return false;
+}
+
+// ---------------------------------------------------------------------------
+// Switch expression lowering
+// ---------------------------------------------------------------------------
+
+var _switchCounter = 0;
+
+IrNode _lowerSwitchExpression(SwitchExpression expr) {
+  final scrutName = '__scrut${_switchCounter++}__';
+  final scrut = lowerExpression(expr.expression);
+
+  // Find the default (wildcard) case if present.
+  IrNode? defaultBranch;
+  final nonDefaultCases = <SwitchExpressionCase>[];
+  for (final c in expr.cases) {
+    final p = c.guardedPattern.pattern;
+    if (_isWildcardOrDefault(p)) {
+      defaultBranch = lowerExpression(c.expression);
+    } else {
+      nonDefaultCases.add(c);
+    }
+  }
+
+  if (defaultBranch == null) {
+    throw LoweringError(
+      'Non-exhaustive switch expression in @Screen body: '
+      'a wildcard arm `_ => ...` is required.',
+      expr,
+    );
+  }
+
+  // Right-fold the non-default cases into ConditionalNodes.
+  final scrutRef = RefNode([scrutName]);
+  IrNode acc = defaultBranch;
+  for (final c in nonDefaultCases.reversed) {
+    final p = c.guardedPattern.pattern;
+    final test = _lowerCaseTest(p, scrutRef, expr);
+    final body = _lowerCaseBody(p, scrutRef, lowerExpression(c.expression), expr);
+    acc = ConditionalNode(
+      condition: test,
+      thenBranch: body,
+      elseBranch: acc,
+    );
+  }
+
+  return LetNode(name: scrutName, value: scrut, body: acc);
+}
+
+bool _isWildcardOrDefault(DartPattern p) {
+  if (p is WildcardPattern) return true;
+  // A ConstantPattern with null literal is NOT wildcard.
+  return false;
+}
+
+IrNode _lowerCaseTest(DartPattern p, IrNode scrutRef, AstNode origin) {
+  if (p is ConstantPattern) {
+    return CompareOpNode(
+      op: CompareOp.eq,
+      left: scrutRef,
+      right: lowerExpression(p.expression),
+    );
+  }
+  if (p is ObjectPattern) {
+    final typeName = p.type.name.lexeme;
+    return IsTypeNode(receiver: scrutRef, typeName: typeName);
+  }
+  throw LoweringError(
+    'Unsupported pattern type in switch expression: ${p.runtimeType}. '
+    'Supported: ConstantPattern, ObjectPattern, WildcardPattern.',
+    origin,
+  );
+}
+
+IrNode _lowerCaseBody(
+    DartPattern p, IrNode scrutRef, IrNode body, AstNode origin) {
+  if (p is ObjectPattern && p.fields.isNotEmpty) {
+    // Wrap each field binding in a LetNode around the body.
+    var wrapped = body;
+    for (final field in p.fields.reversed) {
+      final getter = field.effectiveName;
+      if (getter == null) {
+        throw LoweringError(
+          'PatternField in ObjectPattern has no effective name. '
+          'Only shorthand `:final name` bindings are supported.',
+          origin,
+        );
+      }
+      // The variable name bound in this scope — same as the field name
+      // for shorthand patterns like `:final data`.
+      final bindName = _patternFieldVariableName(field) ?? getter;
+      wrapped = LetNode(
+        name: bindName,
+        value: MemberAccessNode(target: scrutRef, name: getter),
+        body: wrapped,
+      );
+    }
+    return wrapped;
+  }
+  return body;
+}
+
+/// Returns the variable name declared by a pattern field's sub-pattern,
+/// or null if the sub-pattern doesn't declare a variable.
+String? _patternFieldVariableName(PatternField field) {
+  final p = field.pattern;
+  if (p is VariablePattern) return p.name.lexeme;
+  // Wildcard sub-pattern or other: no binding.
+  return null;
 }
 
 /// Returns the core-type bucket name used as the GetterNode key prefix

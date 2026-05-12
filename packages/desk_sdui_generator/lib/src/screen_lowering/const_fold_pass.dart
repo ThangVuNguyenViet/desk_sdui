@@ -122,6 +122,8 @@ IrNode _foldChildren(IrNode node) {
       return LengthOfNode(constFold(node.target));
     case IsNullCheckNode():
       return IsNullCheckNode(constFold(node.operand));
+    case IsTypeNode():
+      return IsTypeNode(receiver: constFold(node.receiver), typeName: node.typeName);
     case StringInterpNode():
       final newParts = <Object>[];
       for (final part in node.parts) {
@@ -178,6 +180,7 @@ bool _isPureLiteral(IrNode node) {
     case IndexAccessNode():
     case LengthOfNode():
     case IsNullCheckNode():
+    case IsTypeNode():
     case StringInterpNode():
     case LambdaNode():
     case MethodCallNode():

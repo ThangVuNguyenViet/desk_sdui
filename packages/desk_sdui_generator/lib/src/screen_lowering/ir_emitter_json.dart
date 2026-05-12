@@ -120,6 +120,8 @@ IrNode _demoteAllConst(IrNode node) {
       return LengthOfNode(_demoteAllConst(node.target));
     case IsNullCheckNode():
       return IsNullCheckNode(_demoteAllConst(node.operand));
+    case IsTypeNode():
+      return IsTypeNode(receiver: _demoteAllConst(node.receiver), typeName: node.typeName);
     case StringInterpNode():
       return StringInterpNode(
         node.parts.map((p) => p is IrNode ? _demoteAllConst(p) : p).toList(),

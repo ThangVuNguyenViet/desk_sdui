@@ -133,5 +133,21 @@ IrNode _demoteAllConst(IrNode node) {
     case LiteralNode():
     case EventNode():
       return node;
+    case ActionSequenceNode():
+      return ActionSequenceNode(
+        steps: node.steps
+            .map((s) => ActionStepNode(
+                  call: _demoteAllConst(s.call),
+                  awaitResult: s.awaitResult,
+                  bindResult: s.bindResult,
+                ))
+            .toList(),
+      );
+    case ActionStepNode():
+      return ActionStepNode(
+        call: _demoteAllConst(node.call),
+        awaitResult: node.awaitResult,
+        bindResult: node.bindResult,
+      );
   }
 }

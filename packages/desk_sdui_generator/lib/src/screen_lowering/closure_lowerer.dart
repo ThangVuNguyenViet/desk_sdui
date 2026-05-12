@@ -18,6 +18,12 @@ IrNode lowerClosure(Expression expr) {
 
   if (expr is FunctionExpression) {
     final body = expr.body;
+
+    // Async block body: `() async { ... }` → ActionSequenceNode
+    if (body is BlockFunctionBody && body.isAsynchronous) {
+      return _lowerActionSequence(body.block, expr);
+    }
+
     if (body is! ExpressionFunctionBody) {
       throw LoweringError(
         'closure must be expression-bodied (`() => x`, not `() { return x; }`)',
@@ -71,6 +77,101 @@ List<String>? _extractTarget(MethodInvocation call) {
     return [target.prefix.name, target.identifier.name, call.methodName.name];
   }
   return null;
+}
+
+/// Whether the lowerer is currently descending into an ActionSequenceNode's
+/// step calls. Set to true inside [_lowerActionSequence].
+/// TODO(LambdaNode): gate async-bearing lambdas on this flag.
+bool inActionContext = false;
+
+ActionSequenceNode _lowerActionSequence(Block block, AstNode origin) {
+  final steps = <ActionStepNode>[];
+  final prev = inActionContext;
+  inActionContext = true;
+  try {
+    for (final stmt in block.statements) {
+      steps.add(_lowerStep(stmt));
+    }
+  } finally {
+    inActionContext = prev;
+  }
+  return ActionSequenceNode(steps: steps);
+}
+
+ActionStepNode _lowerStep(Statement stmt) {
+  // `final x = await call();` — bind result
+  if (stmt is VariableDeclarationStatement) {
+    final decls = stmt.variables.variables;
+    final keyword = stmt.variables.keyword?.lexeme;
+    if (decls.length != 1 || keyword != 'final') {
+      throw LoweringError(
+        'Async event handler bodies must be a sequence of (optionally-awaited) calls, optionally binding the result to a final local. Got: ${stmt.runtimeType}',
+        stmt,
+      );
+    }
+    final decl = decls.single;
+    final init = decl.initializer;
+    if (init is! AwaitExpression) {
+      throw LoweringError(
+        'Async event handler bodies must be a sequence of (optionally-awaited) calls, optionally binding the result to a final local. Got: ${stmt.runtimeType}',
+        stmt,
+      );
+    }
+    final call = init.expression;
+    return ActionStepNode(
+      call: _lowerCallExpression(call, stmt),
+      awaitResult: true,
+      bindResult: decl.name.lexeme,
+    );
+  }
+
+  // `await call();` or `call();`
+  if (stmt is ExpressionStatement) {
+    final expr = stmt.expression;
+    if (expr is AwaitExpression) {
+      return ActionStepNode(
+        call: _lowerCallExpression(expr.expression, stmt),
+        awaitResult: true,
+      );
+    }
+    return ActionStepNode(
+      call: _lowerCallExpression(expr, stmt),
+      awaitResult: false,
+    );
+  }
+
+  throw LoweringError(
+    'Async event handler bodies must be a sequence of (optionally-awaited) calls, optionally binding the result to a final local. Got: ${stmt.runtimeType}',
+    stmt,
+  );
+}
+
+IrNode _lowerCallExpression(Expression expr, AstNode origin) {
+  if (expr is MethodInvocation) {
+    final target = _extractTarget(expr);
+    if (target != null) {
+      final args = <IrNode>[];
+      for (final arg in expr.argumentList.arguments) {
+        args.add(lowerExpression(arg.argumentExpression));
+      }
+      return MethodCallNode(
+        receiver: target.length >= 2
+            ? RefNode(target.sublist(0, target.length - 1))
+            : null,
+        name: target.last,
+        args: args,
+      );
+    }
+  }
+  // fallback: try general expression lowering
+  try {
+    return lowerExpression(expr);
+  } catch (_) {
+    throw LoweringError(
+      'Async event handler step must be a method call. Got: ${expr.runtimeType}',
+      expr,
+    );
+  }
 }
 
 IrNode _lowerCallArg(

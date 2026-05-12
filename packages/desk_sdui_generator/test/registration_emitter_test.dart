@@ -23,8 +23,9 @@ import 'package:test/test.dart';
 // Test helpers
 // ---------------------------------------------------------------------------
 
-const _demoPackageRoot =
-    '/Users/vietthangvunguyen/Workspace/dart_desk_workspace/desk_sdui/packages/desk_sdui_demo';
+final String _demoPackageRoot = p.normalize(
+  p.join(Directory.current.path, '..', 'desk_sdui_demo'),
+);
 
 /// Resolve a Dart source string using the desk_sdui_demo analysis context
 /// (which has Flutter available) and return the [ResolvedUnitResult].
@@ -421,6 +422,41 @@ Widget build() => Column(children: [const Text('hi')]);
       expect(code, contains("rt.registerWidget('Column'"));
       expect(code, contains('MainAxisAlignment.start'));
       expect(code, contains("(args['children'] as List?)?.cast<Widget>()"));
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // emitAll — named widget factories
+  // -------------------------------------------------------------------------
+
+  group('emitAll — named widget factories', () {
+    test('emitAll emits registerWidget for each named factory on Cue',
+        () async {
+      const source = '''
+import 'package:cue/cue.dart';
+import 'package:flutter/widgets.dart';
+
+void _ref() {
+  // touch types so resolution keeps them
+  // ignore: unused_local_variable
+  final c = Cue;
+}
+''';
+
+      final result = await _resolveSource(source);
+      // Locate the Cue ClassElement via the resolved unit's imports.
+      final cueClass = _classElement(result, 'Cue');
+
+      final collected = CollectedTypes()..widgets.add(cueClass);
+      final out = RegistrationEmitter().emitAll(collected);
+
+      // Unnamed form still present.
+      expect(out, contains("rt.registerWidget('Cue',"));
+      // At least the named factories the demo uses must appear.
+      expect(out, contains("rt.registerWidget('Cue.onMount',"));
+      expect(out, contains("rt.registerWidget('Cue.onChange',"));
+      // Spot-check that the call target uses the qualified name.
+      expect(out, contains('=> Cue.onMount('));
     });
   });
 }

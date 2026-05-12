@@ -29,9 +29,142 @@ void registerCounter_bouncyDependencies(Runtime rt) {
     ),
   );
   rt.registerWidget(
+    'Cue.onMount',
+    (args) => Cue.onMount(
+      key: args['key'] as Key?,
+      debugLabel: args['debugLabel'] as String?,
+      motion: args['motion'] as CueMotion,
+      reverseMotion: args['reverseMotion'] as CueMotion?,
+      repeat: args['repeat'] as bool,
+      reverseOnRepeat: args['reverseOnRepeat'] as bool,
+      repeatCount: args['repeatCount'] as int?,
+      acts: args['acts'] as List<Act>?,
+      onEnd: args['onEnd'] as void Function(bool)?,
+      child: args['child'] as Widget,
+    ),
+  );
+  rt.registerWidget(
+    'Cue.onHover',
+    (args) => Cue.onHover(
+      key: args['key'] as Key?,
+      debugLabel: args['debugLabel'] as String?,
+      motion: args['motion'] as CueMotion,
+      cursor: args['cursor'] as MouseCursor,
+      opaque: args['opaque'] as bool,
+      acts: args['acts'] as List<Act>?,
+      onEnd: args['onEnd'] as void Function(bool)?,
+      child: args['child'] as Widget,
+    ),
+  );
+  rt.registerWidget(
+    'Cue.onFocus',
+    (args) => Cue.onFocus(
+      key: args['key'] as Key?,
+      debugLabel: args['debugLabel'] as String?,
+      motion: args['motion'] as CueMotion,
+      reverseMotion: args['reverseMotion'] as CueMotion?,
+      focusNode: args['focusNode'] as FocusNode?,
+      acts: args['acts'] as List<Act>?,
+      onEnd: args['onEnd'] as void Function(bool)?,
+      child: args['child'] as Widget,
+    ),
+  );
+  rt.registerWidget(
+    'Cue.onToggle',
+    (args) => Cue.onToggle(
+      key: args['key'] as Key?,
+      debugLabel: args['debugLabel'] as String?,
+      motion: args['motion'] as CueMotion,
+      reverseMotion: args['reverseMotion'] as CueMotion?,
+      toggled: args['toggled'] as bool,
+      skipFirstAnimation: args['skipFirstAnimation'] as bool,
+      child: args['child'] as Widget,
+      acts: args['acts'] as List<Act>?,
+      onEnd: args['onEnd'] as void Function(bool)?,
+    ),
+  );
+  rt.registerWidget(
+    'Cue.onChange',
+    (args) => Cue.onChange(
+      key: args['key'] as Key?,
+      motion: args['motion'] as CueMotion,
+      debugLabel: args['debugLabel'] as String?,
+      skipFirstAnimation: args['skipFirstAnimation'] as bool,
+      fromCurrentValue: args['fromCurrentValue'] as bool,
+      acts: args['acts'] as List<Act>?,
+      value: args['value'] as Object?,
+      child: args['child'] as Widget,
+    ),
+  );
+  rt.registerWidget(
+    'Cue.indexed',
+    (args) => Cue.indexed(
+      key: args['key'] as Key?,
+      debugLabel: args['debugLabel'] as String?,
+      acts: args['acts'] as List<Act>?,
+      controller: args['controller'] as IndexedCueController,
+      index: args['index'] as int,
+      child: args['child'] as Widget,
+    ),
+  );
+  rt.registerWidget(
+    'Cue.onProgress',
+    (args) => Cue.onProgress(
+      key: args['key'] as Key?,
+      debugLabel: args['debugLabel'] as String?,
+      acts: args['acts'] as List<Act>?,
+      listenable: args['listenable'] as Listenable,
+      progress: args['progress'] as double Function(),
+      child: args['child'] as Widget,
+      min: args['min'] as double,
+      max: args['max'] as double,
+    ),
+  );
+  rt.registerWidget(
+    'Cue.onScroll',
+    (args) => Cue.onScroll(
+      key: args['key'] as Key?,
+      debugLabel: args['debugLabel'] as String?,
+      acts: args['acts'] as List<Act>?,
+      child: args['child'] as Widget,
+    ),
+  );
+  rt.registerWidget(
+    'Cue.onScrollVisible',
+    (args) => Cue.onScrollVisible(
+      key: args['key'] as Key?,
+      debugLabel: args['debugLabel'] as String?,
+      enabled: args['enabled'] as bool,
+      acts: args['acts'] as List<Act>?,
+      child: args['child'] as Widget,
+    ),
+  );
+  rt.registerWidget(
     'Text',
     (args) => Text(
       args['data'] as String,
+      key: args['key'] as Key?,
+      style: args['style'] as TextStyle?,
+      strutStyle: args['strutStyle'] as StrutStyle?,
+      textAlign: args['textAlign'] as TextAlign?,
+      textDirection: args['textDirection'] as TextDirection?,
+      locale: args['locale'] as Locale?,
+      softWrap: args['softWrap'] as bool?,
+      overflow: args['overflow'] as TextOverflow?,
+      textScaleFactor: args['textScaleFactor'] as double?,
+      textScaler: args['textScaler'] as TextScaler?,
+      maxLines: args['maxLines'] as int?,
+      semanticsLabel: args['semanticsLabel'] as String?,
+      semanticsIdentifier: args['semanticsIdentifier'] as String?,
+      textWidthBasis: args['textWidthBasis'] as TextWidthBasis?,
+      textHeightBehavior: args['textHeightBehavior'] as TextHeightBehavior?,
+      selectionColor: args['selectionColor'] as Color?,
+    ),
+  );
+  rt.registerWidget(
+    'Text.rich',
+    (args) => Text.rich(
+      args['textSpan'] as InlineSpan,
       key: args['key'] as Key?,
       style: args['style'] as TextStyle?,
       strutStyle: args['strutStyle'] as StrutStyle?,

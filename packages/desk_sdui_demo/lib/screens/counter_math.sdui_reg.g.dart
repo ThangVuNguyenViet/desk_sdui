@@ -39,6 +39,28 @@ void registerCounter_mathDependencies(Runtime rt) {
       selectionColor: args['selectionColor'] as Color?,
     ),
   );
+  rt.registerWidget(
+    'Text.rich',
+    (args) => Text.rich(
+      args['textSpan'] as InlineSpan,
+      key: args['key'] as Key?,
+      style: args['style'] as TextStyle?,
+      strutStyle: args['strutStyle'] as StrutStyle?,
+      textAlign: args['textAlign'] as TextAlign?,
+      textDirection: args['textDirection'] as TextDirection?,
+      locale: args['locale'] as Locale?,
+      softWrap: args['softWrap'] as bool?,
+      overflow: args['overflow'] as TextOverflow?,
+      textScaleFactor: args['textScaleFactor'] as double?,
+      textScaler: args['textScaler'] as TextScaler?,
+      maxLines: args['maxLines'] as int?,
+      semanticsLabel: args['semanticsLabel'] as String?,
+      semanticsIdentifier: args['semanticsIdentifier'] as String?,
+      textWidthBasis: args['textWidthBasis'] as TextWidthBasis?,
+      textHeightBehavior: args['textHeightBehavior'] as TextHeightBehavior?,
+      selectionColor: args['selectionColor'] as Color?,
+    ),
+  );
   rt.registerValueBuilder(
     'TextStyle',
     (args) => TextStyle(

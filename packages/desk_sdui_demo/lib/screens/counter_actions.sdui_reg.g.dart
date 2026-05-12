@@ -60,6 +60,28 @@ void registerCounter_actionsDependencies(Runtime rt) {
     ),
   );
   rt.registerWidget(
+    'Text.rich',
+    (args) => Text.rich(
+      args['textSpan'] as InlineSpan,
+      key: args['key'] as Key?,
+      style: args['style'] as TextStyle?,
+      strutStyle: args['strutStyle'] as StrutStyle?,
+      textAlign: args['textAlign'] as TextAlign?,
+      textDirection: args['textDirection'] as TextDirection?,
+      locale: args['locale'] as Locale?,
+      softWrap: args['softWrap'] as bool?,
+      overflow: args['overflow'] as TextOverflow?,
+      textScaleFactor: args['textScaleFactor'] as double?,
+      textScaler: args['textScaler'] as TextScaler?,
+      maxLines: args['maxLines'] as int?,
+      semanticsLabel: args['semanticsLabel'] as String?,
+      semanticsIdentifier: args['semanticsIdentifier'] as String?,
+      textWidthBasis: args['textWidthBasis'] as TextWidthBasis?,
+      textHeightBehavior: args['textHeightBehavior'] as TextHeightBehavior?,
+      selectionColor: args['selectionColor'] as Color?,
+    ),
+  );
+  rt.registerWidget(
     'Row',
     (args) => Row(
       key: args['key'] as Key?,
@@ -96,12 +118,60 @@ void registerCounter_actionsDependencies(Runtime rt) {
     ),
   );
   rt.registerWidget(
+    'ElevatedButton.icon',
+    (args) => ElevatedButton.icon(
+      key: args['key'] as Key?,
+      onPressed: args['onPressed'] as void Function()?,
+      onLongPress: args['onLongPress'] as void Function()?,
+      onHover: args['onHover'] as void Function(bool)?,
+      onFocusChange: args['onFocusChange'] as void Function(bool)?,
+      style: args['style'] as ButtonStyle?,
+      focusNode: args['focusNode'] as FocusNode?,
+      autofocus: args['autofocus'] as bool? ?? false,
+      clipBehavior: args['clipBehavior'] as Clip? ?? Clip.none,
+      statesController: args['statesController'] as WidgetStatesController?,
+      icon: args['icon'] as Widget?,
+      label: args['label'] as Widget,
+      iconAlignment: args['iconAlignment'] as IconAlignment?,
+    ),
+  );
+  rt.registerWidget(
     'SizedBox',
     (args) => SizedBox(
       key: args['key'] as Key?,
       width: args['width'] as double?,
       height: args['height'] as double?,
       child: args['child'] as Widget?,
+    ),
+  );
+  rt.registerWidget(
+    'SizedBox.expand',
+    (args) => SizedBox.expand(
+      key: args['key'] as Key?,
+      child: args['child'] as Widget?,
+    ),
+  );
+  rt.registerWidget(
+    'SizedBox.shrink',
+    (args) => SizedBox.shrink(
+      key: args['key'] as Key?,
+      child: args['child'] as Widget?,
+    ),
+  );
+  rt.registerWidget(
+    'SizedBox.fromSize',
+    (args) => SizedBox.fromSize(
+      key: args['key'] as Key?,
+      child: args['child'] as Widget?,
+      size: args['size'] as Size?,
+    ),
+  );
+  rt.registerWidget(
+    'SizedBox.square',
+    (args) => SizedBox.square(
+      key: args['key'] as Key?,
+      child: args['child'] as Widget?,
+      dimension: args['dimension'] as double?,
     ),
   );
   rt.registerValueBuilder(

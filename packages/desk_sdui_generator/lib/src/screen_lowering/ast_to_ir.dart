@@ -275,9 +275,16 @@ void _collectRefs(
       break;
     case ActionSequenceNode():
       for (final step in node.steps) {
-        _collectRefs(step.call, widgetRefs, methodRefs, fnRefs);
+        _collectRefs(step, widgetRefs, methodRefs, fnRefs);
       }
     case ActionStepNode():
       _collectRefs(node.call, widgetRefs, methodRefs, fnRefs);
+    case TryStepNode():
+      for (final s in node.trySteps) {
+        _collectRefs(s.call, widgetRefs, methodRefs, fnRefs);
+      }
+      for (final s in node.catchSteps) {
+        _collectRefs(s.call, widgetRefs, methodRefs, fnRefs);
+      }
   }
 }

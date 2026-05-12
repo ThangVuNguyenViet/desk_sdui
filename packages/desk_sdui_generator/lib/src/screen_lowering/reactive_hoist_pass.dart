@@ -250,5 +250,7 @@ IrNode reactiveHoist(IrNode node) {
       return (node, <String>{});
     case ActionStepNode():
       return (node, <String>{});
+    case TryStepNode():
+      return (node, <String>{});
   }
 }

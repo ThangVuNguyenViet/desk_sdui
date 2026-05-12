@@ -155,19 +155,31 @@ IrNode _foldChildren(IrNode node) {
       return node;
     case ActionSequenceNode():
       return ActionSequenceNode(
-        steps: node.steps
-            .map((s) => ActionStepNode(
-                  call: constFold(s.call),
-                  awaitResult: s.awaitResult,
-                  bindResult: s.bindResult,
-                ))
-            .toList(),
+        steps: node.steps.map(constFold).toList(),
       );
     case ActionStepNode():
       return ActionStepNode(
         call: constFold(node.call),
         awaitResult: node.awaitResult,
         bindResult: node.bindResult,
+      );
+    case TryStepNode():
+      return TryStepNode(
+        trySteps: node.trySteps
+            .map((s) => ActionStepNode(
+                  call: constFold(s.call),
+                  awaitResult: s.awaitResult,
+                  bindResult: s.bindResult,
+                ))
+            .toList(),
+        catchSteps: node.catchSteps
+            .map((s) => ActionStepNode(
+                  call: constFold(s.call),
+                  awaitResult: s.awaitResult,
+                  bindResult: s.bindResult,
+                ))
+            .toList(),
+        exceptionBind: node.exceptionBind,
       );
   }
 }
@@ -203,6 +215,7 @@ bool _isPureLiteral(IrNode node) {
     case ValueCtorNode():
     case ActionSequenceNode():
     case ActionStepNode():
+    case TryStepNode():
       return false;
     case RefNode():
     case EventNode():

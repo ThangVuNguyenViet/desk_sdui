@@ -100,9 +100,12 @@ final class RefNode extends IrNode {
 /// A sequence of async-aware steps. Resolved into a `Future<void> Function()`
 /// that runs the steps in order. Only appears as the resolved value of an
 /// EventNode slot — never as a regular expression.
+///
+/// Each element of [steps] is either an [ActionStepNode] (a plain call/await)
+/// or a [TryStepNode] (a try/catch block).
 final class ActionSequenceNode extends IrNode {
   const ActionSequenceNode({required this.steps});
-  final List<ActionStepNode> steps;
+  final List<IrNode> steps;
 
   @override
   bool operator ==(Object other) =>
@@ -111,6 +114,33 @@ final class ActionSequenceNode extends IrNode {
   int get hashCode => Object.hashAll(steps);
   @override
   String toString() => 'ActionSequenceNode(${steps.length} steps)';
+}
+
+/// A try/catch step within an ActionSequenceNode. The resolver wraps the
+/// `trySteps` in a Dart try/catch; on exception, it binds `exceptionBind`
+/// (if non-null) into the local env and runs `catchSteps`.
+final class TryStepNode extends IrNode {
+  const TryStepNode({
+    required this.trySteps,
+    required this.catchSteps,
+    this.exceptionBind,
+  });
+  final List<ActionStepNode> trySteps;
+  final List<ActionStepNode> catchSteps;
+  final String? exceptionBind;
+
+  @override
+  bool operator ==(Object other) =>
+      other is TryStepNode &&
+      _listEquals(other.trySteps, trySteps) &&
+      _listEquals(other.catchSteps, catchSteps) &&
+      other.exceptionBind == exceptionBind;
+  @override
+  int get hashCode =>
+      Object.hash(Object.hashAll(trySteps), Object.hashAll(catchSteps), exceptionBind);
+  @override
+  String toString() =>
+      'TryStepNode(try ${trySteps.length} catch (${exceptionBind ?? "_"}) ${catchSteps.length})';
 }
 
 /// One step of an ActionSequenceNode: a method/function call, optionally

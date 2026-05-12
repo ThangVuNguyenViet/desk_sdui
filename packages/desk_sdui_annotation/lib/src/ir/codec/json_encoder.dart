@@ -27,10 +27,13 @@ class JsonIrEncoder {
         },
       ActionSequenceNode() => {
           r'$type': 'actionSequence',
-          'steps': node.steps.map(_encodeStep).toList(),
+          'steps': node.steps.map(_encodeActionStep).toList(),
         },
       ActionStepNode() => throw UnsupportedError(
           'ActionStepNode must be encoded via _encodeStep, not _encodeNode.',
+        ),
+      TryStepNode() => throw UnsupportedError(
+          'TryStepNode must be encoded via _encodeActionStep, not _encodeNode.',
         ),
       EventNode() => {
           r'$type': 'event',
@@ -176,6 +179,20 @@ class JsonIrEncoder {
           if (node.typeArgs != null) 'typeArgs': node.typeArgs,
         },
     };
+  }
+
+  /// Encodes a step inside an `actionSequence.steps` array. Dispatches on
+  /// the runtime type: either [ActionStepNode] or [TryStepNode].
+  Map<String, Object?> _encodeActionStep(IrNode step) {
+    if (step is TryStepNode) {
+      return {
+        r'$type': 'tryStep',
+        'trySteps': step.trySteps.map(_encodeStep).toList(),
+        'catchSteps': step.catchSteps.map(_encodeStep).toList(),
+        if (step.exceptionBind != null) 'exceptionBind': step.exceptionBind,
+      };
+    }
+    return _encodeStep(step as ActionStepNode);
   }
 
   Map<String, Object?> _encodeStep(ActionStepNode step) => {

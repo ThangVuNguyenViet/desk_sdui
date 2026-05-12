@@ -26,7 +26,7 @@ class JsonIrDecoder {
         ),
       'actionSequence' => ActionSequenceNode(
           steps: ((map['steps']! as List).cast<Map<String, Object?>>())
-              .map(_decodeStep)
+              .map(_decodeActionStep)
               .toList(),
         ),
       'event' => EventNode(
@@ -165,6 +165,24 @@ class JsonIrDecoder {
     if (value == null) return {};
     final raw = (value as Map).cast<String, Map<String, Object?>>();
     return raw.map((k, v) => MapEntry(k, _decodeNode(v)));
+  }
+
+  /// Decodes a step inside an `actionSequence.steps` array. Dispatches on
+  /// `$type`: either `'actionStep'` (default when tag absent) or `'tryStep'`.
+  IrNode _decodeActionStep(Map<String, Object?> map) {
+    final type = map[r'$type'] as String? ?? 'actionStep';
+    if (type == 'tryStep') {
+      return TryStepNode(
+        trySteps: ((map['trySteps']! as List).cast<Map<String, Object?>>())
+            .map(_decodeStep)
+            .toList(),
+        catchSteps: ((map['catchSteps']! as List).cast<Map<String, Object?>>())
+            .map(_decodeStep)
+            .toList(),
+        exceptionBind: map['exceptionBind'] as String?,
+      );
+    }
+    return _decodeStep(map);
   }
 
   ActionStepNode _decodeStep(Map<String, Object?> map) {

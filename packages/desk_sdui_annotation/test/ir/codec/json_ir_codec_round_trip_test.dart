@@ -241,6 +241,16 @@ void main() {
       expect(decoded, node);
     });
 
+    test('IsTypeNode', () {
+      const node = IsTypeNode(
+        receiver: RefNode(['vm', 'state']),
+        typeName: 'PatternLoaded',
+      );
+      final encoded = codec.encode(node);
+      final decoded = codec.decode(encoded);
+      expect(decoded, node);
+    });
+
     test('StringInterpNode', () {
       const node = StringInterpNode([
         'hello ',

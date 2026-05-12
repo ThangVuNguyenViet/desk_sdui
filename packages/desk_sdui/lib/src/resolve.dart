@@ -56,6 +56,10 @@ Widget resolveNode(
     case SpreadNode(:final source):
       return _resolveBranch(context, source, input, runtime);
 
+    case LetNode(:final name, :final value, :final body):
+      final v = evalExpression(value, input, runtime);
+      return resolveNode(context, body, {...input, name: v}, runtime);
+
     case LiteralNode(:final value):
       if (value is Widget) return value;
       throw StateError(

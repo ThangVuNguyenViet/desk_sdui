@@ -247,6 +247,53 @@ void main() {
       expect(counter.value, 5);
     });
 
+    // ImperativeForNode + continue: FlowContinue must still run the update
+    // step so the loop variable advances before re-checking the condition.
+    // `for (var i=0; i<5; i = i+1) { if (i==2) continue; sum = sum + i; }`
+    // Expected: sum = 0 + 1 + 3 + 4 = 8 (i==2 is skipped).
+    test('for-loop with continue skips body remainder but still updates', () {
+      final sum = Cell(0);
+      final env = <String, Cell>{'sum': sum};
+      final node = ImperativeForNode(
+        init: const LetStatementNode(
+            name: 'i', value: LiteralNode(0), isFinal: false),
+        condition: CompareOpNode(
+          op: CompareOp.lt,
+          left: const RefNode(['i']),
+          right: const LiteralNode(5),
+        ),
+        update: AssignNode(
+          name: 'i',
+          value: ArithOpNode(
+            op: ArithOp.add,
+            left: const RefNode(['i']),
+            right: const LiteralNode(1),
+          ),
+        ),
+        body: BlockNode(statements: [
+          IfStatementNode(
+            cond: CompareOpNode(
+              op: CompareOp.eq,
+              left: const RefNode(['i']),
+              right: const LiteralNode(2),
+            ),
+            then: const ContinueNode(),
+          ),
+          AssignNode(
+            name: 'sum',
+            value: ArithOpNode(
+              op: ArithOp.add,
+              left: const RefNode(['sum']),
+              right: const RefNode(['i']),
+            ),
+          ),
+        ]),
+      );
+      final result = executeStatement(node, env, rt);
+      expect(result, isA<FlowNormal>());
+      expect(sum.value, 8); // 0 + 1 + 3 + 4
+    });
+
     // Test 8: null condition + body with break (infinite-until-break).
     test('for(;;) with break exits', () {
       final x = Cell(0);

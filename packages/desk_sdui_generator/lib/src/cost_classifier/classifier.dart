@@ -13,8 +13,10 @@ import 'package:desk_sdui_annotation/desk_sdui_annotation.dart';
 /// **Limitations (documented per plan):**
 /// - Inter-procedural transitivity is NOT computed. A [linearInArg] function
 ///   called inside a loop in another function is NOT automatically O(N²).
-/// - Only IR-level ForNode loops are detected. Dart `while`/`do`/imperative-for
-///   loops are not in the current IR; they would be [unbounded] if added later.
+/// - Collection-for ([ForNode]) detection is source-aware (data-dependent vs
+///   literal). Imperative loops ([WhileNode], [DoNode], [ImperativeForNode])
+///   are unconditionally classified as [unbounded] — their iteration count is
+///   driven by mutable state, which the classifier does not analyze.
 /// - Conditional/branched recursion: if ANY call site of the self-reference is
 ///   non-size-decreasing, the function is classified as [recursiveFree].
 /// - "Registered method result with iterable shape" — the classifier detects
@@ -29,8 +31,8 @@ enum CostClass {
   linearInArg,
 
   /// Has a loop whose bound is statically undeducible (e.g. a `while` loop
-  /// driven by mutable state). Not representable in the current IR — reserved
-  /// for future `WhileNode`/imperative-for support.
+  /// driven by mutable state). Set for [WhileNode], [DoNode], and
+  /// [ImperativeForNode] subtrees.
   unbounded,
 
   /// Recursive call passes a strictly smaller argument (e.g. `fact(n - 1)`).
@@ -47,7 +49,7 @@ enum CostClass {
 
 class _Findings {
   bool hasDataDependentLoop = false;
-  bool hasUnboundedLoop = false; // reserved for WhileNode / imperative-for
+  bool hasUnboundedLoop = false; // set by WhileNode / DoNode / ImperativeForNode and the existing ForNode
   bool hasSizeDecreasingRecursion = false;
   bool hasFreeRecursion = false;
 }

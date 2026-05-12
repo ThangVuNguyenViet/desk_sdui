@@ -550,7 +550,6 @@ void _collectSealedSubtypes(
   Set<InterfaceElement> visited,
 ) {
   final library = sealedClass.library;
-  if (library == null) return;
 
   for (final classElement in library.classes) {
     if (classElement == sealedClass) continue;

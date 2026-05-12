@@ -9,6 +9,7 @@ import 'dart:typed_data';
 import 'dart:ui';
 import 'package:cue/cue.dart';
 import 'package:desk_sdui_demo/screens/counter_actions.dart';
+import 'package:desk_sdui_demo/screens/async_action_demo.dart' show async_action_demoBinding;
 import 'package:desk_sdui_demo/screens/chef_view.dart' show chef_viewBinding;
 import 'package:desk_sdui_demo/screens/counter_actions.dart' show counter_actionsBinding;
 import 'package:desk_sdui_demo/screens/counter_bouncy.dart' show counter_bouncyBinding;
@@ -19,6 +20,7 @@ import 'package:desk_sdui_demo/screens/counter_record.dart' show counter_recordB
 import 'package:desk_sdui_demo/screens/counter_shorthand.dart' show counter_shorthandBinding;
 import 'package:desk_sdui_demo/screens/counter_stress.dart' show counter_stressBinding;
 import 'package:desk_sdui_demo/screens/themed_counter.dart' show themed_counterBinding;
+import 'package:desk_sdui_demo/screens/async_action_demo.sdui_reg.g.dart' show registerAsync_action_demoDependencies;
 import 'package:desk_sdui_demo/screens/chef_view.sdui_reg.g.dart' show registerChef_viewDependencies;
 import 'package:desk_sdui_demo/screens/counter_actions.sdui_reg.g.dart' show registerCounter_actionsDependencies;
 import 'package:desk_sdui_demo/screens/counter_bouncy.sdui_reg.g.dart' show registerCounter_bouncyDependencies;
@@ -377,6 +379,8 @@ void registerSduiCatalog(Runtime rt) {
 }
 void registerAllScreens(Runtime rt) {
   registerCoreAccessors(rt);
+  rt.registerScreen(async_action_demoBinding);
+  registerAsync_action_demoDependencies(rt);
   rt.registerScreen(chef_viewBinding);
   registerChef_viewDependencies(rt);
   rt.registerScreen(counter_actionsBinding);

@@ -292,14 +292,26 @@ IrNode lowerStatement(Statement stmt) {
   if (stmt is ForStatement) {
     final parts = stmt.forLoopParts;
     if (parts is ForPartsWithDeclarations) {
-      return ImperativeForNode(
-        init: _lowerForInit(parts.variables, stmt),
-        condition: parts.condition == null
-            ? null
-            : _lowerExpression(parts.condition!),
-        update: _lowerForUpdate(parts.updaters),
-        body: lowerStatement(stmt.body),
-      );
+      // Collect the loop-variable bindings so the update/body can resolve them.
+      final loopBindings = <String, BindingKind>{};
+      for (final v in parts.variables.variables) {
+        loopBindings[v.name.lexeme] = parts.variables.isFinal
+            ? BindingKind.finalBinding
+            : BindingKind.varBinding;
+      }
+      pushScope(loopBindings);
+      try {
+        return ImperativeForNode(
+          init: _lowerForInit(parts.variables, stmt),
+          condition: parts.condition == null
+              ? null
+              : _lowerExpression(parts.condition!),
+          update: _lowerForUpdate(parts.updaters),
+          body: lowerStatement(stmt.body),
+        );
+      } finally {
+        popScope();
+      }
     }
     if (parts is ForPartsWithExpression) {
       return ImperativeForNode(

@@ -12,6 +12,83 @@ void registerCoreAccessors(Runtime rt) {
   rt.registerGetter('String.runes',      (r) => (r as String).runes);
   rt.registerGetter('String.codeUnits',  (r) => (r as String).codeUnits);
 
+  // Iterable<T> methods — where, map, toList, toSet, forEach
+  // Note: lambdas synthesized by LambdaNode are typed Object? Function(Object?),
+  // so we wrap predicate calls via a bool-casting helper.
+  bool Function(Object?) _asPredicate(Object? fn) {
+    final f = fn as Object? Function(Object?);
+    return (Object? x) => f(x) as bool;
+  }
+
+  for (final t in const ['Iterable', 'List', 'Set']) {
+    rt.registerMethod('$t.where', (Object? receiver, Map<String, Object?> args) {
+      final it = receiver as Iterable;
+      final pred = _asPredicate(args['arg0']);
+      return it.where(pred).toList();
+    });
+    rt.registerMethod('$t.map', (Object? receiver, Map<String, Object?> args) {
+      final it = receiver as Iterable;
+      final fn = args['arg0'] as Object? Function(Object?);
+      return it.map(fn).toList();
+    });
+    rt.registerMethod('$t.toList', (Object? receiver, Map<String, Object?> args) {
+      return (receiver as Iterable).toList();
+    });
+    rt.registerMethod('$t.toSet', (Object? receiver, Map<String, Object?> args) {
+      return (receiver as Iterable).toSet();
+    });
+    rt.registerMethod('$t.forEach', (Object? receiver, Map<String, Object?> args) {
+      final it = receiver as Iterable;
+      final fn = args['arg0'] as Object? Function(Object?);
+      for (final x in it) {
+        fn(x);
+      }
+      return null;
+    });
+    rt.registerMethod('$t.any', (Object? receiver, Map<String, Object?> args) {
+      final it = receiver as Iterable;
+      final pred = _asPredicate(args['arg0']);
+      return it.any(pred);
+    });
+    rt.registerMethod('$t.every', (Object? receiver, Map<String, Object?> args) {
+      final it = receiver as Iterable;
+      final pred = _asPredicate(args['arg0']);
+      return it.every(pred);
+    });
+    rt.registerMethod('$t.fold', (Object? receiver, Map<String, Object?> args) {
+      final it = receiver as Iterable;
+      final initial = args['arg0'];
+      final fn = args['arg1'] as Object? Function(Object?, Object?);
+      return it.fold(initial, fn);
+    });
+  }
+
+  // String methods
+  rt.registerMethod('String.startsWith', (Object? receiver, Map<String, Object?> args) {
+    return (receiver as String).startsWith(args['arg0'] as String);
+  });
+  rt.registerMethod('String.endsWith', (Object? receiver, Map<String, Object?> args) {
+    return (receiver as String).endsWith(args['arg0'] as String);
+  });
+  rt.registerMethod('String.contains', (Object? receiver, Map<String, Object?> args) {
+    return (receiver as String).contains(args['arg0'] as Pattern);
+  });
+  rt.registerMethod('String.toUpperCase', (Object? receiver, Map<String, Object?> args) {
+    return (receiver as String).toUpperCase();
+  });
+  rt.registerMethod('String.toLowerCase', (Object? receiver, Map<String, Object?> args) {
+    return (receiver as String).toLowerCase();
+  });
+  rt.registerMethod('String.trim', (Object? receiver, Map<String, Object?> args) {
+    return (receiver as String).trim();
+  });
+  rt.registerMethod('String.substring', (Object? receiver, Map<String, Object?> args) {
+    final s = receiver as String;
+    final start = args['arg0'] as int;
+    final end = args['arg1'] as int?;
+    return s.substring(start, end);
+  });
+
   // Iterable<T> — covers List, Set, Iterable, Map.keys/values
   Object? _iterLen(Object? r)    => (r as Iterable).length;
   Object? _iterEmpty(Object? r)  => (r as Iterable).isEmpty;

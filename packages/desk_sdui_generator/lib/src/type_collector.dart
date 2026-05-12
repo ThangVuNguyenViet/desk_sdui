@@ -231,11 +231,21 @@ class _TypeVisitor extends RecursiveAstVisitor<void> {
     // MethodInvocation nodes.
     final methodElement = node.methodName.element;
     if (methodElement is MethodElement) {
-      collected.methods.add(methodElement);
-      // Record library URIs for method param types.
-      _recordElementLibrary(methodElement.enclosingElement!);
-      for (final param in methodElement.formalParameters) {
-        _recordDartTypeLibraries(param.type);
+      // Skip dart:core and dart:async methods — they are covered by
+      // registerCoreAccessors() and should not be auto-generated.
+      final libUri =
+          methodElement.enclosingElement?.library?.firstFragment.source.uri
+              .toString() ??
+          '';
+      final isCoreLib =
+          libUri.startsWith('dart:core') || libUri.startsWith('dart:async');
+      if (!isCoreLib) {
+        collected.methods.add(methodElement);
+        // Record library URIs for method param types.
+        _recordElementLibrary(methodElement.enclosingElement!);
+        for (final param in methodElement.formalParameters) {
+          _recordDartTypeLibraries(param.type);
+        }
       }
     }
 

@@ -64,6 +64,32 @@ Object? evalExpression(
       final v = evalExpression(value, input, runtime);
       return evalExpression(body, {...input, name: v}, runtime);
 
+    case MethodCallNode(:final receiver, :final name, :final args):
+      if (receiver == null) {
+        final resolvedArgs = <String, Object?>{};
+        for (var i = 0; i < args.length; i++) {
+          resolvedArgs['arg$i'] = evalExpression(args[i], input, runtime);
+        }
+        final result = runtime.invokeFunction(name, resolvedArgs);
+        if (result == null) {
+          throw StateError('Function "$name" not registered or returned null.');
+        }
+        return result;
+      }
+      final resolvedReceiver = evalExpression(receiver, input, runtime);
+      final resolvedArgs = <String, Object?>{};
+      for (var i = 0; i < args.length; i++) {
+        resolvedArgs['arg$i'] = evalExpression(args[i], input, runtime);
+      }
+      final handler = runtime.resolveMethodHandler(name);
+      if (handler == null) {
+        throw StateError(
+          'Method "$name" not registered in runtime. '
+          'Register it via registerMethod() or core_accessors.',
+        );
+      }
+      return handler(resolvedReceiver, resolvedArgs);
+
     case LambdaNode(:final params, :final body, :final isAsync):
       if (!isAsync) {
         if (params.isEmpty) {

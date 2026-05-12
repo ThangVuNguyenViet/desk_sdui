@@ -19,6 +19,9 @@ import 'logic_op.dart';
 ///   the original Dart source.
 /// - Expression nodes ([ExpressionNode] and its subclasses) — arithmetic,
 ///   comparison, and logical operations evaluated by the runtime.
+/// - Statement nodes ([StatementNode] and its subclasses) — imperative
+///   statements executed by the runtime's `executeStatement` path; yield
+///   [ControlFlow] signals rather than values.
 ///
 /// Because the union is sealed, the runtime resolver and the generator can
 /// `switch` exhaustively over [IrNode] without a default arm — adding a new
@@ -33,6 +36,15 @@ sealed class IrNode {
 @immutable
 sealed class ExpressionNode extends IrNode {
   const ExpressionNode();
+}
+
+/// Base for IR statement nodes. Statements are executed by
+/// `executeStatement(node, env, runtime)` which returns a [ControlFlow]
+/// signal rather than a value. Expression-as-statement is handled by the
+/// `default:` arm of `executeStatement` via `evalExpression`.
+@immutable
+sealed class StatementNode extends IrNode {
+  const StatementNode();
 }
 
 /// A literal value. The value must be a const-constructible primitive
@@ -848,6 +860,121 @@ final class ValueCtorNode extends IrNode {
   String toString() => typeArgs != null
       ? 'ValueCtorNode($name<${typeArgs!.join(', ')}>(${args.length} args))'
       : 'ValueCtorNode($name(${args.length} args))';
+}
+
+// ─────────────────────────── statement nodes ────────────────────────────
+
+/// A sequence of statements executed in order. Execution stops early if any
+/// statement yields a non-[FlowNormal] control-flow signal. Introduces a
+/// nested lexical scope: bindings added by [LetStatementNode]s inside the
+/// block are visible only within this block (the resolver clones env on entry
+/// and discards the clone on exit).
+final class BlockNode extends StatementNode {
+  const BlockNode({required this.statements});
+  final List<IrNode> statements;
+
+  @override
+  bool operator ==(Object other) =>
+      other is BlockNode && _listEquals(other.statements, statements);
+  @override
+  int get hashCode => Object.hashAll(statements);
+  @override
+  String toString() => 'BlockNode(${statements.length} stmts)';
+}
+
+/// `if (cond) then [else else_]` — statement form. Evaluates [cond] as a
+/// boolean expression; if true, executes [then]; if false and [else_] is
+/// non-null, executes [else_]; otherwise returns [FlowNormal].
+final class IfStatementNode extends StatementNode {
+  const IfStatementNode({
+    required this.cond,
+    required this.then,
+    this.else_,
+  });
+  final IrNode cond;
+  final IrNode then;
+  final IrNode? else_;
+
+  @override
+  bool operator ==(Object other) =>
+      other is IfStatementNode &&
+      other.cond == cond &&
+      other.then == then &&
+      other.else_ == else_;
+  @override
+  int get hashCode => Object.hash(cond, then, else_);
+  @override
+  String toString() => 'IfStatementNode($cond ? $then : $else_)';
+}
+
+/// `break;` — signals [FlowBreak] to the enclosing loop. Labeled break is not
+/// supported (rejected by the lowerer with a diagnostic).
+final class BreakNode extends StatementNode {
+  const BreakNode();
+
+  @override
+  bool operator ==(Object other) => other is BreakNode;
+  @override
+  int get hashCode => runtimeType.hashCode;
+  @override
+  String toString() => 'BreakNode()';
+}
+
+/// `continue;` — signals [FlowContinue] to the enclosing loop. Labeled
+/// continue is not supported (rejected by the lowerer with a diagnostic).
+final class ContinueNode extends StatementNode {
+  const ContinueNode();
+
+  @override
+  bool operator ==(Object other) => other is ContinueNode;
+  @override
+  int get hashCode => runtimeType.hashCode;
+  @override
+  String toString() => 'ContinueNode()';
+}
+
+/// `return [value];` — signals [FlowReturn] to the enclosing function entry.
+/// [value] is null for bare `return;`.
+final class ReturnNode extends StatementNode {
+  const ReturnNode({this.value});
+  final IrNode? value;
+
+  @override
+  bool operator ==(Object other) =>
+      other is ReturnNode && other.value == value;
+  @override
+  int get hashCode => value.hashCode;
+  @override
+  String toString() => 'ReturnNode($value)';
+}
+
+/// Declares a new local variable binding at statement position. Inserts
+/// `name → Cell(value)` into the current scope's env. Scoping is enforced by
+/// [BlockNode]'s clone-env-on-entry / discard-on-exit strategy.
+///
+/// [isFinal] is informational (the lowerer enforces it at codegen time;
+/// the resolver does not re-check).
+final class LetStatementNode extends StatementNode {
+  const LetStatementNode({
+    required this.name,
+    required this.value,
+    required this.isFinal,
+  });
+  final String name;
+  final IrNode value;
+  final bool isFinal;
+
+  @override
+  bool operator ==(Object other) =>
+      other is LetStatementNode &&
+      other.name == name &&
+      other.value == value &&
+      other.isFinal == isFinal;
+  @override
+  int get hashCode => Object.hash(name, value, isFinal);
+  @override
+  String toString() =>
+      'LetStatementNode(${isFinal ? 'final' : 'var'} $name = $value)';
 }
 
 // ───────────────────────────── helpers ─────────────────────────────

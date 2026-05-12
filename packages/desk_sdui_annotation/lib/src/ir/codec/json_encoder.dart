@@ -188,6 +188,28 @@ class JsonIrEncoder {
           'args': node.args.map(_encodeNode).toList(),
           if (node.typeArgs != null) 'typeArgs': node.typeArgs,
         },
+      BlockNode() => {
+          r'$type': 'block',
+          'statements': node.statements.map(_encodeNode).toList(),
+        },
+      IfStatementNode() => {
+          r'$type': 'ifStmt',
+          'cond': _encodeNode(node.cond),
+          'then': _encodeNode(node.then),
+          if (node.else_ != null) 'else': _encodeNode(node.else_!),
+        },
+      BreakNode() => {r'$type': 'break'},
+      ContinueNode() => {r'$type': 'continue'},
+      ReturnNode() => {
+          r'$type': 'returnStmt',
+          if (node.value != null) 'value': _encodeNode(node.value!),
+        },
+      LetStatementNode() => {
+          r'$type': 'letStmt',
+          'name': node.name,
+          'value': _encodeNode(node.value),
+          'isFinal': node.isFinal,
+        },
     };
   }
 

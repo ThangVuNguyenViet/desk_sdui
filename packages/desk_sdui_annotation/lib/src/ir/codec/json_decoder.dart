@@ -162,6 +162,26 @@ class JsonIrDecoder {
               .toList(),
           typeArgs: _decodeStringList(map['typeArgs']),
         ),
+      'block' => BlockNode(
+          statements: ((map['statements']! as List).cast<Map<String, Object?>>())
+              .map(_decodeNode)
+              .toList(),
+        ),
+      'ifStmt' => IfStatementNode(
+          cond: _decodeNode(map['cond']! as Map<String, Object?>),
+          then: _decodeNode(map['then']! as Map<String, Object?>),
+          else_: _decodeOptional(map['else']),
+        ),
+      'break' => const BreakNode(),
+      'continue' => const ContinueNode(),
+      'returnStmt' => ReturnNode(
+          value: _decodeOptional(map['value']),
+        ),
+      'letStmt' => LetStatementNode(
+          name: map['name']! as String,
+          value: _decodeNode(map['value']! as Map<String, Object?>),
+          isFinal: map['isFinal']! as bool,
+        ),
       _ => throw FormatException('Unknown IR node type: $type'),
     };
   }

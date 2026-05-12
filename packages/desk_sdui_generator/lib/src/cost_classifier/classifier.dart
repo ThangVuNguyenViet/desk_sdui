@@ -245,6 +245,25 @@ void _walk(IrNode node, _Findings f, {required String? selfName}) {
     case LetStatementNode():
       _walk(node.value, f, selfName: selfName);
 
+    case WhileNode():
+      // While-loops are unbounded by definition (iteration count depends on
+      // runtime state). Mark as unbounded and recurse into sub-trees.
+      f.hasUnboundedLoop = true;
+      _walk(node.condition, f, selfName: selfName);
+      _walk(node.body, f, selfName: selfName);
+
+    case DoNode():
+      f.hasUnboundedLoop = true;
+      _walk(node.body, f, selfName: selfName);
+      _walk(node.condition, f, selfName: selfName);
+
+    case ImperativeForNode():
+      f.hasUnboundedLoop = true;
+      if (node.init != null) _walk(node.init!, f, selfName: selfName);
+      if (node.condition != null) _walk(node.condition!, f, selfName: selfName);
+      if (node.update != null) _walk(node.update!, f, selfName: selfName);
+      _walk(node.body, f, selfName: selfName);
+
     case BreakNode():
     case ContinueNode():
     case LiteralNode():

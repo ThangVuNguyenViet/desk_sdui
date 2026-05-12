@@ -156,6 +156,15 @@ String _emitNode(IrNode node) {
       return 'ReturnNode($val)';
     case LetStatementNode():
       return 'LetStatementNode(name: ${_dartString(node.name)}, value: ${_emitNode(node.value)}, isFinal: ${node.isFinal})';
+    case WhileNode():
+      return 'WhileNode(condition: ${_emitNode(node.condition)}, body: ${_emitNode(node.body)})';
+    case DoNode():
+      return 'DoNode(body: ${_emitNode(node.body)}, condition: ${_emitNode(node.condition)})';
+    case ImperativeForNode():
+      final init = node.init != null ? 'init: ${_emitNode(node.init!)}, ' : '';
+      final cond = node.condition != null ? 'condition: ${_emitNode(node.condition!)}, ' : '';
+      final upd = node.update != null ? 'update: ${_emitNode(node.update!)}, ' : '';
+      return 'ImperativeForNode(${init}${cond}${upd}body: ${_emitNode(node.body)})';
   }
 }
 

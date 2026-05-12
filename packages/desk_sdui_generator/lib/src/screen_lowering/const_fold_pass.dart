@@ -211,6 +211,23 @@ IrNode _foldChildren(IrNode node) {
         value: constFold(node.value),
         isFinal: node.isFinal,
       );
+    case WhileNode():
+      return WhileNode(
+        condition: constFold(node.condition),
+        body: constFold(node.body),
+      );
+    case DoNode():
+      return DoNode(
+        body: constFold(node.body),
+        condition: constFold(node.condition),
+      );
+    case ImperativeForNode():
+      return ImperativeForNode(
+        init: node.init != null ? constFold(node.init!) : null,
+        condition: node.condition != null ? constFold(node.condition!) : null,
+        update: node.update != null ? constFold(node.update!) : null,
+        body: constFold(node.body),
+      );
   }
 }
 
@@ -254,6 +271,9 @@ bool _isPureLiteral(IrNode node) {
     case ContinueNode():
     case ReturnNode():
     case LetStatementNode():
+    case WhileNode():
+    case DoNode():
+    case ImperativeForNode():
       return false;
     case RefNode():
     case EventNode():

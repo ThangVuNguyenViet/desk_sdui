@@ -302,5 +302,39 @@ IrNode reactiveHoist(IrNode node) {
         LetStatementNode(name: node.name, value: val, isFinal: node.isFinal),
         paths,
       );
+    case WhileNode():
+      final (cond, condPaths) = _hoist(node.condition);
+      final (body, bodyPaths) = _hoist(node.body);
+      return (
+        WhileNode(condition: cond, body: body),
+        {...condPaths, ...bodyPaths},
+      );
+    case DoNode():
+      final (body, bodyPaths) = _hoist(node.body);
+      final (cond, condPaths) = _hoist(node.condition);
+      return (
+        DoNode(body: body, condition: cond),
+        {...bodyPaths, ...condPaths},
+      );
+    case ImperativeForNode():
+      final (init, initPaths) = node.init != null
+          ? _hoist(node.init!)
+          : (null as IrNode?, <String>{});
+      final (cond, condPaths) = node.condition != null
+          ? _hoist(node.condition!)
+          : (null as IrNode?, <String>{});
+      final (upd, updPaths) = node.update != null
+          ? _hoist(node.update!)
+          : (null as IrNode?, <String>{});
+      final (body, bodyPaths) = _hoist(node.body);
+      return (
+        ImperativeForNode(
+          init: init,
+          condition: cond,
+          update: upd,
+          body: body,
+        ),
+        {...initPaths, ...condPaths, ...updPaths, ...bodyPaths},
+      );
   }
 }

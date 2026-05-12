@@ -264,6 +264,29 @@ IrNode inferKeys(IrNode node, {TypeLookup? lookupType}) {
         value: inferKeys(node.value, lookupType: lookupType),
         isFinal: node.isFinal,
       );
+    case WhileNode():
+      return WhileNode(
+        condition: inferKeys(node.condition, lookupType: lookupType),
+        body: inferKeys(node.body, lookupType: lookupType),
+      );
+    case DoNode():
+      return DoNode(
+        body: inferKeys(node.body, lookupType: lookupType),
+        condition: inferKeys(node.condition, lookupType: lookupType),
+      );
+    case ImperativeForNode():
+      return ImperativeForNode(
+        init: node.init != null
+            ? inferKeys(node.init!, lookupType: lookupType)
+            : null,
+        condition: node.condition != null
+            ? inferKeys(node.condition!, lookupType: lookupType)
+            : null,
+        update: node.update != null
+            ? inferKeys(node.update!, lookupType: lookupType)
+            : null,
+        body: inferKeys(node.body, lookupType: lookupType),
+      );
   }
 }
 

@@ -205,5 +205,22 @@ IrNode _demoteAllConst(IrNode node) {
         value: _demoteAllConst(node.value),
         isFinal: node.isFinal,
       );
+    case WhileNode():
+      return WhileNode(
+        condition: _demoteAllConst(node.condition),
+        body: _demoteAllConst(node.body),
+      );
+    case DoNode():
+      return DoNode(
+        body: _demoteAllConst(node.body),
+        condition: _demoteAllConst(node.condition),
+      );
+    case ImperativeForNode():
+      return ImperativeForNode(
+        init: node.init != null ? _demoteAllConst(node.init!) : null,
+        condition: node.condition != null ? _demoteAllConst(node.condition!) : null,
+        update: node.update != null ? _demoteAllConst(node.update!) : null,
+        body: _demoteAllConst(node.body),
+      );
   }
 }

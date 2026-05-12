@@ -274,6 +274,49 @@ IrNode lowerStatement(Statement stmt) {
   if (stmt is ExpressionStatement) {
     return _lowerExpression(stmt.expression);
   }
+  // Note: labeled loops arrive as LabeledStatement { statement: WhileStatement }
+  // and are rejected below by the LabeledStatement case — no .label field
+  // exists on WhileStatement / DoStatement / ForStatement in the analyzer AST.
+  if (stmt is WhileStatement) {
+    return WhileNode(
+      condition: _lowerExpression(stmt.condition),
+      body: lowerStatement(stmt.body),
+    );
+  }
+  if (stmt is DoStatement) {
+    return DoNode(
+      body: lowerStatement(stmt.body),
+      condition: _lowerExpression(stmt.condition),
+    );
+  }
+  if (stmt is ForStatement) {
+    final parts = stmt.forLoopParts;
+    if (parts is ForPartsWithDeclarations) {
+      return ImperativeForNode(
+        init: _lowerForInit(parts.variables, stmt),
+        condition: parts.condition == null
+            ? null
+            : _lowerExpression(parts.condition!),
+        update: _lowerForUpdate(parts.updaters),
+        body: lowerStatement(stmt.body),
+      );
+    }
+    if (parts is ForPartsWithExpression) {
+      return ImperativeForNode(
+        init: parts.initialization == null
+            ? null
+            : _lowerExpression(parts.initialization!),
+        condition: parts.condition == null
+            ? null
+            : _lowerExpression(parts.condition!),
+        update: _lowerForUpdate(parts.updaters),
+        body: lowerStatement(stmt.body),
+      );
+    }
+    // ForEachParts (for-in): collection-for. Delegate to existing path by
+    // wrapping in a helper that understands the for-in structure.
+    return _lowerCollectionForStatement(stmt);
+  }
   if (stmt is LabeledStatement) {
     final labelName = stmt.labels.isNotEmpty
         ? stmt.labels.first.name.lexeme
@@ -286,6 +329,94 @@ IrNode lowerStatement(Statement stmt) {
   }
   throw LoweringError(
     'Unsupported statement: ${stmt.runtimeType}',
+    stmt,
+  );
+}
+
+/// Lowers a `VariableDeclarationList` from a C-style for-init clause to
+/// a [LetStatementNode] (single decl) or [BlockNode] of [LetStatementNode]s
+/// (multiple decls, rare).
+IrNode _lowerForInit(
+    VariableDeclarationList decl, AstNode context) {
+  if (decl.variables.length == 1) {
+    final v = decl.variables.single;
+    if (v.initializer == null) {
+      throw LoweringError(
+        'For-loop init variable must have an initializer.',
+        context,
+      );
+    }
+    return LetStatementNode(
+      name: v.name.lexeme,
+      value: lowerExpression(v.initializer!),
+      isFinal: decl.isFinal,
+    );
+  }
+  // Multiple declarators in the same for-init (rare but valid Dart).
+  final stmts = <IrNode>[];
+  for (final v in decl.variables) {
+    if (v.initializer == null) {
+      throw LoweringError(
+        'For-loop init variable must have an initializer.',
+        context,
+      );
+    }
+    stmts.add(LetStatementNode(
+      name: v.name.lexeme,
+      value: lowerExpression(v.initializer!),
+      isFinal: decl.isFinal,
+    ));
+  }
+  return BlockNode(statements: stmts);
+}
+
+/// Lowers a list of for-update expressions. A single updater is lowered
+/// directly; multiple are wrapped in a [BlockNode] of expression-statements.
+IrNode? _lowerForUpdate(NodeList<Expression> updaters) {
+  if (updaters.isEmpty) return null;
+  if (updaters.length == 1) return lowerExpression(updaters.single);
+  return BlockNode(
+    statements: updaters.map<IrNode>(lowerExpression).toList(),
+  );
+}
+
+/// Lowers a `for (x in xs) body` statement (ForEachParts) to a [ForNode].
+/// This handles the statement-form of collection-for (not the expression form
+/// used inside list literals).
+IrNode _lowerCollectionForStatement(ForStatement stmt) {
+  final parts = stmt.forLoopParts;
+  final body = lowerStatement(stmt.body);
+  if (parts is ForEachPartsWithDeclaration) {
+    return ForNode(
+      variable: parts.loopVariable.name.lexeme,
+      source: _lowerExpression(parts.iterable),
+      body: body,
+    );
+  }
+  if (parts is ForEachPartsWithPattern) {
+    // Destructured `for (final (i, x) in xs.indexed)` — uses the destructured
+    // ForNode constructor.
+    // Collect bound names from the record pattern.
+    final pattern = parts.pattern;
+    final variables = <String>[];
+    if (pattern is RecordPattern) {
+      for (final field in pattern.fields) {
+        final p = field.pattern;
+        if (p is DeclaredVariablePattern) {
+          variables.add(p.name.lexeme);
+        }
+      }
+    }
+    if (variables.isNotEmpty) {
+      return ForNode.destructured(
+        variables: variables,
+        source: _lowerExpression(parts.iterable),
+        body: body,
+      );
+    }
+  }
+  throw LoweringError(
+    'Unsupported for-in loop pattern: ${parts.runtimeType}',
     stmt,
   );
 }
@@ -466,5 +597,22 @@ void _collectRefs(
       }
     case LetStatementNode():
       _collectRefs(node.value, widgetRefs, methodRefs, fnRefs);
+    case WhileNode():
+      _collectRefs(node.condition, widgetRefs, methodRefs, fnRefs);
+      _collectRefs(node.body, widgetRefs, methodRefs, fnRefs);
+    case DoNode():
+      _collectRefs(node.body, widgetRefs, methodRefs, fnRefs);
+      _collectRefs(node.condition, widgetRefs, methodRefs, fnRefs);
+    case ImperativeForNode():
+      if (node.init != null) {
+        _collectRefs(node.init!, widgetRefs, methodRefs, fnRefs);
+      }
+      if (node.condition != null) {
+        _collectRefs(node.condition!, widgetRefs, methodRefs, fnRefs);
+      }
+      if (node.update != null) {
+        _collectRefs(node.update!, widgetRefs, methodRefs, fnRefs);
+      }
+      _collectRefs(node.body, widgetRefs, methodRefs, fnRefs);
   }
 }

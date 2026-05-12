@@ -22,6 +22,7 @@ Widget resolveNode(
         :final args,
         :final key,
         :final listenablePaths,
+        :final typeArgs,
       ):
       if (listenablePaths.isNotEmpty) {
         return _resolveReactiveWidget(
@@ -32,9 +33,10 @@ Widget resolveNode(
           listenablePaths,
           input,
           runtime,
+          typeArgs: typeArgs,
         );
       }
-      return _buildWidget(context, name, args, key, input, runtime);
+      return _buildWidget(context, name, args, key, input, runtime, typeArgs: typeArgs);
 
     case BuiltinWidgetNode(:final name, :final args, :final key):
       return _buildWidget(context, name, args, key, input, runtime);
@@ -126,14 +128,14 @@ Object? _resolveArg(
     case ForNode():
       return _expandFor(context, node, input, runtime);
 
-    case WidgetNode(:final name, :final args):
-    case BuiltinWidgetNode(:final name, :final args):
+    case WidgetNode(:final name, :final args, :final typeArgs):
       final fn = runtime.fnFor(name);
       if (fn != null) {
         final fnArgs = <String, Object?>{};
         args.forEach((k, v) {
           fnArgs[k] = _resolveArg(context, v, input, runtime);
         });
+        if (typeArgs != null) fnArgs['__typeArgs__'] = typeArgs;
         return Function.apply(fn, [fnArgs]);
       }
       // Qualified value-ctor names (e.g. `'EdgeInsets.only'`) are registered
@@ -145,16 +147,36 @@ Object? _resolveArg(
         args.forEach((k, v) {
           resolvedArgs[k] = _resolveArg(context, v, input, runtime);
         });
+        if (typeArgs != null) resolvedArgs['__typeArgs__'] = typeArgs;
+        return valueBuilder(resolvedArgs);
+      }
+      return resolveNode(context, node, input, runtime);
+    case BuiltinWidgetNode(:final name, :final args):
+      final fn = runtime.fnFor(name);
+      if (fn != null) {
+        final fnArgs = <String, Object?>{};
+        args.forEach((k, v) {
+          fnArgs[k] = _resolveArg(context, v, input, runtime);
+        });
+        return Function.apply(fn, [fnArgs]);
+      }
+      final valueBuilder = runtime.resolveValueBuilder(name);
+      if (valueBuilder != null) {
+        final resolvedArgs = <String, Object?>{};
+        args.forEach((k, v) {
+          resolvedArgs[k] = _resolveArg(context, v, input, runtime);
+        });
         return valueBuilder(resolvedArgs);
       }
       return resolveNode(context, node, input, runtime);
 
-    case MethodCallNode(:final receiver, :final name, :final args):
+    case MethodCallNode(:final receiver, :final name, :final args, :final typeArgs):
       if (receiver == null) {
         final resolvedArgs = <String, Object?>{};
         for (var i = 0; i < args.length; i++) {
           resolvedArgs['arg$i'] = _resolveArg(context, args[i], input, runtime);
         }
+        if (typeArgs != null) resolvedArgs['__typeArgs__'] = typeArgs;
         return runtime.invokeFunction(name, resolvedArgs);
       }
       final resolvedReceiver = _resolveArg(context, receiver, input, runtime);
@@ -162,6 +184,7 @@ Object? _resolveArg(
       for (var i = 0; i < args.length; i++) {
         resolvedArgs['arg$i'] = _resolveArg(context, args[i], input, runtime);
       }
+      if (typeArgs != null) resolvedArgs['__typeArgs__'] = typeArgs;
       final handler = runtime.resolveMethodHandler(name);
       if (handler == null) {
         throw StateError(
@@ -171,11 +194,12 @@ Object? _resolveArg(
       }
       return handler(resolvedReceiver, resolvedArgs);
 
-    case ValueCtorNode(:final name, :final args):
+    case ValueCtorNode(:final name, :final args, :final typeArgs):
       final resolvedArgs = <String, Object?>{};
       for (var i = 0; i < args.length; i++) {
         resolvedArgs['arg$i'] = _resolveArg(context, args[i], input, runtime);
       }
+      if (typeArgs != null) resolvedArgs['__typeArgs__'] = typeArgs;
       final builder = runtime.resolveValueBuilder(name);
       if (builder == null) {
         throw StateError(
@@ -287,8 +311,9 @@ Widget _buildWidget(
   Map<String, IrNode> args,
   IrNode? key,
   Map<String, Object?> input,
-  Runtime runtime,
-) {
+  Runtime runtime, {
+  List<String>? typeArgs,
+}) {
   final builder = runtime.widgetFor(name);
   if (builder == null) {
     throw StateError('Widget "$name" is not registered');
@@ -300,6 +325,7 @@ Widget _buildWidget(
   if (key != null) {
     resolvedArgs['key'] = _resolveArg(context, key, input, runtime);
   }
+  if (typeArgs != null) resolvedArgs['__typeArgs__'] = typeArgs;
   return builder(context, resolvedArgs);
 }
 
@@ -310,8 +336,9 @@ Widget _resolveReactiveWidget(
   IrNode? key,
   Set<String> listenablePaths,
   Map<String, Object?> input,
-  Runtime runtime,
-) {
+  Runtime runtime, {
+  List<String>? typeArgs,
+}) {
   final reactiveMap = input['__reactive__'] as Map<String, Object?>?;
   if (reactiveMap == null) {
     throw StateError(
@@ -335,7 +362,7 @@ Widget _resolveReactiveWidget(
           reactiveMap,
         );
       }
-      return _buildWidget(ctx, name, args, key, scopedInput, runtime);
+      return _buildWidget(ctx, name, args, key, scopedInput, runtime, typeArgs: typeArgs);
     },
   );
 }

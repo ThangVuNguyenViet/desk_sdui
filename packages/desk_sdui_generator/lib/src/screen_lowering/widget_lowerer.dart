@@ -19,9 +19,10 @@ List<String>? _extractTypeArgs(TypeArgumentList? typeArgList, AstNode context) {
 
 String _typeArgName(TypeAnnotation t, AstNode context) {
   if (t is NamedType) {
-    // Special names like void/dynamic/Never resolve directly from the token.
-    final name = t.name2.lexeme;
-    return name;
+    // NamedType.name is a SimpleIdentifier or PrefixedIdentifier. We only use
+    // the simple name (last segment) to match the IR "simple names" convention.
+    // In analyzer 13, NamedType exposes `.name` as a NamedType-specific token.
+    return t.name.lexeme;
   }
   if (t is GenericFunctionType || t is RecordTypeAnnotation) {
     throw LoweringError(

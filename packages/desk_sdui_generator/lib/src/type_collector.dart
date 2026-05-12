@@ -222,7 +222,7 @@ class _TypeVisitor extends RecursiveAstVisitor<void> {
         final className = enclosing.name ?? '';
         if (className.isNotEmpty) {
           final argNames = typeArgList.arguments.map((t) {
-            if (t is NamedType) return t.name2.lexeme;
+            if (t is NamedType) return t.name.lexeme;
             return t.toSource();
           }).toSet();
           collected.genericCtorTypeArgs

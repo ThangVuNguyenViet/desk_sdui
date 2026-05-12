@@ -2,6 +2,7 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:desk_sdui_annotation/desk_sdui_annotation.dart';
 import '../diagnostics.dart';
+import 'ast_to_ir.dart' show lowerExpressionOrWidget;
 
 IrNode lowerExpression(Expression expr) {
   if (expr is ParenthesizedExpression) {
@@ -264,7 +265,7 @@ IrNode _lowerSwitchExpression(SwitchExpression expr) {
   for (final c in expr.cases) {
     final p = c.guardedPattern.pattern;
     if (_isWildcardOrDefault(p)) {
-      defaultBranch = lowerExpression(c.expression);
+      defaultBranch = lowerExpressionOrWidget(c.expression);
     } else {
       nonDefaultCases.add(c);
     }
@@ -284,7 +285,7 @@ IrNode _lowerSwitchExpression(SwitchExpression expr) {
   for (final c in nonDefaultCases.reversed) {
     final p = c.guardedPattern.pattern;
     final test = _lowerCaseTest(p, scrutRef, expr);
-    final body = _lowerCaseBody(p, scrutRef, lowerExpression(c.expression), expr);
+    final body = _lowerCaseBody(p, scrutRef, lowerExpressionOrWidget(c.expression), expr);
     acc = ConditionalNode(
       condition: test,
       thenBranch: body,

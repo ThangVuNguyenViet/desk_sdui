@@ -84,7 +84,14 @@ ScreenLowerResult lowerScreen(FunctionDeclaration fn, ScreenAnnotationData ann) 
   );
 }
 
-IrNode _lowerExpression(Expression expr) {
+IrNode _lowerExpression(Expression expr) => lowerExpressionOrWidget(expr);
+
+/// Dispatches an [Expression] to either the widget lowerer (for widget
+/// constructors and capitalized factory invocations) or the regular
+/// expression lowerer. Exposed so that lowerers in other files (e.g. the
+/// switch-expression lowerer in `expression_lowerer.dart`) can lower bodies
+/// that may contain widgets.
+IrNode lowerExpressionOrWidget(Expression expr) {
   if (expr is InstanceCreationExpression) {
     return lowerWidgetInstance(expr);
   } else if (expr is MethodInvocation && expr.target == null) {

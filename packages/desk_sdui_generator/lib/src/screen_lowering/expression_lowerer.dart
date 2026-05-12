@@ -180,13 +180,6 @@ LambdaNode lowerLambda(FunctionExpression expr, {bool inActionContext = false}) 
         p,
       );
     }
-    // Reject parameters with defaults.
-    if ((p as dynamic).defaultValue != null) {
-      throw LoweringError(
-        'LambdaNode: parameters with default values are not supported.',
-        p,
-      );
-    }
     params.add(p.name!.lexeme);
   }
 

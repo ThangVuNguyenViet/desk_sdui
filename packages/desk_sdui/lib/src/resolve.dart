@@ -1,6 +1,7 @@
 import 'package:desk_sdui_annotation/desk_sdui_annotation.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
+import 'cell.dart';
 import 'expression_eval.dart';
 import 'ref_resolver.dart';
 import 'runtime.dart';
@@ -218,7 +219,7 @@ Object? _resolveArg(
 
     case ActionSequenceNode(:final steps):
       return () async {
-        var localEnv = input;
+        var localEnv = toEnv(input);
         for (final step in steps) {
           localEnv = await _runActionStep(step, localEnv, runtime);
         }
@@ -233,16 +234,16 @@ Object? _resolveArg(
 ///
 /// Handles both [ActionStepNode] (plain call/await) and [TryStepNode]
 /// (try/catch block). Throws [StateError] for unknown step kinds.
-Future<Map<String, Object?>> _runActionStep(
+Future<Map<String, Cell>> _runActionStep(
   IrNode step,
-  Map<String, Object?> env,
+  Map<String, Cell> env,
   Runtime runtime,
 ) async {
   if (step is ActionStepNode) {
-    final result = evalExpression(step.call, env, runtime);
+    final result = evalExpressionWithEnv(step.call, env, runtime);
     final value = step.awaitResult && result is Future ? await result : result;
     if (step.bindResult != null) {
-      return {...env, step.bindResult!: value};
+      return {...env, step.bindResult!: Cell(value)};
     }
     return env;
   }
@@ -256,7 +257,7 @@ Future<Map<String, Object?>> _runActionStep(
       return e;
     } catch (err) {
       var e = step.exceptionBind != null
-          ? {...env, step.exceptionBind!: err}
+          ? {...env, step.exceptionBind!: Cell(err)}
           : env;
       for (final s in step.catchSteps) {
         e = await _runActionStep(s, e, runtime);

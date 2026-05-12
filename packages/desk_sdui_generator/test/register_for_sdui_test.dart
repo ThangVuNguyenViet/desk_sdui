@@ -390,4 +390,229 @@ import 'package:desk_sdui_annotation/desk_sdui_annotation.dart';
       },
     );
   });
+
+  // -------------------------------------------------------------------------
+  // Auto-discovery: enums via ctor params
+  // -------------------------------------------------------------------------
+
+  group('collectTypesFromAnnotation — enum auto-discovery', () {
+    test(
+      '@Register([Column]) auto-discovers MainAxisAlignment constants',
+      () async {
+        const source = '''
+import 'package:flutter/material.dart';
+import 'package:desk_sdui_annotation/desk_sdui_annotation.dart';
+
+@Register([Column])
+class _Cov {}
+''';
+
+        final result = await _resolveSource(source);
+        final libReader = LibraryReader(result.libraryElement);
+        final checker = TypeChecker.typeNamed(Register, inPackage: 'desk_sdui_annotation');
+
+        final annotated = libReader.annotatedWith(checker).first;
+        final el = annotated.element as ClassElement;
+        final dartObj = annotated.annotation.objectValue;
+        final collected = collectTypesFromAnnotation(el, dartObj);
+
+        final constantNames = collected.constants
+            .map((e) => '${e.enclosingElement?.name}.${e.name}')
+            .toSet();
+
+        expect(
+          constantNames,
+          contains('MainAxisAlignment.start'),
+          reason: 'Column ctor references MainAxisAlignment',
+        );
+        expect(
+          constantNames,
+          contains('MainAxisAlignment.center'),
+          reason: 'MainAxisAlignment.center is an enum constant',
+        );
+        expect(
+          constantNames,
+          contains('CrossAxisAlignment.center'),
+          reason: 'Column ctor references CrossAxisAlignment',
+        );
+      },
+    );
+
+    test(
+      '@Register([Row]) auto-discovers TextDirection constants',
+      () async {
+        const source = '''
+import 'package:flutter/material.dart';
+import 'package:desk_sdui_annotation/desk_sdui_annotation.dart';
+
+@Register([Row])
+class _Cov {}
+''';
+
+        final result = await _resolveSource(source);
+        final libReader = LibraryReader(result.libraryElement);
+        final checker = TypeChecker.typeNamed(Register, inPackage: 'desk_sdui_annotation');
+
+        final annotated = libReader.annotatedWith(checker).first;
+        final el = annotated.element as ClassElement;
+        final dartObj = annotated.annotation.objectValue;
+        final collected = collectTypesFromAnnotation(el, dartObj);
+
+        final constantNames = collected.constants
+            .map((e) => '${e.enclosingElement?.name}.${e.name}')
+            .toSet();
+
+        expect(
+          constantNames,
+          contains('TextDirection.ltr'),
+          reason: 'Row ctor references TextDirection',
+        );
+      },
+    );
+  });
+
+  // -------------------------------------------------------------------------
+  // Auto-discovery: static const fields
+  // -------------------------------------------------------------------------
+
+  group('collectTypesFromAnnotation — static const auto-discovery', () {
+    test(
+      '@Register([Colors]) auto-discovers Colors.red, Colors.blue, etc.',
+      () async {
+        const source = '''
+import 'package:flutter/material.dart';
+import 'package:desk_sdui_annotation/desk_sdui_annotation.dart';
+
+@Register([Colors])
+class _Cov {}
+''';
+
+        final result = await _resolveSource(source);
+        final libReader = LibraryReader(result.libraryElement);
+        final checker = TypeChecker.typeNamed(Register, inPackage: 'desk_sdui_annotation');
+
+        final annotated = libReader.annotatedWith(checker).first;
+        final el = annotated.element as ClassElement;
+        final dartObj = annotated.annotation.objectValue;
+        final collected = collectTypesFromAnnotation(el, dartObj);
+
+        final constantNames = collected.constants
+            .map((e) => '${e.enclosingElement?.name}.${e.name}')
+            .toSet();
+
+        expect(constantNames, contains('Colors.red'));
+        expect(constantNames, contains('Colors.blue'));
+        expect(constantNames, contains('Colors.green'));
+      },
+    );
+
+    test(
+      '@Register([Icons]) does NOT explode constants (cap > 200)',
+      () async {
+        const source = '''
+import 'package:flutter/material.dart';
+import 'package:desk_sdui_annotation/desk_sdui_annotation.dart';
+
+@Register([Icons])
+class _Cov {}
+''';
+
+        final result = await _resolveSource(source);
+        final libReader = LibraryReader(result.libraryElement);
+        final checker = TypeChecker.typeNamed(Register, inPackage: 'desk_sdui_annotation');
+
+        final annotated = libReader.annotatedWith(checker).first;
+        final el = annotated.element as ClassElement;
+        final dartObj = annotated.annotation.objectValue;
+        final collected = collectTypesFromAnnotation(el, dartObj);
+
+        // Either the constants set has no Icons entries, OR a note was emitted.
+        final iconConstantCount = collected.constants
+            .where((e) => e.enclosingElement?.name == 'Icons')
+            .length;
+        final hasElidedNote = collected.notes.any(
+          (n) => n.contains('elided Icons'),
+        );
+
+        expect(
+          iconConstantCount == 0 || hasElidedNote,
+          isTrue,
+          reason: 'Icons must be capped (elided) or skipped entirely',
+        );
+      },
+    );
+
+    test(
+      '@Register([Alignment]) auto-discovers Alignment.center, etc.',
+      () async {
+        const source = '''
+import 'package:flutter/material.dart';
+import 'package:desk_sdui_annotation/desk_sdui_annotation.dart';
+
+@Register([Alignment])
+class _Cov {}
+''';
+
+        final result = await _resolveSource(source);
+        final libReader = LibraryReader(result.libraryElement);
+        final checker = TypeChecker.typeNamed(Register, inPackage: 'desk_sdui_annotation');
+
+        final annotated = libReader.annotatedWith(checker).first;
+        final el = annotated.element as ClassElement;
+        final dartObj = annotated.annotation.objectValue;
+        final collected = collectTypesFromAnnotation(el, dartObj);
+
+        final constantNames = collected.constants
+            .map((e) => '${e.enclosingElement?.name}.${e.name}')
+            .toSet();
+
+        expect(constantNames, contains('Alignment.center'));
+        expect(constantNames, contains('Alignment.topLeft'));
+      },
+    );
+  });
+
+  // -------------------------------------------------------------------------
+  // Auto-discovery: sealed subtypes
+  // -------------------------------------------------------------------------
+
+  group('collectTypesFromAnnotation — sealed subtype auto-discovery', () {
+    test(
+      '@Register([Status]) auto-discovers Active and Idle subtypes',
+      () async {
+        const source = '''
+import 'package:desk_sdui_annotation/desk_sdui_annotation.dart';
+
+sealed class Status {}
+final class Active extends Status {}
+final class Idle extends Status {}
+
+@Register([Status])
+class _Cov {}
+''';
+
+        final result = await _resolveSource(source);
+        final libReader = LibraryReader(result.libraryElement);
+        final checker = TypeChecker.typeNamed(Register, inPackage: 'desk_sdui_annotation');
+
+        final annotated = libReader.annotatedWith(checker).first;
+        final el = annotated.element as ClassElement;
+        final dartObj = annotated.annotation.objectValue;
+        final collected = collectTypesFromAnnotation(el, dartObj);
+
+        final valueTypeNames = collected.valueTypes.map((e) => e.name).toSet();
+
+        expect(
+          valueTypeNames,
+          contains('Active'),
+          reason: 'Active is a sealed subtype of Status',
+        );
+        expect(
+          valueTypeNames,
+          contains('Idle'),
+          reason: 'Idle is a sealed subtype of Status',
+        );
+      },
+    );
+  });
 }

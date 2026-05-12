@@ -1,6 +1,7 @@
 // GENERATED CODE — DO NOT MODIFY BY HAND
 // ignore_for_file: cast_nullable_to_non_nullable, cascade_invocations, prefer_const_constructors, lines_longer_than_80_chars, unnecessary_const, unused_import, directives_ordering, always_use_package_imports, instantiate_abstract_class
 import 'dart:ui';
+import 'package:desk_sdui_demo/screens/async_action_demo.dart';
 import 'package:desk_sdui/desk_sdui.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';

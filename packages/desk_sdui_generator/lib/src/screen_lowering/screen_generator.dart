@@ -131,6 +131,12 @@ ScreenLoweringOutputs lowerScreenElement({
     }
   }
 
+  // Always import the source file so that user-defined parameter types
+  // (controllers, data classes) are in scope for `as T` casts in registrations.
+  if (partOfUri.startsWith('package:')) {
+    extraImports.add(partOfUri);
+  }
+
   final importLines = [
     "import 'dart:ui';",
     for (final imp in extraImports.toList()..sort()) "import '$imp';",

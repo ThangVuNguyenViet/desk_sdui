@@ -1,0 +1,212 @@
+// ignore_for_file: deprecated_member_use
+library;
+
+import 'dart:io';
+
+import 'package:analyzer/dart/analysis/results.dart';
+import 'package:analyzer/dart/analysis/utilities.dart';
+import 'package:analyzer/dart/ast/ast.dart';
+import 'package:desk_sdui_annotation/desk_sdui_annotation.dart';
+import 'package:desk_sdui_generator/src/diagnostics.dart';
+import 'package:desk_sdui_generator/src/screen_lowering/ast_to_ir.dart';
+import 'package:path/path.dart' as p;
+import 'package:test/test.dart';
+
+const _demoPackageRoot =
+    '/Users/vietthangvunguyen/Workspace/dart_desk_workspace/desk_sdui/packages/desk_sdui_demo';
+
+Future<FunctionDeclaration> _resolveScreen(String source) async {
+  final dir = Directory(p.join(_demoPackageRoot, 'lib'));
+  final tempFile = File(
+    p.join(
+      dir.path,
+      '_assign_node_temp_${DateTime.now().microsecondsSinceEpoch}.dart',
+    ),
+  );
+  tempFile.writeAsStringSync(source);
+  try {
+    final result = await resolveFile(path: tempFile.path);
+    if (result is! ResolvedUnitResult) {
+      throw StateError('resolveFile returned ${result.runtimeType}');
+    }
+    return result.unit.declarations.whereType<FunctionDeclaration>().first;
+  } finally {
+    if (tempFile.existsSync()) tempFile.deleteSync();
+  }
+}
+
+ScreenLowerResult _lower(FunctionDeclaration fnDecl) {
+  return lowerScreen(fnDecl, ScreenAnnotationData(name: 'test'));
+}
+
+void main() {
+  group('AssignNode lowering', () {
+    // Test 1: `var x = 0; final t = (x = x + 1); return Text(t);`
+    // Should lower to LetNode(x, 0, LetNode(t, AssignNode(x, +(x, 1)), Widget)).
+    test('var + assignment-as-expression in final init', () async {
+      final fnDecl = await _resolveScreen('''
+import 'package:flutter/material.dart';
+
+Widget s() {
+  var x = 0;
+  final t = (x = x + 1);
+  return Text('\$t');
+}
+''');
+      final result = _lower(fnDecl);
+      // Outer LetNode: x = 0
+      expect(result.root, isA<LetNode>());
+      final outerLet = result.root as LetNode;
+      expect(outerLet.name, 'x');
+      expect(outerLet.value, isA<LiteralNode>());
+
+      // Inner LetNode: t = AssignNode(x, +(x, 1))
+      expect(outerLet.body, isA<LetNode>());
+      final innerLet = outerLet.body as LetNode;
+      expect(innerLet.name, 't');
+      expect(innerLet.value, isA<AssignNode>());
+      final assign = innerLet.value as AssignNode;
+      expect(assign.name, 'x');
+      expect(assign.value, isA<ArithOpNode>());
+      final arith = assign.value as ArithOpNode;
+      expect(arith.op, ArithOp.add);
+      expect(arith.left, const RefNode(['x']));
+      expect(arith.right, const LiteralNode(1));
+    });
+
+    // Test 2: `final y = 5; y = 6;` should be rejected — y is final.
+    test('rejects assignment to final binding', () async {
+      final fnDecl = await _resolveScreen('''
+import 'package:flutter/material.dart';
+
+Widget s() {
+  final y = 5;
+  y = 6;
+  return Text('\$y');
+}
+''');
+      expect(
+        () => _lower(fnDecl),
+        throwsA(
+          isA<LoweringError>().having(
+            (e) => e.message,
+            'message',
+            contains('Cannot assign to final local "y"'),
+          ),
+        ),
+      );
+    });
+
+    // Test 3: `x = 0;` without prior declaration should be rejected.
+    test('rejects assignment to undeclared name', () async {
+      final fnDecl = await _resolveScreen('''
+import 'package:flutter/material.dart';
+
+Widget s() {
+  x = 0;
+  return Text('hi');
+}
+''');
+      expect(
+        () => _lower(fnDecl),
+        throwsA(
+          isA<LoweringError>().having(
+            (e) => e.message,
+            'message',
+            contains('no local binding visible'),
+          ),
+        ),
+      );
+    });
+
+    // Test 4: compound assignment `x += 3` lowers to AssignNode(x, +(x, 3)).
+    test('compound assignment += lowers to AssignNode with ArithOpNode', () async {
+      final fnDecl = await _resolveScreen('''
+import 'package:flutter/material.dart';
+
+Widget s() {
+  var x = 0;
+  final t = (x += 3);
+  return Text('\$t');
+}
+''');
+      final result = _lower(fnDecl);
+      final outerLet = result.root as LetNode;
+      expect(outerLet.name, 'x');
+      final innerLet = outerLet.body as LetNode;
+      expect(innerLet.name, 't');
+      final assign = innerLet.value as AssignNode;
+      expect(assign.name, 'x');
+      final arith = assign.value as ArithOpNode;
+      expect(arith.op, ArithOp.add);
+      expect(arith.left, const RefNode(['x']));
+      expect(arith.right, const LiteralNode(3));
+    });
+
+    // Test 5: postfix increment `x++` as statement lowers to AssignNode.
+    test('postfix increment as statement lowers to AssignNode', () async {
+      final fnDecl = await _resolveScreen('''
+import 'package:flutter/material.dart';
+
+Widget s() {
+  var x = 0;
+  x++;
+  return Text('\$x');
+}
+''');
+      final result = _lower(fnDecl);
+      final outerLet = result.root as LetNode;
+      expect(outerLet.name, 'x');
+      // Statement-shim LetNode wraps the AssignNode under '__stmt__'.
+      expect(outerLet.body, isA<LetNode>());
+      final stmtLet = outerLet.body as LetNode;
+      expect(stmtLet.name, '__stmt__');
+      expect(stmtLet.value, isA<AssignNode>());
+      final assign = stmtLet.value as AssignNode;
+      expect(assign.name, 'x');
+      final arith = assign.value as ArithOpNode;
+      expect(arith.op, ArithOp.add);
+      expect(arith.left, const RefNode(['x']));
+      expect(arith.right, const LiteralNode(1));
+    });
+
+    // Test 6: post-increment as expression (final t = x++) is rejected.
+    test('rejects post-increment as expression', () async {
+      final fnDecl = await _resolveScreen('''
+import 'package:flutter/material.dart';
+
+Widget s() {
+  var x = 0;
+  final t = x++;
+  return Text('\$t');
+}
+''');
+      expect(
+        () => _lower(fnDecl),
+        throwsA(
+          isA<LoweringError>().having(
+            (e) => e.message,
+            'message',
+            contains('Pre/post increment as an expression is not supported'),
+          ),
+        ),
+      );
+    });
+
+    // Test 7: explicitly-typed declaration `int x = 0;` is treated as mutable.
+    test('explicitly-typed declaration treated as mutable (var-like)', () async {
+      final fnDecl = await _resolveScreen('''
+import 'package:flutter/material.dart';
+
+Widget s() {
+  int x = 0;
+  final t = (x = x + 1);
+  return Text('\$t');
+}
+''');
+      // Should not throw — typed-decl is mutable by default.
+      final result = _lower(fnDecl);
+      expect(result.root, isA<LetNode>());
+    });
+  });
+}

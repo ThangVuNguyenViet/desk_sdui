@@ -153,6 +153,11 @@ IrNode _foldChildren(IrNode node) {
     case RefNode():
     case EventNode():
       return node;
+    case SequenceNode():
+      return SequenceNode(
+        steps: node.steps.map(constFold).toList(),
+        returnExpr: constFold(node.returnExpr),
+      );
     case ActionSequenceNode():
       return ActionSequenceNode(
         steps: node.steps
@@ -201,6 +206,7 @@ bool _isPureLiteral(IrNode node) {
     case LambdaNode():
     case MethodCallNode():
     case ValueCtorNode():
+    case SequenceNode():
     case ActionSequenceNode():
     case ActionStepNode():
       return false;

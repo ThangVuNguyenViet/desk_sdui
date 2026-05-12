@@ -179,6 +179,28 @@ class RegistrationEmitter {
     return "rt.registerFunction('${fn.name}', (args) => ${fn.name}($argsCode));";
   }
 
+  /// Emit a `rt.registerMethod(...)` call for a cascade setter (e.g.
+  /// `..text = 'x'` on a `TextEditingController`).
+  ///
+  /// The registration name is `'ClassName.fieldName='` (Dart setter convention).
+  /// The closure assigns `args['arg0']` to the named field on the cast receiver.
+  String emitCascadeSetter(SetterElement setter) {
+    // setter.displayName is 'text=' — strip the trailing '=' for field access.
+    final enclosing = setter.enclosingElement;
+    final className = (enclosing is InterfaceElement ? enclosing.name : null) ?? '';
+    // displayName includes the trailing '=' for setters in analyzer 13.
+    final displayName = setter.displayName;
+    final fieldName = displayName.endsWith('=')
+        ? displayName.substring(0, displayName.length - 1)
+        : displayName;
+    final registrationName = '$className.$fieldName=';
+    final paramType = setter.formalParameters.isNotEmpty
+        ? _typeDisplayName(setter.formalParameters.first.type)
+        : 'Object?';
+    return "rt.registerMethod('$registrationName', "
+        "(recv, args) => (recv as $className).$fieldName = args['arg0'] as $paramType);";
+  }
+
   /// Emit all public instance methods for a registered non-Widget class.
   ///
   /// Discovery rules:
@@ -311,6 +333,10 @@ class RegistrationEmitter {
 
     for (final fn in collected.functions) {
       lines.add(emitFunction(fn));
+    }
+
+    for (final setter in collected.cascadeSetters) {
+      lines.add(emitCascadeSetter(setter));
     }
 
     return lines.join('\n');

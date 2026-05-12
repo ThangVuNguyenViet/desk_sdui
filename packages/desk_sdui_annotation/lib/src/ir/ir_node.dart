@@ -545,6 +545,30 @@ final class LetNode extends ExpressionNode {
   String toString() => 'LetNode($name = $value in $body)';
 }
 
+/// Evaluates each step in [steps] in order (synchronously), then evaluates
+/// and returns [returnExpr]. Used by cascade lowering: each step is a
+/// side-effecting call on the cascade receiver, and [returnExpr] references
+/// the receiver (typically via a Let-bound name).
+///
+/// Distinct from [ActionSequenceNode]: this is synchronous and returns a value
+/// (the receiver). [ActionSequenceNode] is async and returns a `Future<void>
+/// Function()` for event-handler slots.
+final class SequenceNode extends ExpressionNode {
+  const SequenceNode({required this.steps, required this.returnExpr});
+  final List<IrNode> steps;
+  final IrNode returnExpr;
+
+  @override
+  bool operator ==(Object other) =>
+      other is SequenceNode &&
+      _listEquals(other.steps, steps) &&
+      other.returnExpr == returnExpr;
+  @override
+  int get hashCode => Object.hash(Object.hashAll(steps), returnExpr);
+  @override
+  String toString() => 'SequenceNode(${steps.length} steps, return $returnExpr)';
+}
+
 /// Synthesizes a Dart `Function` at resolve time. Captures the current env
 /// (Map<String, Object?>) and produces a callable that, when invoked, extends
 /// the captured env with the call-site param values and resolves `body`.

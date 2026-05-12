@@ -106,6 +106,12 @@ class JsonIrDecoder {
           value: _decodeNode(map['value']! as Map<String, Object?>),
           body: _decodeNode(map['body']! as Map<String, Object?>),
         ),
+      'sequence' => SequenceNode(
+          steps: ((map['steps']! as List).cast<Map<String, Object?>>())
+              .map(_decodeNode)
+              .toList(),
+          returnExpr: _decodeNode(map['returnExpr']! as Map<String, Object?>),
+        ),
       'lambda' => LambdaNode(
           params: (map['params']! as List).cast<String>(),
           body: _decodeNode(map['body']! as Map<String, Object?>),

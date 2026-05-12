@@ -137,6 +137,11 @@ IrNode _demoteAllConst(IrNode node) {
         name: node.name,
         args: node.args.map(_demoteAllConst).toList(),
       );
+    case SequenceNode():
+      return SequenceNode(
+        steps: node.steps.map(_demoteAllConst).toList(),
+        returnExpr: _demoteAllConst(node.returnExpr),
+      );
     case LambdaNode():
       return LambdaNode(
         params: node.params,

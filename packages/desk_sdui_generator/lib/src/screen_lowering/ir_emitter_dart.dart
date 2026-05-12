@@ -119,6 +119,9 @@ String _emitNode(IrNode node) {
           ? ', typeArgs: ${_emitStringList(node.typeArgs!)}'
           : '';
       return 'ValueCtorNode(name: ${_dartString(node.name)}, args: [$args]$typeArgs)';
+    case SequenceNode():
+      final steps = node.steps.map(_emitNode).join(', ');
+      return 'SequenceNode(steps: [$steps], returnExpr: ${_emitNode(node.returnExpr)})';
     case LambdaNode():
       final params = _dartList(node.params.map(_dartString));
       final isAsync = node.isAsync ? ', isAsync: true' : '';

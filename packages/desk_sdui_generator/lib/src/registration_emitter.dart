@@ -31,9 +31,26 @@ class RegistrationEmitter {
   String emitWidget(ClassElement widget) {
     final ctor = _unnamedCtor(widget);
     if (ctor == null) return '// No unnamed constructor for ${widget.name}';
+    return _emitWidgetCtor(
+      ctor,
+      registrationName: widget.name!,
+      callTarget: widget.name!,
+    );
+  }
+
+  /// Emit a `rt.registerWidget(...)` line for a specific constructor [ctor].
+  /// [registrationName] is the qualified name (e.g. 'Cue' or 'Cue.onMount').
+  /// [callTarget] is the Dart expression used to invoke it
+  /// (e.g. 'Cue' or 'Cue.onMount').
+  String _emitWidgetCtor(
+    ConstructorElement ctor, {
+    required String registrationName,
+    required String callTarget,
+  }) {
     final params = ctor.formalParameters;
     final argsCode = _buildWidgetArgList(params);
-    return "rt.registerWidget('${widget.name}', (args) => ${widget.name}($argsCode));";
+    return "rt.registerWidget('$registrationName', "
+        "(args) => $callTarget($argsCode));";
   }
 
   /// Emit a `rt.registerConstant(...)` call for a static field or accessor.

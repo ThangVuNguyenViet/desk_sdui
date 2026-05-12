@@ -206,11 +206,25 @@ void _walk(IrNode node, _Findings f, {required String? selfName}) {
 
     case ActionSequenceNode():
       for (final step in node.steps) {
-        _walk(step.call, f, selfName: selfName);
+        _walk(step, f, selfName: selfName);
       }
 
     case ActionStepNode():
       _walk(node.call, f, selfName: selfName);
+
+    case TryStepNode():
+      for (final s in node.trySteps) {
+        _walk(s, f, selfName: selfName);
+      }
+      for (final s in node.catchSteps) {
+        _walk(s, f, selfName: selfName);
+      }
+
+    case SequenceNode():
+      for (final step in node.steps) {
+        _walk(step, f, selfName: selfName);
+      }
+      _walk(node.returnExpr, f, selfName: selfName);
 
     case LiteralNode():
     case ConstNode():

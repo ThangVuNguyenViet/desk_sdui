@@ -24,6 +24,14 @@ IrNode lowerClosure(Expression expr) {
       return _lowerActionSequence(body.block, expr);
     }
 
+    // Sync block body: `() { count = count + 1; }` — Plan #11 inline event
+    // handler that mutates stateful fields. Delegate to lowerLambda which
+    // produces a BlockNode-bodied LambdaNode; the runtime evaluates it via
+    // executeStatement and triggers setState on completion.
+    if (body is BlockFunctionBody && !body.isAsynchronous) {
+      return lowerLambda(expr);
+    }
+
     if (body is! ExpressionFunctionBody) {
       throw LoweringError(
         'closure must be expression-bodied (`() => x`, not `() { return x; }`)',

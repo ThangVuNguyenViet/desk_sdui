@@ -324,6 +324,44 @@ ControlFlow executeStatement(
       env[name] = Cell(v);
       return FlowNormal.instance;
 
+    case WhileNode(:final condition, :final body):
+      while (evalExpressionWithEnv(condition, env, runtime) == true) {
+        final flow = executeStatement(body, env, runtime);
+        if (flow is FlowBreak) break;
+        if (flow is FlowContinue) continue;
+        if (flow is FlowReturn) return flow; // propagate
+      }
+      return FlowNormal.instance;
+
+    case DoNode(:final body, :final condition):
+      do {
+        final flow = executeStatement(body, env, runtime);
+        if (flow is FlowBreak) break;
+        if (flow is FlowContinue) continue;
+        if (flow is FlowReturn) return flow;
+      } while (evalExpressionWithEnv(condition, env, runtime) == true);
+      return FlowNormal.instance;
+
+    case ImperativeForNode(:final init, :final condition, :final update, :final body):
+      // Fresh scope for the loop variable, per Dart semantics.
+      final scoped = Map<String, Cell>.of(env);
+      if (init != null) {
+        final flow = executeStatement(init, scoped, runtime);
+        if (flow is! FlowNormal) return flow;
+      }
+      loop:
+      while (condition == null ||
+          evalExpressionWithEnv(condition, scoped, runtime) == true) {
+        final flow = executeStatement(body, scoped, runtime);
+        if (flow is FlowBreak) break loop;
+        if (flow is FlowReturn) return flow;
+        // FlowContinue and FlowNormal both fall through to update.
+        if (update != null) {
+          evalExpressionWithEnv(update, scoped, runtime); // discard value
+        }
+      }
+      return FlowNormal.instance;
+
     default:
       // Expression-as-statement: evaluate and discard the value.
       evalExpressionWithEnv(node, env, runtime);

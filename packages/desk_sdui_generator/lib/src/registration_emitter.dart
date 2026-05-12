@@ -237,6 +237,10 @@ class RegistrationEmitter {
       }
     }
 
+    for (final note in collected.notes) {
+      lines.add(note);
+    }
+
     for (final constant in collected.constants) {
       lines.add(emitConstant(constant));
     }

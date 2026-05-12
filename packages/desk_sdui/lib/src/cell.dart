@@ -13,8 +13,31 @@ class Cell {
   Object? value;
 }
 
+/// Reserved input-map key holding a `Map<String, Cell>` of persistent
+/// state cells installed by an enclosing `IrStatefulNode` host. When [toEnv]
+/// encounters this key, it splices those cells into the resulting env in
+/// place of freshly-allocated ones for matching names — so writes to those
+/// cells survive across resolver invocations (cross-build screen state).
+const String kStateCellsKey = r'__stateCells__';
+
 /// Converts a public-API `Map<String, Object?>` input map into the internal
 /// cell-backed env. Called once at every resolver entry point.
+///
+/// If [inputs] contains a [kStateCellsKey] entry holding a
+/// `Map<String, Cell>`, those persistent cells shadow freshly-allocated ones
+/// for matching names. This is how an `IrStatefulNode` host preserves
+/// mutable state across rebuilds.
 Map<String, Cell> toEnv(Map<String, Object?> inputs) {
-  return {for (final e in inputs.entries) e.key: Cell(e.value)};
+  final stateCellsRaw = inputs[kStateCellsKey];
+  final env = <String, Cell>{};
+  for (final e in inputs.entries) {
+    if (e.key == kStateCellsKey) continue;
+    env[e.key] = Cell(e.value);
+  }
+  if (stateCellsRaw is Map<String, Cell>) {
+    for (final entry in stateCellsRaw.entries) {
+      env[entry.key] = entry.value;
+    }
+  }
+  return env;
 }

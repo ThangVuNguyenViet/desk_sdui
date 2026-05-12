@@ -2,7 +2,7 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:desk_sdui_annotation/desk_sdui_annotation.dart';
 import '../diagnostics.dart';
-import 'ast_to_ir.dart' show lowerExpressionOrWidget;
+import 'ast_to_ir.dart' show lowerExpressionOrWidget, lowerStatement;
 
 // ---------------------------------------------------------------------------
 // Binding-kind tracking for block bodies
@@ -276,6 +276,15 @@ LambdaNode lowerLambda(FunctionExpression expr, {bool inActionContext = false}) 
         );
       }
       loweredBody = lowerExpression(ret.expression!);
+    } else if (!isAsync) {
+      // Sync block body with multiple statements (or a single non-return
+      // statement). Per Plan #11 this is required to support inline event
+      // handlers that mutate stateful fields, e.g.
+      //   onPressed: () { count = count + 1; }
+      // Lower the block to a BlockNode; the runtime evaluator dispatches a
+      // BlockNode-bodied LambdaNode via executeStatement.
+      final loweredStmts = stmts.map(lowerStatement).toList();
+      loweredBody = BlockNode(statements: loweredStmts);
     } else {
       throw LoweringError(
         'LambdaNode bodies must be a single expression (or a block with a '

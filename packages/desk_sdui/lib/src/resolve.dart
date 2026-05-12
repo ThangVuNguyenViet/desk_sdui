@@ -6,6 +6,13 @@ import 'expression_eval.dart';
 import 'ref_resolver.dart';
 import 'runtime.dart';
 
+/// Reserved input key holding the `setState` callback installed by an
+/// enclosing [_StatefulIrHost]. Event handlers that mutate cells in the
+/// screen-level state should invoke this after running, so Flutter schedules
+/// a rebuild. Stateless screens have no such key (the wrapper is absent and
+/// mutations have nothing to rebuild against).
+const String kStatefulSetStateKey = '__setState__';
+
 /// Resolves an IR node to a Widget. May recurse.
 Widget resolveNode(
   BuildContext context,
@@ -14,6 +21,13 @@ Widget resolveNode(
   Runtime runtime,
 ) {
   switch (node) {
+    case IrStatefulNode():
+      return _StatefulIrHost(
+        node: node,
+        input: input,
+        runtime: runtime,
+      );
+
     case ConstNode(:final value):
       if (value is Widget) return value;
       throw StateError('ConstNode at widget position must hold a Widget');
@@ -418,11 +432,13 @@ Object? _resolveArg(
       return _bindEvent(node, input, runtime);
 
     case ActionSequenceNode(:final steps):
+      final setStateHook = input[kStatefulSetStateKey];
       return () async {
         var localEnv = toEnv(input);
         for (final step in steps) {
           localEnv = await _runActionStep(step, localEnv, runtime);
         }
+        if (setStateHook is void Function()) setStateHook();
       };
 
     default:
@@ -643,4 +659,71 @@ void _installReactiveGetter(
       (cursor['__getters__'] as Map?)?.cast<String, Object?>() ?? {};
   getters[path.last] = () => listenable.value;
   cursor['__getters__'] = getters;
+}
+
+/// Host widget for an [IrStatefulNode] — owns the field cells across builds
+/// and rebuilds whenever an event handler invokes `setState`. The cells are
+/// initialized once in [initState] using the field initializers; on every
+/// subsequent build, the cells (as `Map<String, Cell>`) are merged into the
+/// input env so the body sees their current values. Event handlers that
+/// mutate any of those cells then trigger a rebuild via the [kStatefulSetStateKey]
+/// callback installed in the input.
+class _StatefulIrHost extends StatefulWidget {
+  const _StatefulIrHost({
+    required this.node,
+    required this.input,
+    required this.runtime,
+  });
+
+  final IrStatefulNode node;
+  final Map<String, Object?> input;
+  final Runtime runtime;
+
+  @override
+  State<_StatefulIrHost> createState() => _StatefulIrHostState();
+}
+
+class _StatefulIrHostState extends State<_StatefulIrHost> {
+  late final Map<String, Cell> _stateCells;
+
+  @override
+  void initState() {
+    super.initState();
+    // Initialize each field's cell once, in declaration order. Each
+    // initializer evaluates against an env that contains the original
+    // VM inputs plus the previously-initialized fields.
+    _stateCells = <String, Cell>{};
+    final initEnv = toEnv(widget.input);
+    for (final field in widget.node.fields) {
+      final value = evalExpressionWithEnv(
+        field.initializer,
+        {...initEnv, ..._stateCells},
+        widget.runtime,
+      );
+      _stateCells[field.name] = Cell(value);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Compose the per-build input: VM inputs + persistent state cells (under
+    // `kStateCellsKey` — toEnv splices them in) + the setState hook event
+    // handlers will invoke.
+    final scopedInput = <String, Object?>{
+      ...widget.input,
+      // Expose each cell's current value at its name as well, so consumers
+      // that only read the value map (without entering toEnv) still see it.
+      for (final entry in _stateCells.entries) entry.key: entry.value.value,
+      kStateCellsKey: _stateCells,
+      kStatefulSetStateKey: _scheduleRebuild,
+    };
+    return resolveNode(context, widget.node.body, scopedInput, widget.runtime);
+  }
+
+  /// Called by event handlers (wrapped at resolve time) after they've run.
+  /// Triggers a rebuild so the body re-resolves against the new cell values.
+  void _scheduleRebuild() {
+    if (!mounted) return;
+    setState(() {});
+  }
 }

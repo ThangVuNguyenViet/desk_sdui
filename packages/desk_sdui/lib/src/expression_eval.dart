@@ -139,27 +139,39 @@ Object? evalExpressionWithEnv(
       // Lambdas capture the current env (Map<String, Cell>). Because cells are
       // mutable objects, lambdas see live values of mutable bindings at call time.
       final capturedEnv = env;
+      // Plan #11: a sync lambda with a BlockNode body (multi-statement event
+      // handler that mutates stateful fields) runs through executeStatement
+      // and then invokes the setState hook captured in env (if any) so Flutter
+      // schedules a rebuild.
+      final isBlockBody = body is BlockNode;
+      void runSetStateHook(Map<String, Cell> e) {
+        final hookCell = e[r'__setState__'];
+        final hook = hookCell?.value;
+        if (hook is void Function()) hook();
+      }
       if (!isAsync) {
+        Object? invokeSync(Map<String, Cell> e) {
+          if (isBlockBody) {
+            executeStatement(body, e, runtime);
+            runSetStateHook(e);
+            return null;
+          }
+          return evalExpressionWithEnv(body, e, runtime);
+        }
+
         if (params.isEmpty) {
-          return () => evalExpressionWithEnv(body, capturedEnv, runtime);
+          return () => invokeSync(capturedEnv);
         }
         if (params.length == 1) {
-          return (Object? a0) => evalExpressionWithEnv(
-                body,
-                {...capturedEnv, params[0]: Cell(a0)},
-                runtime,
-              );
+          return (Object? a0) =>
+              invokeSync({...capturedEnv, params[0]: Cell(a0)});
         }
         if (params.length == 2) {
-          return (Object? a0, Object? a1) => evalExpressionWithEnv(
-                body,
-                {
-                  ...capturedEnv,
-                  params[0]: Cell(a0),
-                  params[1]: Cell(a1),
-                },
-                runtime,
-              );
+          return (Object? a0, Object? a1) => invokeSync({
+                ...capturedEnv,
+                params[0]: Cell(a0),
+                params[1]: Cell(a1),
+              });
         }
         // >2 params: variadic fallback via List.
         return (List<Object?> args) {
@@ -167,7 +179,7 @@ Object? evalExpressionWithEnv(
           for (var i = 0; i < params.length; i++) {
             lambdaEnv = {...lambdaEnv, params[i]: Cell(args[i])};
           }
-          return evalExpressionWithEnv(body, lambdaEnv, runtime);
+          return invokeSync(lambdaEnv);
         };
       }
       // Async path: closures return Future<Object?>. Only valid in action

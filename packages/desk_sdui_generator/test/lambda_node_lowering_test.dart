@@ -99,19 +99,20 @@ void main() {
       expect(node.body, isA<ArithOpNode>());
     });
 
-    // Test 4: Block body with leading let → rejected.
-    test('(p) { final t = p; return t; } is rejected (block with let)', () async {
-      final expr = await _resolveFunctionExpression('(int p) { final t = p; return t; }');
-      expect(
-        () => lowerLambda(expr),
-        throwsA(
-          isA<LoweringError>().having(
-            (e) => e.message,
-            'message',
-            contains('single expression'),
-          ),
-        ),
-      );
+    // Test 4: Block body with multiple statements now lowers to a BlockNode
+    // body (Plan #11 — sync block-bodied lambdas drive inline event handlers
+    // that mutate stateful fields). This used to be rejected pre-#11.
+    test('(p) { final t = p; return t; } lowers to BlockNode-bodied LambdaNode',
+        () async {
+      final expr = await _resolveFunctionExpression(
+          '(int p) { final t = p; return t; }');
+      final node = lowerLambda(expr);
+      expect(node.isAsync, isFalse);
+      expect(node.body, isA<BlockNode>());
+      final block = node.body as BlockNode;
+      expect(block.statements, hasLength(2));
+      expect(block.statements[0], isA<LetStatementNode>());
+      expect(block.statements[1], isA<ReturnNode>());
     });
 
     // Test 5: Async lambda outside action context → rejected.

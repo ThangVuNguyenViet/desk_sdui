@@ -243,3 +243,90 @@ Object? evalExpressionWithEnv(
 Map<String, Object?> _unwrapEnv(Map<String, Cell> env) {
   return {for (final e in env.entries) e.key: e.value.value};
 }
+
+// ---------------------------------------------------------------------------
+// Statement-form resolver + ControlFlow signals
+// ---------------------------------------------------------------------------
+
+/// Control-flow signal returned by [executeStatement].
+sealed class ControlFlow {
+  const ControlFlow();
+}
+
+/// Normal (fall-through) execution: the statement completed without an
+/// early-exit control-flow signal.
+final class FlowNormal extends ControlFlow {
+  const FlowNormal();
+  static const instance = FlowNormal();
+}
+
+/// `break;` — abort the enclosing loop iteration.
+final class FlowBreak extends ControlFlow {
+  const FlowBreak();
+  static const instance = FlowBreak();
+}
+
+/// `continue;` — skip to the next enclosing loop iteration.
+final class FlowContinue extends ControlFlow {
+  const FlowContinue();
+  static const instance = FlowContinue();
+}
+
+/// `return [value];` — return from the enclosing function.
+final class FlowReturn extends ControlFlow {
+  const FlowReturn(this.value);
+  final Object? value;
+}
+
+/// Executes a statement node, returning a [ControlFlow] signal.
+///
+/// [node] must be a [StatementNode] (or an expression-as-statement, handled
+/// by the `default:` arm). [env] is the mutable cell-backed environment.
+///
+/// For [BlockNode]: a shallow copy of [env] is used as the block's scope, so
+/// bindings declared inside the block do not leak out, but mutations to
+/// already-existing cells ARE visible to the outer scope (shared cell refs).
+ControlFlow executeStatement(
+  IrNode node,
+  Map<String, Cell> env,
+  Runtime runtime,
+) {
+  switch (node) {
+    case BlockNode(:final statements):
+      // Shallow-copy of env: new binding names are scoped to this block; cell
+      // values of outer bindings are shared by reference (mutations visible).
+      final scoped = Map<String, Cell>.of(env);
+      for (final s in statements) {
+        final flow = executeStatement(s, scoped, runtime);
+        if (flow is! FlowNormal) return flow;
+      }
+      return FlowNormal.instance;
+
+    case IfStatementNode(:final cond, :final then, :final else_):
+      final c = evalExpressionWithEnv(cond, env, runtime);
+      if (c == true) return executeStatement(then, env, runtime);
+      if (else_ != null) return executeStatement(else_, env, runtime);
+      return FlowNormal.instance;
+
+    case BreakNode():
+      return FlowBreak.instance;
+
+    case ContinueNode():
+      return FlowContinue.instance;
+
+    case ReturnNode(:final value):
+      return FlowReturn(
+        value == null ? null : evalExpressionWithEnv(value, env, runtime),
+      );
+
+    case LetStatementNode(:final name, :final value):
+      final v = evalExpressionWithEnv(value, env, runtime);
+      env[name] = Cell(v);
+      return FlowNormal.instance;
+
+    default:
+      // Expression-as-statement: evaluate and discard the value.
+      evalExpressionWithEnv(node, env, runtime);
+      return FlowNormal.instance;
+  }
+}

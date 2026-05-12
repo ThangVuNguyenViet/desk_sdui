@@ -46,54 +46,17 @@ class ScreenAnnotationData {
 
 ScreenLowerResult lowerScreen(FunctionDeclaration fn, ScreenAnnotationData ann) {
   final body = fn.functionExpression.body;
-  final Expression expr;
+  final IrNode rootIr;
   if (body is ExpressionFunctionBody) {
-    expr = body.expression;
+    rootIr = _lowerExpression(body.expression);
   } else if (body is BlockFunctionBody) {
-    final statements = body.block.statements;
-    if (statements.length != 1) {
-      throw LoweringError(
-        '@Screen body must be a single return statement or expression body; '
-        'got ${statements.length} statements',
-        fn,
-      );
-    }
-    final stmt = statements.single;
-    if (stmt is! ReturnStatement) {
-      throw LoweringError(
-        '@Screen body must be a single return statement or expression body; '
-        'got ${stmt.runtimeType}',
-        fn,
-      );
-    }
-    final returnExpr = stmt.expression;
-    if (returnExpr == null) {
-      throw LoweringError(
-        '@Screen body must be a single return statement or expression body; '
-        'got empty return',
-        fn,
-      );
-    }
-    expr = returnExpr;
+    rootIr = _lowerBlockBody(body, fn);
   } else {
     throw LoweringError(
       '@Screen body must be a single return statement or expression body; '
       'got ${body.runtimeType}',
       fn,
     );
-  }
-  final IrNode rootIr;
-  if (expr is InstanceCreationExpression) {
-    rootIr = lowerWidgetInstance(expr);
-  } else if (expr is MethodInvocation && expr.target == null) {
-    final name = expr.methodName.name;
-    if (name.isNotEmpty && name[0] == name[0].toUpperCase()) {
-      rootIr = lowerWidgetInvocation(expr);
-    } else {
-      rootIr = lowerExpression(expr);
-    }
-  } else {
-    rootIr = lowerExpression(expr);
   }
 
   final params = <({String name, String type})>[];
@@ -119,6 +82,74 @@ ScreenLowerResult lowerScreen(FunctionDeclaration fn, ScreenAnnotationData ann) 
     widgetRefs: widgetRefs,
     fnRefs: fnRefs,
   );
+}
+
+IrNode _lowerExpression(Expression expr) {
+  if (expr is InstanceCreationExpression) {
+    return lowerWidgetInstance(expr);
+  } else if (expr is MethodInvocation && expr.target == null) {
+    final name = expr.methodName.name;
+    if (name.isNotEmpty && name[0] == name[0].toUpperCase()) {
+      return lowerWidgetInvocation(expr);
+    } else {
+      return lowerExpression(expr);
+    }
+  } else {
+    return lowerExpression(expr);
+  }
+}
+
+IrNode _lowerBlockBody(BlockFunctionBody body, FunctionDeclaration fn) {
+  final stmts = body.block.statements;
+  if (stmts.isEmpty) {
+    throw LoweringError(
+      '@Screen body must end with a return statement.',
+      fn,
+    );
+  }
+  final returnStmt = stmts.last;
+  if (returnStmt is! ReturnStatement || returnStmt.expression == null) {
+    throw LoweringError(
+      '@Screen body must end with a return statement.',
+      fn,
+    );
+  }
+  IrNode acc = _lowerExpression(returnStmt.expression!);
+  for (final stmt in stmts.take(stmts.length - 1).toList().reversed) {
+    if (stmt is! VariableDeclarationStatement) {
+      throw LoweringError(
+        '@Screen body may only contain final locals before the return.',
+        fn,
+      );
+    }
+    final decl = stmt.variables;
+    if (!decl.isFinal) {
+      throw LoweringError(
+        "@Screen locals must be 'final' (single-assignment). "
+        'Use a registered VM method for mutable state.',
+        fn,
+      );
+    }
+    if (decl.variables.length != 1) {
+      throw LoweringError(
+        '@Screen locals: declare one variable per statement.',
+        fn,
+      );
+    }
+    final v = decl.variables.single;
+    if (v.initializer == null) {
+      throw LoweringError(
+        '@Screen locals must have an initializer.',
+        fn,
+      );
+    }
+    acc = LetNode(
+      name: v.name.lexeme,
+      value: lowerExpression(v.initializer!),
+      body: acc,
+    );
+  }
+  return acc;
 }
 
 void _collectRefs(
@@ -198,6 +229,9 @@ void _collectRefs(
       _collectRefs(node.right, widgetRefs, methodRefs, fnRefs);
     case GetterNode():
       _collectRefs(node.receiver, widgetRefs, methodRefs, fnRefs);
+    case LetNode():
+      _collectRefs(node.value, widgetRefs, methodRefs, fnRefs);
+      _collectRefs(node.body, widgetRefs, methodRefs, fnRefs);
     case MemberAccessNode():
       _collectRefs(node.target, widgetRefs, methodRefs, fnRefs);
     case IndexAccessNode():

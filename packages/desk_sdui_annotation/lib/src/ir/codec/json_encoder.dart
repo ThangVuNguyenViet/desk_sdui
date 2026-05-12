@@ -111,6 +111,12 @@ class JsonIrEncoder {
           'receiver': _encodeNode(node.receiver),
           'name': node.name,
         },
+      LetNode() => {
+          r'$type': 'let',
+          'name': node.name,
+          'value': _encodeNode(node.value),
+          'body': _encodeNode(node.body),
+        },
       MemberAccessNode() => {
           r'$type': 'member',
           'target': _encodeNode(node.target),

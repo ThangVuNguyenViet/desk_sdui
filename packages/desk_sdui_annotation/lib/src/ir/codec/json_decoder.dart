@@ -95,6 +95,11 @@ class JsonIrDecoder {
           receiver: _decodeNode(map['receiver']! as Map<String, Object?>),
           name: map['name']! as String,
         ),
+      'let' => LetNode(
+          name: map['name']! as String,
+          value: _decodeNode(map['value']! as Map<String, Object?>),
+          body: _decodeNode(map['body']! as Map<String, Object?>),
+        ),
       'member' => MemberAccessNode(
           target: _decodeNode(map['target']! as Map<String, Object?>),
           name: map['name']! as String,

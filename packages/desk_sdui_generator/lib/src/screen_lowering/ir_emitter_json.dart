@@ -100,6 +100,12 @@ IrNode _demoteAllConst(IrNode node) {
         receiver: _demoteAllConst(node.receiver),
         name: node.name,
       );
+    case LetNode():
+      return LetNode(
+        name: node.name,
+        value: _demoteAllConst(node.value),
+        body: _demoteAllConst(node.body),
+      );
     case MemberAccessNode():
       return MemberAccessNode(
         target: _demoteAllConst(node.target),

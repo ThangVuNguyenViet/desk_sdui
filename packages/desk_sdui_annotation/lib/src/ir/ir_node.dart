@@ -469,6 +469,27 @@ final class GetterNode extends ExpressionNode {
   String toString() => 'GetterNode($receiver.$name)';
 }
 
+/// Binds `name = value` and evaluates `body` in the extended env.
+/// Lowered from `final name = value; <body>` in @Screen bodies. Single-
+/// assignment — no re-binding within the same scope.
+final class LetNode extends ExpressionNode {
+  const LetNode({required this.name, required this.value, required this.body});
+  final String name;
+  final IrNode value;
+  final IrNode body;
+
+  @override
+  bool operator ==(Object other) =>
+      other is LetNode &&
+      other.name == name &&
+      other.value == value &&
+      other.body == body;
+  @override
+  int get hashCode => Object.hash(name, value, body);
+  @override
+  String toString() => 'LetNode($name = $value in $body)';
+}
+
 /// `a.b` — accesses a property on the target.
 final class MemberAccessNode extends ExpressionNode {
   const MemberAccessNode({

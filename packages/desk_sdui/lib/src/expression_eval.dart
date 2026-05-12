@@ -346,8 +346,18 @@ ControlFlow executeStatement(
       // Fresh scope for the loop variable, per Dart semantics.
       final scoped = Map<String, Cell>.of(env);
       if (init != null) {
-        final flow = executeStatement(init, scoped, runtime);
-        if (flow is! FlowNormal) return flow;
+        // For a BlockNode init (multiple declarators), the let-bindings must
+        // land in the loop's `scoped` map itself (not in BlockNode's own
+        // clone scope). Execute each inner statement directly in `scoped`.
+        if (init is BlockNode) {
+          for (final s in init.statements) {
+            final flow = executeStatement(s, scoped, runtime);
+            if (flow is! FlowNormal) return flow;
+          }
+        } else {
+          final flow = executeStatement(init, scoped, runtime);
+          if (flow is! FlowNormal) return flow;
+        }
       }
       loop:
       while (condition == null ||
@@ -356,8 +366,12 @@ ControlFlow executeStatement(
         if (flow is FlowBreak) break loop;
         if (flow is FlowReturn) return flow;
         // FlowContinue and FlowNormal both fall through to update.
+        // Use executeStatement so a BlockNode update (multiple updaters like
+        // `i = i + 1, j = j + 2`) dispatches correctly. A single-expression
+        // update falls through executeStatement's default arm to
+        // evalExpressionWithEnv.
         if (update != null) {
-          evalExpressionWithEnv(update, scoped, runtime); // discard value
+          executeStatement(update, scoped, runtime);
         }
       }
       return FlowNormal.instance;

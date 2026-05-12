@@ -371,5 +371,91 @@ void main() {
       expect(result, isA<FlowNormal>());
       expect(outer.value, 3); // outer loop ran 3 full iterations
     });
+
+    // Regression: multiple updaters via BlockNode advance all loop variables
+    // each iteration. Mirrors `for (var i=0, j=0; i<3; i = i+1, j = j+2)`
+    // lowering which wraps updaters in a BlockNode.
+    test('ImperativeForNode update as BlockNode advances multiple vars', () {
+      final outerI = Cell(-1);
+      final outerJ = Cell(-1);
+      final env = <String, Cell>{'outerI': outerI, 'outerJ': outerJ};
+      // for (var i=0, j=0; i<3; i = i+1, j = j+2) { outerI = i; outerJ = j; }
+      final node = ImperativeForNode(
+        init: const BlockNode(statements: [
+          LetStatementNode(name: 'i', value: LiteralNode(0), isFinal: false),
+          LetStatementNode(name: 'j', value: LiteralNode(0), isFinal: false),
+        ]),
+        condition: CompareOpNode(
+          op: CompareOp.lt,
+          left: const RefNode(['i']),
+          right: const LiteralNode(3),
+        ),
+        update: BlockNode(statements: [
+          AssignNode(
+            name: 'i',
+            value: ArithOpNode(
+              op: ArithOp.add,
+              left: const RefNode(['i']),
+              right: const LiteralNode(1),
+            ),
+          ),
+          AssignNode(
+            name: 'j',
+            value: ArithOpNode(
+              op: ArithOp.add,
+              left: const RefNode(['j']),
+              right: const LiteralNode(2),
+            ),
+          ),
+        ]),
+        body: BlockNode(statements: [
+          const AssignNode(name: 'outerI', value: RefNode(['i'])),
+          const AssignNode(name: 'outerJ', value: RefNode(['j'])),
+        ]),
+      );
+      final result = executeStatement(node, env, rt);
+      expect(result, isA<FlowNormal>());
+      // After 3 iterations: i went 0,1,2 then update to 3 exits cond; j went
+      // 0,2,4 then update to 6 (but body captures last seen values).
+      // Body runs for i in [0,1,2] → last body sees i=2, j=4.
+      expect(outerI.value, 2);
+      expect(outerJ.value, 4);
+    });
+
+    // Inter-iteration scope isolation: a LetStatementNode in the body
+    // rebinds fresh each iteration (does not bleed across passes).
+    // Each iteration: let x = i; outer = x. Asserts outer == final i after loop.
+    test('LetStatementNode in loop body rebinds fresh each iteration', () {
+      final outer = Cell(-1);
+      final env = <String, Cell>{'outer': outer};
+      final node = ImperativeForNode(
+        init: const LetStatementNode(
+            name: 'i', value: LiteralNode(0), isFinal: false),
+        condition: CompareOpNode(
+          op: CompareOp.lt,
+          left: const RefNode(['i']),
+          right: const LiteralNode(3),
+        ),
+        update: AssignNode(
+          name: 'i',
+          value: ArithOpNode(
+            op: ArithOp.add,
+            left: const RefNode(['i']),
+            right: const LiteralNode(1),
+          ),
+        ),
+        body: BlockNode(statements: [
+          // x is final, declared fresh per iteration. If it leaked, the
+          // second iteration's `final x = i` would throw (re-binding a final).
+          const LetStatementNode(
+              name: 'x', value: RefNode(['i']), isFinal: true),
+          const AssignNode(name: 'outer', value: RefNode(['x'])),
+        ]),
+      );
+      final result = executeStatement(node, env, rt);
+      expect(result, isA<FlowNormal>());
+      // outer should reflect the last iteration's i (which is 2).
+      expect(outer.value, 2);
+    });
   });
 }

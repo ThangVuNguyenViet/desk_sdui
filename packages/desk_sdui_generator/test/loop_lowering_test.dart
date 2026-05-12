@@ -153,6 +153,40 @@ Widget s(List<String> items) {
       expect(block.statements[0], isNot(isA<ImperativeForNode>()));
     });
 
+    // Multiple updaters → BlockNode of expression-statements. Mirrors
+    // `for (var i=0, j=0; i<3; i = i+1, j = j+2)`.
+    test('multiple for-updaters lower to BlockNode of assignments', () async {
+      final fnDecl = await _resolveScreen('''
+import 'package:flutter/material.dart';
+
+Widget s() {
+  for (var i = 0, j = 0; i < 3; i = i + 1, j = j + 2) {
+  }
+  return const Text('x');
+}
+''');
+      final result = _lower(fnDecl);
+      expect(result.root, isA<BlockNode>());
+      final block = result.root as BlockNode;
+      expect(block.statements[0], isA<ImperativeForNode>());
+      final forNode = block.statements[0] as ImperativeForNode;
+      // init is a BlockNode containing two LetStatementNodes (i, j).
+      expect(forNode.init, isA<BlockNode>());
+      final initBlock = forNode.init! as BlockNode;
+      expect(initBlock.statements, hasLength(2));
+      expect(initBlock.statements[0], isA<LetStatementNode>());
+      expect((initBlock.statements[0] as LetStatementNode).name, 'i');
+      expect((initBlock.statements[1] as LetStatementNode).name, 'j');
+      // update is a BlockNode wrapping both assignments.
+      expect(forNode.update, isA<BlockNode>());
+      final updBlock = forNode.update! as BlockNode;
+      expect(updBlock.statements, hasLength(2));
+      expect(updBlock.statements[0], isA<AssignNode>());
+      expect((updBlock.statements[0] as AssignNode).name, 'i');
+      expect(updBlock.statements[1], isA<AssignNode>());
+      expect((updBlock.statements[1] as AssignNode).name, 'j');
+    });
+
     // Test 6: Labeled loop is rejected with LoweringError.
     test('labeled loop inside LabeledStatement is rejected', () async {
       final fnDecl = await _resolveScreen('''

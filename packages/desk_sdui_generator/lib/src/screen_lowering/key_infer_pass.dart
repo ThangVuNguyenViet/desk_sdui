@@ -235,6 +235,35 @@ IrNode inferKeys(IrNode node, {TypeLookup? lookupType}) {
             .toList(),
         exceptionBind: node.exceptionBind,
       );
+    case BlockNode():
+      return BlockNode(
+        statements: node.statements
+            .map((s) => inferKeys(s, lookupType: lookupType))
+            .toList(),
+      );
+    case IfStatementNode():
+      return IfStatementNode(
+        cond: inferKeys(node.cond, lookupType: lookupType),
+        then: inferKeys(node.then, lookupType: lookupType),
+        else_: node.else_ != null
+            ? inferKeys(node.else_!, lookupType: lookupType)
+            : null,
+      );
+    case BreakNode():
+    case ContinueNode():
+      return node;
+    case ReturnNode():
+      return ReturnNode(
+        value: node.value != null
+            ? inferKeys(node.value!, lookupType: lookupType)
+            : null,
+      );
+    case LetStatementNode():
+      return LetStatementNode(
+        name: node.name,
+        value: inferKeys(node.value, lookupType: lookupType),
+        isFinal: node.isFinal,
+      );
   }
 }
 

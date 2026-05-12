@@ -188,6 +188,29 @@ IrNode _foldChildren(IrNode node) {
             .toList(),
         exceptionBind: node.exceptionBind,
       );
+    case BlockNode():
+      return BlockNode(
+        statements: node.statements.map(constFold).toList(),
+      );
+    case IfStatementNode():
+      return IfStatementNode(
+        cond: constFold(node.cond),
+        then: constFold(node.then),
+        else_: node.else_ != null ? constFold(node.else_!) : null,
+      );
+    case BreakNode():
+    case ContinueNode():
+      return node;
+    case ReturnNode():
+      return ReturnNode(
+        value: node.value != null ? constFold(node.value!) : null,
+      );
+    case LetStatementNode():
+      return LetStatementNode(
+        name: node.name,
+        value: constFold(node.value),
+        isFinal: node.isFinal,
+      );
   }
 }
 
@@ -225,6 +248,12 @@ bool _isPureLiteral(IrNode node) {
     case ActionSequenceNode():
     case ActionStepNode():
     case TryStepNode():
+    case BlockNode():
+    case IfStatementNode():
+    case BreakNode():
+    case ContinueNode():
+    case ReturnNode():
+    case LetStatementNode():
       return false;
     case RefNode():
     case EventNode():

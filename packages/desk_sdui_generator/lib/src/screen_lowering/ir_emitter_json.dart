@@ -182,5 +182,28 @@ IrNode _demoteAllConst(IrNode node) {
             .toList(),
         exceptionBind: node.exceptionBind,
       );
+    case BlockNode():
+      return BlockNode(
+        statements: node.statements.map(_demoteAllConst).toList(),
+      );
+    case IfStatementNode():
+      return IfStatementNode(
+        cond: _demoteAllConst(node.cond),
+        then: _demoteAllConst(node.then),
+        else_: node.else_ != null ? _demoteAllConst(node.else_!) : null,
+      );
+    case BreakNode():
+    case ContinueNode():
+      return node;
+    case ReturnNode():
+      return ReturnNode(
+        value: node.value != null ? _demoteAllConst(node.value!) : null,
+      );
+    case LetStatementNode():
+      return LetStatementNode(
+        name: node.name,
+        value: _demoteAllConst(node.value),
+        isFinal: node.isFinal,
+      );
   }
 }

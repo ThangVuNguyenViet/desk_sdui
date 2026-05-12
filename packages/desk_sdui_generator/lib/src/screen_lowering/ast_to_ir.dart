@@ -114,6 +114,26 @@ IrNode _lowerBlockBody(BlockFunctionBody body, FunctionDeclaration fn) {
       fn,
     );
   }
+
+  // Detect whether this is a "simple" body (old path: (VarDecl)* ExprStmt*
+  // ReturnStmt) or a "block" body that requires the new BlockNode path. The
+  // new path is taken whenever any statement is NOT a VarDecl / ExprStmt /
+  // ReturnStmt (e.g. IfStatement, nested Block, BreakStatement, etc.).
+  final hasComplexStatement = stmts.any(
+    (s) =>
+        s is! VariableDeclarationStatement &&
+        s is! ExpressionStatement &&
+        s is! ReturnStatement,
+  );
+
+  if (hasComplexStatement) {
+    // New block-body path: lower all statements to a BlockNode.
+    return _lowerGeneralBlock(stmts, fn);
+  }
+
+  // Legacy simple path: (VarDecl)* ExpressionStatement* ReturnStatement.
+  // Kept for backward compatibility with existing screens. New screens
+  // that only have var decls + assignments + return will still use this path.
   final returnStmt = stmts.last;
   if (returnStmt is! ReturnStatement || returnStmt.expression == null) {
     throw LoweringError(
@@ -121,21 +141,13 @@ IrNode _lowerBlockBody(BlockFunctionBody body, FunctionDeclaration fn) {
       fn,
     );
   }
-  // First pass — collect binding kinds for every declared local so that
-  // [AssignmentExpression] lowering inside initializers can validate writability.
-  // `final x = ...`              → BindingKind.finalBinding
-  // `var x = ...`                → BindingKind.varBinding
-  // `int x = ...` / typed decl   → BindingKind.varBinding (Dart's default mutability)
+  // First pass — collect binding kinds for every declared local.
   final bindings = <String, BindingKind>{};
   for (final stmt in stmts.take(stmts.length - 1)) {
     if (stmt is VariableDeclarationStatement) {
       final decl = stmt.variables;
       for (final v in decl.variables) {
         final name = v.name.lexeme;
-        // Reserve `__`-prefixed names for lowerer-internal shims (e.g.
-        // `__stmt__` from ExpressionStatement sequencing, `__scrut0__` from
-        // switch-expression lowering, `__cas0__` from cascades). User code
-        // must not collide.
         if (name.startsWith('__')) {
           throw LoweringError(
             'Local name "$name" is reserved: names beginning with "__" are '
@@ -176,12 +188,6 @@ IrNode _lowerBlockBody(BlockFunctionBody body, FunctionDeclaration fn) {
         continue;
       }
       if (stmt is ExpressionStatement) {
-        // Allow standalone assignment / increment statements: `x = e;`, `x++;`,
-        // `x += e;`. The expression lowerer enforces writability via the
-        // active binding scope. We wrap the resulting AssignNode in a LetNode
-        // shim to sequence it with the rest of the body — using a fresh
-        // throwaway name so the result is discarded (the assignment's side
-        // effect on the mutable cell is what matters).
         final lowered = lowerExpression(stmt.expression);
         acc = LetNode(name: '__stmt__', value: lowered, body: acc);
         continue;
@@ -196,6 +202,133 @@ IrNode _lowerBlockBody(BlockFunctionBody body, FunctionDeclaration fn) {
   } finally {
     popScope();
   }
+}
+
+/// Lowers a general block statement list (containing if/else, nested blocks,
+/// etc.) to a [BlockNode]. All variable declarations in the block are
+/// collected first (for scope tracking) then each statement is lowered.
+IrNode _lowerGeneralBlock(
+  List<Statement> stmts,
+  FunctionDeclaration fn,
+) {
+  // Collect top-level variable declarations in this block for scope tracking.
+  final bindings = <String, BindingKind>{};
+  for (final stmt in stmts) {
+    if (stmt is VariableDeclarationStatement) {
+      final decl = stmt.variables;
+      for (final v in decl.variables) {
+        final name = v.name.lexeme;
+        if (name.startsWith('__')) {
+          throw LoweringError(
+            'Local name "$name" is reserved: names beginning with "__" are '
+            'used internally by the lowerer. Pick a different name.',
+            v,
+          );
+        }
+        bindings[name] =
+            decl.isFinal ? BindingKind.finalBinding : BindingKind.varBinding;
+      }
+    }
+  }
+
+  pushScope(bindings);
+  try {
+    final lowered = stmts.map(lowerStatement).toList();
+    return BlockNode(statements: lowered);
+  } finally {
+    popScope();
+  }
+}
+
+/// Lowers a single [Statement] to an [IrNode].
+IrNode lowerStatement(Statement stmt) {
+  if (stmt is ReturnStatement) {
+    return ReturnNode(
+      value: stmt.expression == null ? null : _lowerExpression(stmt.expression!),
+    );
+  }
+  if (stmt is BreakStatement) {
+    if (stmt.label != null) {
+      throw LoweringError('Labeled break is not supported.', stmt);
+    }
+    return const BreakNode();
+  }
+  if (stmt is ContinueStatement) {
+    if (stmt.label != null) {
+      throw LoweringError('Labeled continue is not supported.', stmt);
+    }
+    return const ContinueNode();
+  }
+  if (stmt is IfStatement) {
+    return IfStatementNode(
+      cond: _lowerExpression(stmt.expression),
+      then: lowerStatement(stmt.thenStatement),
+      else_: stmt.elseStatement == null
+          ? null
+          : lowerStatement(stmt.elseStatement!),
+    );
+  }
+  if (stmt is Block) {
+    // Nested block: collect bindings for inner scope.
+    final bindings = <String, BindingKind>{};
+    for (final s in stmt.statements) {
+      if (s is VariableDeclarationStatement) {
+        final decl = s.variables;
+        for (final v in decl.variables) {
+          final name = v.name.lexeme;
+          if (name.startsWith('__')) {
+            throw LoweringError(
+              'Local name "$name" is reserved: names beginning with "__" are '
+              'used internally by the lowerer. Pick a different name.',
+              v,
+            );
+          }
+          bindings[name] =
+              decl.isFinal ? BindingKind.finalBinding : BindingKind.varBinding;
+        }
+      }
+    }
+    pushScope(bindings);
+    try {
+      final lowered = stmt.statements.map(lowerStatement).toList();
+      return BlockNode(statements: lowered);
+    } finally {
+      popScope();
+    }
+  }
+  if (stmt is VariableDeclarationStatement) {
+    return _lowerVarDeclStatement(stmt);
+  }
+  if (stmt is ExpressionStatement) {
+    return _lowerExpression(stmt.expression);
+  }
+  throw LoweringError(
+    'Unsupported statement: ${stmt.runtimeType}',
+    stmt,
+  );
+}
+
+/// Lowers a [VariableDeclarationStatement] to a [LetStatementNode].
+IrNode _lowerVarDeclStatement(VariableDeclarationStatement stmt) {
+  final decl = stmt.variables;
+  if (decl.variables.length != 1) {
+    throw LoweringError(
+      '@Screen locals: declare one variable per statement.',
+      stmt,
+    );
+  }
+  final v = decl.variables.single;
+  if (v.initializer == null) {
+    throw LoweringError(
+      '@Screen locals must have an initializer.',
+      stmt,
+    );
+  }
+  return LetStatementNode(
+    name: v.name.lexeme,
+    value: lowerExpression(v.initializer!),
+    isFinal: decl.isFinal,
+  );
 }
 
 void _collectRefs(
@@ -332,5 +465,24 @@ void _collectRefs(
       for (final s in node.catchSteps) {
         _collectRefs(s.call, widgetRefs, methodRefs, fnRefs);
       }
+    case BlockNode():
+      for (final s in node.statements) {
+        _collectRefs(s, widgetRefs, methodRefs, fnRefs);
+      }
+    case IfStatementNode():
+      _collectRefs(node.cond, widgetRefs, methodRefs, fnRefs);
+      _collectRefs(node.then, widgetRefs, methodRefs, fnRefs);
+      if (node.else_ != null) {
+        _collectRefs(node.else_!, widgetRefs, methodRefs, fnRefs);
+      }
+    case BreakNode():
+    case ContinueNode():
+      break;
+    case ReturnNode():
+      if (node.value != null) {
+        _collectRefs(node.value!, widgetRefs, methodRefs, fnRefs);
+      }
+    case LetStatementNode():
+      _collectRefs(node.value, widgetRefs, methodRefs, fnRefs);
   }
 }

@@ -229,6 +229,24 @@ void _walk(IrNode node, _Findings f, {required String? selfName}) {
       }
       _walk(node.returnExpr, f, selfName: selfName);
 
+    case BlockNode():
+      for (final s in node.statements) {
+        _walk(s, f, selfName: selfName);
+      }
+
+    case IfStatementNode():
+      _walk(node.cond, f, selfName: selfName);
+      _walk(node.then, f, selfName: selfName);
+      if (node.else_ != null) _walk(node.else_!, f, selfName: selfName);
+
+    case ReturnNode():
+      if (node.value != null) _walk(node.value!, f, selfName: selfName);
+
+    case LetStatementNode():
+      _walk(node.value, f, selfName: selfName);
+
+    case BreakNode():
+    case ContinueNode():
     case LiteralNode():
     case ConstNode():
     case RefNode():

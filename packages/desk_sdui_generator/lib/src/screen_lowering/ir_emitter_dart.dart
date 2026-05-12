@@ -141,6 +141,21 @@ String _emitNode(IrNode node) {
           ? ', exceptionBind: ${_dartString(node.exceptionBind!)}'
           : '';
       return 'TryStepNode(trySteps: [$trySteps], catchSteps: [$catchSteps]$excBind)';
+    case BlockNode():
+      final stmts = node.statements.map(_emitNode).join(', ');
+      return 'BlockNode(statements: [$stmts])';
+    case IfStatementNode():
+      final else_ = node.else_ != null ? ', else_: ${_emitNode(node.else_!)}' : '';
+      return 'IfStatementNode(cond: ${_emitNode(node.cond)}, then: ${_emitNode(node.then)}$else_)';
+    case BreakNode():
+      return 'BreakNode()';
+    case ContinueNode():
+      return 'ContinueNode()';
+    case ReturnNode():
+      final val = node.value != null ? 'value: ${_emitNode(node.value!)}' : '';
+      return 'ReturnNode($val)';
+    case LetStatementNode():
+      return 'LetStatementNode(name: ${_dartString(node.name)}, value: ${_emitNode(node.value)}, isFinal: ${node.isFinal})';
   }
 }
 

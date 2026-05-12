@@ -268,5 +268,39 @@ IrNode reactiveHoist(IrNode node) {
       return (node, <String>{});
     case TryStepNode():
       return (node, <String>{});
+    case BlockNode():
+      final allPaths = <String>{};
+      final newStmts = <IrNode>[];
+      for (final s in node.statements) {
+        final (rewritten, paths) = _hoist(s);
+        newStmts.add(rewritten);
+        allPaths.addAll(paths);
+      }
+      return (BlockNode(statements: newStmts), allPaths);
+    case IfStatementNode():
+      final (cond, condPaths) = _hoist(node.cond);
+      final (then, thenPaths) = _hoist(node.then);
+      final (else_, elsePaths) = node.else_ != null
+          ? _hoist(node.else_!)
+          : (null as IrNode?, <String>{});
+      return (
+        IfStatementNode(cond: cond, then: then, else_: else_),
+        {...condPaths, ...thenPaths, ...elsePaths},
+      );
+    case BreakNode():
+    case ContinueNode():
+      return (node, <String>{});
+    case ReturnNode():
+      if (node.value != null) {
+        final (val, paths) = _hoist(node.value!);
+        return (ReturnNode(value: val), paths);
+      }
+      return (node, <String>{});
+    case LetStatementNode():
+      final (val, paths) = _hoist(node.value);
+      return (
+        LetStatementNode(name: node.name, value: val, isFinal: node.isFinal),
+        paths,
+      );
   }
 }

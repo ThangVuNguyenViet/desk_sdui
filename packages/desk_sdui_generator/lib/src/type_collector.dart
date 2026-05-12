@@ -22,6 +22,7 @@ class CollectedTypes {
     Set<TopLevelFunctionElement>? functions,
     Set<String>? extraLibraryUris,
     List<String>? notes,
+    Map<String, Set<String>>? genericCtorTypeArgs,
   })  : widgets = widgets ?? {},
         valueTypes = valueTypes ?? {},
         constants = constants ?? {},
@@ -29,7 +30,8 @@ class CollectedTypes {
         subscriptables = subscriptables ?? {},
         functions = functions ?? {},
         extraLibraryUris = extraLibraryUris ?? {},
-        notes = notes ?? [];
+        notes = notes ?? [],
+        genericCtorTypeArgs = genericCtorTypeArgs ?? {};
 
   /// Widget subclasses constructed in the screen body (e.g. `Column`, `Text`).
   final Set<ClassElement> widgets;
@@ -66,6 +68,16 @@ class CollectedTypes {
   /// (e.g. elided static-const warnings).
   final List<String> notes;
 
+  /// Maps a constructor simple-name (e.g. `'List'`, `'ValueNotifier'`) to the
+  /// set of explicit type-arg names used with it in screen bodies.
+  ///
+  /// E.g. if a screen body contains `List<MyType>()` and `List<String>()`,
+  /// this map will contain `{'List': {'MyType', 'String'}}`.
+  ///
+  /// Only populated by [collectTypes] (the screen-body visitor). The
+  /// annotation-based collector doesn't walk call-site type args.
+  final Map<String, Set<String>> genericCtorTypeArgs;
+
   /// Merges [other] into this (in-place union).
   void unionWith(CollectedTypes other) {
     widgets.addAll(other.widgets);
@@ -76,6 +88,9 @@ class CollectedTypes {
     functions.addAll(other.functions);
     extraLibraryUris.addAll(other.extraLibraryUris);
     notes.addAll(other.notes);
+    for (final entry in other.genericCtorTypeArgs.entries) {
+      genericCtorTypeArgs.putIfAbsent(entry.key, Set.new).addAll(entry.value);
+    }
   }
 }
 
@@ -199,6 +214,21 @@ class _TypeVisitor extends RecursiveAstVisitor<void> {
       _recordElementLibrary(enclosing);
       if (ctorElement != null) {
         _recordConstructorParamLibraries(ctorElement);
+      }
+
+      // Record explicit type args (e.g. `List<MyType>()` → {'List': {'MyType'}}).
+      final typeArgList = node.constructorName.type.typeArguments;
+      if (typeArgList != null && typeArgList.arguments.isNotEmpty) {
+        final className = enclosing.name ?? '';
+        if (className.isNotEmpty) {
+          final argNames = typeArgList.arguments.map((t) {
+            if (t is NamedType) return t.name2.lexeme;
+            return t.toSource();
+          }).toSet();
+          collected.genericCtorTypeArgs
+              .putIfAbsent(className, Set.new)
+              .addAll(argNames);
+        }
       }
     }
     super.visitInstanceCreationExpression(node);

@@ -54,15 +54,18 @@ Widget s() {
 }
 ''');
       final result = _lower(fnDecl);
-      // Outer LetNode: x = 0
-      expect(result.root, isA<LetNode>());
-      final outerLet = result.root as LetNode;
-      expect(outerLet.name, 'x');
-      expect(outerLet.value, isA<LiteralNode>());
+      // Plan #11 (IrStatefulNode): leading `var x = 0` lowers to a stateful
+      // field, not a LetNode. The trailing `final t = ...` becomes a LetNode
+      // inside the IrStatefulNode body.
+      expect(result.root, isA<IrStatefulNode>());
+      final stateful = result.root as IrStatefulNode;
+      expect(stateful.fields, hasLength(1));
+      expect(stateful.fields.single.name, 'x');
+      expect(stateful.fields.single.initializer, const LiteralNode(0));
 
-      // Inner LetNode: t = AssignNode(x, +(x, 1))
-      expect(outerLet.body, isA<LetNode>());
-      final innerLet = outerLet.body as LetNode;
+      // Body: LetNode(t, AssignNode(x, +(x, 1)), Widget).
+      expect(stateful.body, isA<LetNode>());
+      final innerLet = stateful.body as LetNode;
       expect(innerLet.name, 't');
       expect(innerLet.value, isA<AssignNode>());
       final assign = innerLet.value as AssignNode;
@@ -131,9 +134,11 @@ Widget s() {
 }
 ''');
       final result = _lower(fnDecl);
-      final outerLet = result.root as LetNode;
-      expect(outerLet.name, 'x');
-      final innerLet = outerLet.body as LetNode;
+      // `var x = 0` is a stateful field; trailing `final t = (x += 3)` is a
+      // LetNode in the body.
+      final stateful = result.root as IrStatefulNode;
+      expect(stateful.fields.single.name, 'x');
+      final innerLet = stateful.body as LetNode;
       expect(innerLet.name, 't');
       final assign = innerLet.value as AssignNode;
       expect(assign.name, 'x');
@@ -155,11 +160,12 @@ Widget s() {
 }
 ''');
       final result = _lower(fnDecl);
-      final outerLet = result.root as LetNode;
-      expect(outerLet.name, 'x');
-      // Statement-shim LetNode wraps the AssignNode under '__stmt__'.
-      expect(outerLet.body, isA<LetNode>());
-      final stmtLet = outerLet.body as LetNode;
+      // `var x = 0` → stateful field; statement `x++` → __stmt__ LetNode in
+      // the body wrapping AssignNode(x, x + 1).
+      final stateful = result.root as IrStatefulNode;
+      expect(stateful.fields.single.name, 'x');
+      expect(stateful.body, isA<LetNode>());
+      final stmtLet = stateful.body as LetNode;
       expect(stmtLet.name, '__stmt__');
       expect(stmtLet.value, isA<AssignNode>());
       final assign = stmtLet.value as AssignNode;
@@ -186,9 +192,9 @@ Widget s() {
 }
 ''');
       final result = _lower(fnDecl);
-      final outerLet = result.root as LetNode;
-      expect(outerLet.name, 'x');
-      final stmtLet = outerLet.body as LetNode;
+      final stateful = result.root as IrStatefulNode;
+      expect(stateful.fields.single.name, 'x');
+      final stmtLet = stateful.body as LetNode;
       expect(stmtLet.name, '__stmt__');
       final assign = stmtLet.value as AssignNode;
       expect(assign.name, 'x');
@@ -232,9 +238,14 @@ Widget s() {
   return Text('\$t');
 }
 ''');
-      // Should not throw — typed-decl is mutable by default.
+      // Should not throw — typed-decl is mutable by default. Per Plan #11,
+      // a leading mutable decl becomes a stateful field; the trailing
+      // `final t = ...` becomes a LetNode in the body.
       final result = _lower(fnDecl);
-      expect(result.root, isA<LetNode>());
+      expect(result.root, isA<IrStatefulNode>());
+      final stateful = result.root as IrStatefulNode;
+      expect(stateful.fields.single.name, 'x');
+      expect(stateful.body, isA<LetNode>());
     });
   });
 }

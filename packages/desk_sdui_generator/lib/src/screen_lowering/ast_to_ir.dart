@@ -141,9 +141,45 @@ IrNode _lowerBlockBody(BlockFunctionBody body, FunctionDeclaration fn) {
       fn,
     );
   }
-  // First pass — collect binding kinds for every declared local.
+
+  // Feature 11 (IrStatefulNode): a *leading run* of `var`-decl statements
+  // lowers to cross-build State<> fields, not LetNodes. The first non-`var`
+  // statement (a `final` decl, ExpressionStatement, etc.) ends the field run.
+  // After that, the remaining locals + the return lower normally to a LetNode
+  // chain, then we wrap the result in an IrStatefulNode if any fields were
+  // collected.
+  final statefulFields = <IrStatefulFieldNode>[];
+  var i = 0;
+  while (i < stmts.length - 1) {
+    final s = stmts[i];
+    if (s is! VariableDeclarationStatement) break;
+    if (s.variables.isFinal) break;
+    if (s.variables.variables.length != 1) break;
+    final v = s.variables.variables.single;
+    if (v.initializer == null) break;
+    final name = v.name.lexeme;
+    if (name.startsWith('__')) {
+      throw LoweringError(
+        'Local name "$name" is reserved: names beginning with "__" are '
+        'used internally by the lowerer. Pick a different name.',
+        v,
+      );
+    }
+    statefulFields.add(IrStatefulFieldNode(
+      name: name,
+      initializer: lowerExpression(v.initializer!),
+      isFinal: false,
+    ));
+    i++;
+  }
+
+  // First pass — collect binding kinds for every declared local. The stateful
+  // fields are seeded as varBindings so AssignNode is allowed against them.
   final bindings = <String, BindingKind>{};
-  for (final stmt in stmts.take(stmts.length - 1)) {
+  for (final f in statefulFields) {
+    bindings[f.name] = BindingKind.varBinding;
+  }
+  for (final stmt in stmts.skip(i).take(stmts.length - 1 - i)) {
     if (stmt is VariableDeclarationStatement) {
       final decl = stmt.variables;
       for (final v in decl.variables) {
@@ -164,7 +200,10 @@ IrNode _lowerBlockBody(BlockFunctionBody body, FunctionDeclaration fn) {
   pushScope(bindings);
   try {
     IrNode acc = _lowerExpression(returnStmt.expression!);
-    for (final stmt in stmts.take(stmts.length - 1).toList().reversed) {
+    // Iterate the *trailing* statements (after the stateful-fields run) in
+    // reverse, wrapping each as LetNode / __stmt__-LetNode.
+    final trailing = stmts.skip(i).take(stmts.length - 1 - i).toList();
+    for (final stmt in trailing.reversed) {
       if (stmt is VariableDeclarationStatement) {
         final decl = stmt.variables;
         if (decl.variables.length != 1) {
@@ -197,6 +236,9 @@ IrNode _lowerBlockBody(BlockFunctionBody body, FunctionDeclaration fn) {
         'are supported before the return. Got ${stmt.runtimeType}.',
         fn,
       );
+    }
+    if (statefulFields.isNotEmpty) {
+      return IrStatefulNode(fields: statefulFields, body: acc);
     }
     return acc;
   } finally {

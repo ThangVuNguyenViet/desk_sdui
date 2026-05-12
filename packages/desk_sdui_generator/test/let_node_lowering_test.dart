@@ -116,9 +116,11 @@ Widget s() {
       expect((inner.value as RefNode).path, ['a']);
     });
 
-    test('accept var t = ... (mutable local; feature #8)', () async {
-      // var-declared locals are now accepted (Feature 8: mutable-env-assign).
-      // They lower to LetNode just like final, but are writable.
+    test('accept var t = ... (mutable local; feature #8 / stateful in #11)',
+        () async {
+      // var-declared locals are accepted (Feature 8). Per Plan #11, a
+      // leading `var` at the screen-body root lowers to an IrStatefulNode
+      // field, not a LetNode. (LetNode is reserved for `final` derivations.)
       final fnDecl = await _resolveScreen('''
 import 'package:flutter/material.dart';
 
@@ -128,9 +130,11 @@ Widget s() {
 }
 ''');
       final result = _lower(fnDecl);
-      expect(result.root, isA<LetNode>());
-      final let = result.root as LetNode;
-      expect(let.name, 't');
+      expect(result.root, isA<IrStatefulNode>());
+      final stateful = result.root as IrStatefulNode;
+      expect(stateful.fields, hasLength(1));
+      expect(stateful.fields.single.name, 't');
+      expect(stateful.fields.single.isFinal, isFalse);
     });
 
     test('reject uninitialized final', () async {

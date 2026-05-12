@@ -1,3 +1,5 @@
+import 'dart:io' show ProcessInfo;
+
 import 'package:desk_sdui/desk_sdui.dart';
 import 'package:desk_sdui_demo/desk_sdui_setup.g.dart';
 import 'package:desk_sdui_demo/screens/counter_actions.dart';
@@ -36,7 +38,17 @@ class _DemoAppState extends State<DemoApp> {
   void initState() {
     super.initState();
     rt = Runtime();
+
+    final rssBefore = ProcessInfo.currentRss;
+    final sw = Stopwatch()..start();
     registerAllScreens(rt);
+    sw.stop();
+    final rssAfter = ProcessInfo.currentRss;
+    debugPrint('[sdui-probe] registerAllScreens: '
+        '${sw.elapsedMicroseconds} µs, '
+        'RSS delta ${(rssAfter - rssBefore) ~/ 1024} KB '
+        '(before ${rssBefore ~/ 1024} KB, after ${rssAfter ~/ 1024} KB)');
+
     _counterController = CounterController();
   }
 

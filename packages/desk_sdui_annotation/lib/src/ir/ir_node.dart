@@ -490,6 +490,32 @@ final class LetNode extends ExpressionNode {
   String toString() => 'LetNode($name = $value in $body)';
 }
 
+/// Synthesizes a Dart `Function` at resolve time. Captures the current env
+/// (Map<String, Object?>) and produces a callable that, when invoked, extends
+/// the captured env with the call-site param values and resolves `body`.
+final class LambdaNode extends ExpressionNode {
+  const LambdaNode({
+    required this.params,
+    required this.body,
+    this.isAsync = false,
+  });
+  final List<String> params;
+  final IrNode body;
+  final bool isAsync;
+
+  @override
+  bool operator ==(Object other) =>
+      other is LambdaNode &&
+      _listEquals(other.params, params) &&
+      other.body == body &&
+      other.isAsync == isAsync;
+  @override
+  int get hashCode => Object.hash(Object.hashAll(params), body, isAsync);
+  @override
+  String toString() =>
+      'LambdaNode(${isAsync ? "async " : ""}(${params.join(", ")}) => $body)';
+}
+
 /// `a.b` — accesses a property on the target.
 final class MemberAccessNode extends ExpressionNode {
   const MemberAccessNode({

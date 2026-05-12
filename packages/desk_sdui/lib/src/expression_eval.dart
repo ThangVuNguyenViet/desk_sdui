@@ -175,6 +175,28 @@ Object? evalExpression(
       }
       return buf.toString();
 
+    case MethodCallNode(:final receiver, :final name, :final args):
+      if (receiver == null) {
+        final resolvedArgs = <String, Object?>{};
+        for (var i = 0; i < args.length; i++) {
+          resolvedArgs['arg$i'] = evalExpression(args[i], input, runtime);
+        }
+        return runtime.invokeFunction(name, resolvedArgs);
+      }
+      final resolvedReceiver = evalExpression(receiver, input, runtime);
+      final resolvedArgs = <String, Object?>{};
+      for (var i = 0; i < args.length; i++) {
+        resolvedArgs['arg$i'] = evalExpression(args[i], input, runtime);
+      }
+      final handler = runtime.resolveMethodHandler(name);
+      if (handler == null) {
+        throw StateError(
+          'Method "$name" not registered. '
+          'Add it to a @Screen body or @Register annotation.',
+        );
+      }
+      return handler(resolvedReceiver, resolvedArgs);
+
     default:
       throw StateError('evalExpression: unsupported node $node');
   }

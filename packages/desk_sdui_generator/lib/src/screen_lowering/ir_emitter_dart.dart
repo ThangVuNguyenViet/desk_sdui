@@ -114,6 +114,12 @@ String _emitNode(IrNode node) {
       final params = _dartList(node.params.map(_dartString));
       final isAsync = node.isAsync ? ', isAsync: true' : '';
       return 'LambdaNode(params: $params, body: ${_emitNode(node.body)}$isAsync)';
+    case ActionSequenceNode():
+      final steps = node.steps.map(_emitNode).join(', ');
+      return 'ActionSequenceNode(steps: [$steps])';
+    case ActionStepNode():
+      final bind = node.bindResult != null ? ', bindResult: ${_dartString(node.bindResult!)}' : '';
+      return 'ActionStepNode(call: ${_emitNode(node.call)}, awaitResult: ${node.awaitResult}$bind)';
   }
 }
 

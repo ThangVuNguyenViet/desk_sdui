@@ -1,14 +1,14 @@
 // GENERATED CODE — DO NOT MODIFY BY HAND
 // ignore_for_file: cast_nullable_to_non_nullable, cascade_invocations, prefer_const_constructors, lines_longer_than_80_chars, unnecessary_const, unused_import, directives_ordering, always_use_package_imports, instantiate_abstract_class
 import 'dart:ui';
-import 'package:desk_sdui_demo/screens/counter_record.dart';
+import 'package:desk_sdui_demo/screens/async_action_demo.dart';
 import 'package:desk_sdui/desk_sdui.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:vector_math/vector_math_64.dart' hide Colors;
 
-void registerCounter_recordDependencies(Runtime rt) {
+void registerAsync_action_demoDependencies(Runtime rt) {
   rt.registerWidget(
     'Center',
     (args) => Center(
@@ -16,6 +16,40 @@ void registerCounter_recordDependencies(Runtime rt) {
       widthFactor: args['widthFactor'] as double?,
       heightFactor: args['heightFactor'] as double?,
       child: args['child'] as Widget?,
+    ),
+  );
+  rt.registerWidget(
+    'ElevatedButton',
+    (args) => ElevatedButton(
+      key: args['key'] as Key?,
+      onPressed: args['onPressed'] as void Function()?,
+      onLongPress: args['onLongPress'] as void Function()?,
+      onHover: args['onHover'] as void Function(bool)?,
+      onFocusChange: args['onFocusChange'] as void Function(bool)?,
+      style: args['style'] as ButtonStyle?,
+      focusNode: args['focusNode'] as FocusNode?,
+      autofocus: args['autofocus'] as bool? ?? false,
+      clipBehavior: args['clipBehavior'] as Clip?,
+      statesController: args['statesController'] as WidgetStatesController?,
+      child: args['child'] as Widget?,
+    ),
+  );
+  rt.registerWidget(
+    'ElevatedButton.icon',
+    (args) => ElevatedButton.icon(
+      key: args['key'] as Key?,
+      onPressed: args['onPressed'] as void Function()?,
+      onLongPress: args['onLongPress'] as void Function()?,
+      onHover: args['onHover'] as void Function(bool)?,
+      onFocusChange: args['onFocusChange'] as void Function(bool)?,
+      style: args['style'] as ButtonStyle?,
+      focusNode: args['focusNode'] as FocusNode?,
+      autofocus: args['autofocus'] as bool? ?? false,
+      clipBehavior: args['clipBehavior'] as Clip? ?? Clip.none,
+      statesController: args['statesController'] as WidgetStatesController?,
+      icon: args['icon'] as Widget?,
+      label: args['label'] as Widget,
+      iconAlignment: args['iconAlignment'] as IconAlignment?,
     ),
   );
   rt.registerWidget(
@@ -62,37 +96,12 @@ void registerCounter_recordDependencies(Runtime rt) {
       selectionColor: args['selectionColor'] as Color?,
     ),
   );
-  rt.registerValueBuilder(
-    'TextStyle',
-    (args) => TextStyle(
-      inherit: args['inherit'] as bool? ?? true,
-      color: args['color'] as Color?,
-      backgroundColor: args['backgroundColor'] as Color?,
-      fontSize: args['fontSize'] as double?,
-      fontWeight: args['fontWeight'] as FontWeight?,
-      fontStyle: args['fontStyle'] as FontStyle?,
-      letterSpacing: args['letterSpacing'] as double?,
-      wordSpacing: args['wordSpacing'] as double?,
-      textBaseline: args['textBaseline'] as TextBaseline?,
-      height: args['height'] as double?,
-      leadingDistribution:
-          args['leadingDistribution'] as TextLeadingDistribution?,
-      locale: args['locale'] as Locale?,
-      foreground: args['foreground'] as Paint?,
-      background: args['background'] as Paint?,
-      shadows: args['shadows'] as List<Shadow>?,
-      fontFeatures: args['fontFeatures'] as List<FontFeature>?,
-      fontVariations: args['fontVariations'] as List<FontVariation>?,
-      decoration: args['decoration'] as TextDecoration?,
-      decorationColor: args['decorationColor'] as Color?,
-      decorationStyle: args['decorationStyle'] as TextDecorationStyle?,
-      decorationThickness: args['decorationThickness'] as double?,
-      debugLabel: args['debugLabel'] as String?,
-      fontFamily: args['fontFamily'] as String?,
-      fontFamilyFallback: args['fontFamilyFallback'] as List<String>?,
-      package: args['package'] as String?,
-      overflow: args['overflow'] as TextOverflow?,
-    ),
+  rt.registerMethod(
+    'AsyncActionController.simulateLogin',
+    (recv, args) => (recv as AsyncActionController).simulateLogin(),
   );
-  rt.registerConstant('FontWeight.w800', FontWeight.w800);
+  rt.registerMethod(
+    'AsyncActionController.log',
+    (recv, args) => (recv as AsyncActionController).log(args['arg0'] as String),
+  );
 }

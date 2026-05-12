@@ -121,6 +121,16 @@ ScreenLoweringOutputs lowerScreenElement({
     }
   }
 
+  // Import the source file (if it's a package URI) so that user-defined
+  // parameter types are in scope for `as T` casts in registrations.
+  // Skip if it's already in extraImports or if it's a built-in package.
+  if (partOfUri.startsWith('package:')) {
+    final pkg = partOfUri.substring('package:'.length).split('/').first;
+    if (pkg != 'desk_sdui' && pkg != 'flutter' && pkg != 'desk_sdui_demo') {
+      extraImports.add(partOfUri);
+    }
+  }
+
   final importLines = [
     "import 'dart:ui';",
     for (final imp in extraImports.toList()..sort()) "import '$imp';",

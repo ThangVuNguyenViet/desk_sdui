@@ -24,6 +24,11 @@ class JsonIrDecoder {
           (map['path']! as List).cast<String>(),
           reactive: map['reactive'] as bool? ?? false,
         ),
+      'actionSequence' => ActionSequenceNode(
+          steps: ((map['steps']! as List).cast<Map<String, Object?>>())
+              .map(_decodeStep)
+              .toList(),
+        ),
       'event' => EventNode(
           (map['target']! as List).cast<String>(),
           args: _decodeNamedArgs(map['args']),
@@ -157,6 +162,14 @@ class JsonIrDecoder {
     if (value == null) return {};
     final raw = (value as Map).cast<String, Map<String, Object?>>();
     return raw.map((k, v) => MapEntry(k, _decodeNode(v)));
+  }
+
+  ActionStepNode _decodeStep(Map<String, Object?> map) {
+    return ActionStepNode(
+      call: _decodeNode(map['call']! as Map<String, Object?>),
+      awaitResult: map['awaitResult']! as bool,
+      bindResult: map['bindResult'] as String?,
+    );
   }
 
   IrNode _decodeFor(Map<String, Object?> map) {

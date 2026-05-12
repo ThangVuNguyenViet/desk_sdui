@@ -21,7 +21,7 @@ void main() {
   test('single await → ActionSequenceNode with one awaited step', () {
     final ir = lower('() async { await vm.login(); }') as ActionSequenceNode;
     expect(ir.steps, hasLength(1));
-    final step = ir.steps[0];
+    final step = ir.steps[0] as ActionStepNode;
     expect(step.awaitResult, isTrue);
     expect(step.bindResult, isNull);
     final call = step.call as MethodCallNode;
@@ -39,11 +39,11 @@ void main() {
     ) as ActionSequenceNode;
     expect(ir.steps, hasLength(2));
 
-    final s1 = ir.steps[0];
+    final s1 = ir.steps[0] as ActionStepNode;
     expect(s1.awaitResult, isTrue);
     expect(s1.bindResult, isNull);
 
-    final s2 = ir.steps[1];
+    final s2 = ir.steps[1] as ActionStepNode;
     expect(s2.awaitResult, isFalse);
     expect(s2.bindResult, isNull);
   });
@@ -58,13 +58,13 @@ void main() {
     ) as ActionSequenceNode;
     expect(ir.steps, hasLength(2));
 
-    final s1 = ir.steps[0];
+    final s1 = ir.steps[0] as ActionStepNode;
     expect(s1.awaitResult, isTrue);
     expect(s1.bindResult, 'user');
     final s1Call = s1.call as MethodCallNode;
     expect(s1Call.name, 'login');
 
-    final s2 = ir.steps[1];
+    final s2 = ir.steps[1] as ActionStepNode;
     expect(s2.awaitResult, isFalse);
     expect(s2.bindResult, isNull);
     final s2Call = s2.call as MethodCallNode;

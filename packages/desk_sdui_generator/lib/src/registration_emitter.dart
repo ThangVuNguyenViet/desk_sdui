@@ -188,7 +188,33 @@ class RegistrationEmitter {
     final lines = <String>[];
 
     for (final widget in collected.widgets) {
-      lines.add(emitWidget(widget));
+      // 1. Unnamed ctor (skip if widget is abstract with no unnamed factory).
+      final unnamed = _unnamedCtor(widget);
+      if (unnamed != null) {
+        lines.add(_emitWidgetCtor(
+          unnamed,
+          registrationName: widget.name!,
+          callTarget: widget.name!,
+        ));
+      } else if (!widget.isAbstract) {
+        // Concrete widgets must have an unnamed ctor; emit the existing marker
+        // comment for visibility.
+        lines.add('// No unnamed constructor for ${widget.name}');
+      }
+
+      // 2. Public named factory ctors. Includes abstract widgets like `Cue`
+      //    whose only instantiation paths are named factories.
+      for (final ctor in widget.constructors) {
+        final ctorName = ctor.name ?? '';
+        if (ctorName.isEmpty || ctorName == 'new') continue; // handled above
+        if (ctor.isPrivate) continue;
+        final qualified = '${widget.name}.$ctorName';
+        lines.add(_emitWidgetCtor(
+          ctor,
+          registrationName: qualified,
+          callTarget: qualified,
+        ));
+      }
     }
 
     for (final valueType in collected.valueTypes) {

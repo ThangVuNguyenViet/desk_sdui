@@ -148,6 +148,22 @@ IrNode _foldChildren(IrNode node) {
     case RefNode():
     case EventNode():
       return node;
+    case ActionSequenceNode():
+      return ActionSequenceNode(
+        steps: node.steps
+            .map((s) => ActionStepNode(
+                  call: constFold(s.call),
+                  awaitResult: s.awaitResult,
+                  bindResult: s.bindResult,
+                ))
+            .toList(),
+      );
+    case ActionStepNode():
+      return ActionStepNode(
+        call: constFold(node.call),
+        awaitResult: node.awaitResult,
+        bindResult: node.bindResult,
+      );
   }
 }
 
@@ -178,6 +194,8 @@ bool _isPureLiteral(IrNode node) {
     case StringInterpNode():
     case MethodCallNode():
     case ValueCtorNode():
+    case ActionSequenceNode():
+    case ActionStepNode():
       return false;
     case RefNode():
     case EventNode():

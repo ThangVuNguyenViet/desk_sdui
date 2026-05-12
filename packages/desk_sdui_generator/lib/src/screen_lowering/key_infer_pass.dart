@@ -185,6 +185,22 @@ IrNode inferKeys(IrNode node, {TypeLookup? lookupType}) {
     case RefNode():
     case EventNode():
       return node;
+    case ActionSequenceNode():
+      return ActionSequenceNode(
+        steps: node.steps
+            .map((s) => ActionStepNode(
+                  call: inferKeys(s.call, lookupType: lookupType),
+                  awaitResult: s.awaitResult,
+                  bindResult: s.bindResult,
+                ))
+            .toList(),
+      );
+    case ActionStepNode():
+      return ActionStepNode(
+        call: inferKeys(node.call, lookupType: lookupType),
+        awaitResult: node.awaitResult,
+        bindResult: node.bindResult,
+      );
   }
 }
 

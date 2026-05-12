@@ -236,5 +236,11 @@ IrNode reactiveHoist(IrNode node) {
     case ConstNode():
     case EventNode():
       return (node, <String>{});
+    case ActionSequenceNode():
+      // ActionSequenceNode steps run at event time, not during build —
+      // no reactive paths to hoist from them.
+      return (node, <String>{});
+    case ActionStepNode():
+      return (node, <String>{});
   }
 }

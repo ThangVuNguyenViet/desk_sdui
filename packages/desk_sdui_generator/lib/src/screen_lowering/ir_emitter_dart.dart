@@ -108,6 +108,12 @@ String _emitNode(IrNode node) {
     case ValueCtorNode():
       final args = node.args.map(_emitNode).join(', ');
       return 'ValueCtorNode(name: ${_dartString(node.name)}, args: [$args])';
+    case ActionSequenceNode():
+      final steps = node.steps.map(_emitNode).join(', ');
+      return 'ActionSequenceNode(steps: [$steps])';
+    case ActionStepNode():
+      final bind = node.bindResult != null ? ', bindResult: ${_dartString(node.bindResult!)}' : '';
+      return 'ActionStepNode(call: ${_emitNode(node.call)}, awaitResult: ${node.awaitResult}$bind)';
   }
 }
 

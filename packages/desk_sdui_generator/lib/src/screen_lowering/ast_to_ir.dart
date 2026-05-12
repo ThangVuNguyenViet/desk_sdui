@@ -262,5 +262,11 @@ void _collectRefs(
     case ConstNode():
     case RefNode():
       break;
+    case ActionSequenceNode():
+      for (final step in node.steps) {
+        _collectRefs(step.call, widgetRefs, methodRefs, fnRefs);
+      }
+    case ActionStepNode():
+      _collectRefs(node.call, widgetRefs, methodRefs, fnRefs);
   }
 }

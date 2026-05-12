@@ -97,6 +97,47 @@ final class RefNode extends IrNode {
   String toString() => 'RefNode($path, reactive: $reactive)';
 }
 
+/// A sequence of async-aware steps. Resolved into a `Future<void> Function()`
+/// that runs the steps in order. Only appears as the resolved value of an
+/// EventNode slot — never as a regular expression.
+final class ActionSequenceNode extends IrNode {
+  const ActionSequenceNode({required this.steps});
+  final List<ActionStepNode> steps;
+
+  @override
+  bool operator ==(Object other) =>
+      other is ActionSequenceNode && _listEquals(other.steps, steps);
+  @override
+  int get hashCode => Object.hashAll(steps);
+  @override
+  String toString() => 'ActionSequenceNode(${steps.length} steps)';
+}
+
+/// One step of an ActionSequenceNode: a method/function call, optionally
+/// awaited, optionally binding its result to a name for later steps.
+final class ActionStepNode extends IrNode {
+  const ActionStepNode({
+    required this.call,
+    required this.awaitResult,
+    this.bindResult,
+  });
+  final IrNode call;        // typically MethodCallNode; future: WidgetMethodNode, etc.
+  final bool awaitResult;
+  final String? bindResult;
+
+  @override
+  bool operator ==(Object other) =>
+      other is ActionStepNode &&
+      other.call == call &&
+      other.awaitResult == awaitResult &&
+      other.bindResult == bindResult;
+  @override
+  int get hashCode => Object.hash(call, awaitResult, bindResult);
+  @override
+  String toString() =>
+      'ActionStepNode(${awaitResult ? "await " : ""}$call${bindResult != null ? " as $bindResult" : ""})';
+}
+
 /// Calls a bound method on the resolver's input map. Args are themselves
 /// IrNodes (literals, refs, etc.) resolved at call time.
 final class EventNode extends IrNode {

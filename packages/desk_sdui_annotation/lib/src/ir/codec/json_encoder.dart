@@ -25,6 +25,13 @@ class JsonIrEncoder {
           'path': node.path,
           if (node.reactive) 'reactive': true,
         },
+      ActionSequenceNode() => {
+          r'$type': 'actionSequence',
+          'steps': node.steps.map(_encodeStep).toList(),
+        },
+      ActionStepNode() => throw UnsupportedError(
+          'ActionStepNode must be encoded via _encodeStep, not _encodeNode.',
+        ),
       EventNode() => {
           r'$type': 'event',
           'target': node.target,
@@ -150,6 +157,13 @@ class JsonIrEncoder {
         },
     };
   }
+
+  Map<String, Object?> _encodeStep(ActionStepNode step) => {
+        r'$type': 'actionStep',
+        'call': _encodeNode(step.call),
+        'awaitResult': step.awaitResult,
+        if (step.bindResult != null) 'bindResult': step.bindResult,
+      };
 
   Object? _encodeScalar(Object? value) {
     if (value == null) return null;

@@ -44,7 +44,10 @@ String _emitNode(IrNode node) {
       final listenablePaths = node.listenablePaths.isEmpty
           ? ''
           : ', listenablePaths: {${node.listenablePaths.map(_dartString).join(', ')}}';
-      return 'WidgetNode(name: ${_dartString(node.name)}, args: $args$key$listenablePaths)';
+      final typeArgs = node.typeArgs != null
+          ? ', typeArgs: ${_emitStringList(node.typeArgs!)}'
+          : '';
+      return 'WidgetNode(name: ${_dartString(node.name)}, args: $args$key$listenablePaths$typeArgs)';
     case BuiltinWidgetNode():
       final args = '{${node.args.entries.map((e) => '${_dartString(e.key)}: ${_emitNode(e.value)}').join(', ')}}';
       final key = node.key != null ? ', key: ${_emitNode(node.key!)}' : '';
@@ -102,10 +105,16 @@ String _emitNode(IrNode node) {
     case MethodCallNode():
       final args = node.args.map(_emitNode).join(', ');
       final receiver = node.receiver != null ? _emitNode(node.receiver!) : 'null';
-      return 'MethodCallNode(receiver: $receiver, name: ${_dartString(node.name)}, args: [$args])';
+      final typeArgs = node.typeArgs != null
+          ? ', typeArgs: ${_emitStringList(node.typeArgs!)}'
+          : '';
+      return 'MethodCallNode(receiver: $receiver, name: ${_dartString(node.name)}, args: [$args]$typeArgs)';
     case ValueCtorNode():
       final args = node.args.map(_emitNode).join(', ');
-      return 'ValueCtorNode(name: ${_dartString(node.name)}, args: [$args])';
+      final typeArgs = node.typeArgs != null
+          ? ', typeArgs: ${_emitStringList(node.typeArgs!)}'
+          : '';
+      return 'ValueCtorNode(name: ${_dartString(node.name)}, args: [$args]$typeArgs)';
   }
 }
 
@@ -120,6 +129,9 @@ String _dartValue(Object? v) {
 }
 
 String _dartList(Iterable<String> items) => '[${items.join(', ')}]';
+
+String _emitStringList(List<String> items) =>
+    '[${items.map(_dartString).join(', ')}]';
 
 String _buildInputs(ScreenLowerResult result) {
   if (result.params.isEmpty) return 'const []';

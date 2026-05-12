@@ -626,5 +626,12 @@ void _collectRefs(
         _collectRefs(node.update!, widgetRefs, methodRefs, fnRefs);
       }
       _collectRefs(node.body, widgetRefs, methodRefs, fnRefs);
+    case IrStatefulNode():
+      for (final field in node.fields) {
+        _collectRefs(field.initializer, widgetRefs, methodRefs, fnRefs);
+      }
+      _collectRefs(node.body, widgetRefs, methodRefs, fnRefs);
+    case IrStatefulFieldNode():
+      _collectRefs(node.initializer, widgetRefs, methodRefs, fnRefs);
   }
 }

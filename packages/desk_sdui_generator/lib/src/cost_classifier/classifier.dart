@@ -266,6 +266,17 @@ void _walk(IrNode node, _Findings f, {required String? selfName}) {
       if (node.update != null) _walk(node.update!, f, selfName: selfName);
       _walk(node.body, f, selfName: selfName);
 
+    case IrStatefulNode():
+      // Field initializers run once at initState time; classify them like
+      // ordinary expressions. The body runs every build like a stateless body.
+      for (final field in node.fields) {
+        _walk(field.initializer, f, selfName: selfName);
+      }
+      _walk(node.body, f, selfName: selfName);
+
+    case IrStatefulFieldNode():
+      _walk(node.initializer, f, selfName: selfName);
+
     case BreakNode():
     case ContinueNode():
     case LiteralNode():

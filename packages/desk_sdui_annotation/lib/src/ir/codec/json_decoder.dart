@@ -196,6 +196,17 @@ class JsonIrDecoder {
           update: _decodeOptional(map['update']),
           body: _decodeNode(map['body']! as Map<String, Object?>),
         ),
+      'stateful' => IrStatefulNode(
+          fields: ((map['fields']! as List).cast<Map<String, Object?>>())
+              .map<IrStatefulFieldNode>(_decodeStatefulField)
+              .toList(),
+          body: _decodeNode(map['body']! as Map<String, Object?>),
+        ),
+      'statefulField' => IrStatefulFieldNode(
+          name: map['name']! as String,
+          initializer: _decodeNode(map['initializer']! as Map<String, Object?>),
+          isFinal: map['isFinal']! as bool,
+        ),
       _ => throw FormatException('Unknown IR node type: $type'),
     };
   }
@@ -243,6 +254,14 @@ class JsonIrDecoder {
     if (value == null) return null;
     final list = (value as List).cast<String>();
     return list.isEmpty ? null : list;
+  }
+
+  IrStatefulFieldNode _decodeStatefulField(Map<String, Object?> map) {
+    return IrStatefulFieldNode(
+      name: map['name']! as String,
+      initializer: _decodeNode(map['initializer']! as Map<String, Object?>),
+      isFinal: map['isFinal']! as bool,
+    );
   }
 
   IrNode _decodeFor(Map<String, Object?> map) {

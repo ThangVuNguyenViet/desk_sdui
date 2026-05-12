@@ -165,6 +165,11 @@ String _emitNode(IrNode node) {
       final cond = node.condition != null ? 'condition: ${_emitNode(node.condition!)}, ' : '';
       final upd = node.update != null ? 'update: ${_emitNode(node.update!)}, ' : '';
       return 'ImperativeForNode(${init}${cond}${upd}body: ${_emitNode(node.body)})';
+    case IrStatefulNode():
+      final fields = node.fields.map(_emitNode).join(', ');
+      return 'IrStatefulNode(fields: [$fields], body: ${_emitNode(node.body)})';
+    case IrStatefulFieldNode():
+      return 'IrStatefulFieldNode(name: ${_dartString(node.name)}, initializer: ${_emitNode(node.initializer)}, isFinal: ${node.isFinal})';
   }
 }
 

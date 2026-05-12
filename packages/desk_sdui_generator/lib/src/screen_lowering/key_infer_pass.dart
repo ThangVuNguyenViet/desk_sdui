@@ -287,6 +287,23 @@ IrNode inferKeys(IrNode node, {TypeLookup? lookupType}) {
             : null,
         body: inferKeys(node.body, lookupType: lookupType),
       );
+    case IrStatefulNode():
+      return IrStatefulNode(
+        fields: node.fields
+            .map((f) => IrStatefulFieldNode(
+                  name: f.name,
+                  initializer: inferKeys(f.initializer, lookupType: lookupType),
+                  isFinal: f.isFinal,
+                ))
+            .toList(),
+        body: inferKeys(node.body, lookupType: lookupType),
+      );
+    case IrStatefulFieldNode():
+      return IrStatefulFieldNode(
+        name: node.name,
+        initializer: inferKeys(node.initializer, lookupType: lookupType),
+        isFinal: node.isFinal,
+      );
   }
 }
 

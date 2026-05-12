@@ -336,5 +336,32 @@ IrNode reactiveHoist(IrNode node) {
         ),
         {...initPaths, ...condPaths, ...updPaths, ...bodyPaths},
       );
+    case IrStatefulNode():
+      // Field initializers run once in initState; no reactive hoisting needed
+      // (rebuild on signal change is driven by the body, not the fields).
+      final newFields = <IrStatefulFieldNode>[];
+      for (final f in node.fields) {
+        final (initRewritten, _) = _hoist(f.initializer);
+        newFields.add(IrStatefulFieldNode(
+          name: f.name,
+          initializer: initRewritten,
+          isFinal: f.isFinal,
+        ));
+      }
+      final (body, bodyPaths) = _hoist(node.body);
+      return (
+        IrStatefulNode(fields: newFields, body: body),
+        bodyPaths,
+      );
+    case IrStatefulFieldNode():
+      final (initRewritten, paths) = _hoist(node.initializer);
+      return (
+        IrStatefulFieldNode(
+          name: node.name,
+          initializer: initRewritten,
+          isFinal: node.isFinal,
+        ),
+        paths,
+      );
   }
 }

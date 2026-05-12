@@ -227,6 +227,17 @@ class JsonIrEncoder {
           if (node.update != null) 'update': _encodeNode(node.update!),
           'body': _encodeNode(node.body),
         },
+      IrStatefulNode() => {
+          r'$type': 'stateful',
+          'fields': node.fields.map(_encodeNode).toList(),
+          'body': _encodeNode(node.body),
+        },
+      IrStatefulFieldNode() => {
+          r'$type': 'statefulField',
+          'name': node.name,
+          'initializer': _encodeNode(node.initializer),
+          'isFinal': node.isFinal,
+        },
     };
   }
 

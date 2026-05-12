@@ -1058,6 +1058,58 @@ final class ImperativeForNode extends StatementNode {
   String toString() => 'ImperativeForNode($init; $condition; $update)';
 }
 
+// ────────────────────────── screen-state nodes ──────────────────────────
+
+/// A screen whose body owns mutable cross-build state. Generated as a
+/// StatefulWidget + State<>. [fields] are initialized once in `initState`;
+/// every subsequent build resolves [body] against an env that includes
+/// the field cells merged with the VM inputs.
+///
+/// Only `var`-declared root-level locals in a `@Screen` body produce an
+/// [IrStatefulNode]; `final` locals lower to [LetNode] (per-build derivation).
+final class IrStatefulNode extends IrNode {
+  const IrStatefulNode({required this.fields, required this.body});
+  final List<IrStatefulFieldNode> fields;
+  final IrNode body;
+
+  @override
+  bool operator ==(Object other) =>
+      other is IrStatefulNode &&
+      _listEquals(other.fields, fields) &&
+      other.body == body;
+  @override
+  int get hashCode => Object.hash(Object.hashAll(fields), body);
+  @override
+  String toString() => 'IrStatefulNode(${fields.length} fields)';
+}
+
+/// One field in an [IrStatefulNode]. The [initializer] is evaluated once in
+/// `initState` against the VM inputs and previously-initialized fields
+/// (declaration order). [isFinal] is informational — the lowerer enforces it
+/// by excluding `final` vars from the stateful-field run.
+final class IrStatefulFieldNode extends IrNode {
+  const IrStatefulFieldNode({
+    required this.name,
+    required this.initializer,
+    required this.isFinal,
+  });
+  final String name;
+  final IrNode initializer;
+  final bool isFinal;
+
+  @override
+  bool operator ==(Object other) =>
+      other is IrStatefulFieldNode &&
+      other.name == name &&
+      other.initializer == initializer &&
+      other.isFinal == isFinal;
+  @override
+  int get hashCode => Object.hash(name, initializer, isFinal);
+  @override
+  String toString() =>
+      'IrStatefulFieldNode(${isFinal ? 'final' : 'var'} $name)';
+}
+
 // ───────────────────────────── helpers ─────────────────────────────
 
 bool _listEquals<T>(List<T>? a, List<T>? b) {

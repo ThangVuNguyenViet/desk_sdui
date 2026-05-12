@@ -222,5 +222,22 @@ IrNode _demoteAllConst(IrNode node) {
         update: node.update != null ? _demoteAllConst(node.update!) : null,
         body: _demoteAllConst(node.body),
       );
+    case IrStatefulNode():
+      return IrStatefulNode(
+        fields: node.fields
+            .map((f) => IrStatefulFieldNode(
+                  name: f.name,
+                  initializer: _demoteAllConst(f.initializer),
+                  isFinal: f.isFinal,
+                ))
+            .toList(),
+        body: _demoteAllConst(node.body),
+      );
+    case IrStatefulFieldNode():
+      return IrStatefulFieldNode(
+        name: node.name,
+        initializer: _demoteAllConst(node.initializer),
+        isFinal: node.isFinal,
+      );
   }
 }

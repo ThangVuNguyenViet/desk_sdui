@@ -292,5 +292,57 @@ void main() {
       final decoded = codec.decode(encoded);
       expect(decoded, node);
     });
+
+    test('IrStatefulFieldNode', () {
+      const node = IrStatefulFieldNode(
+        name: 'counter',
+        initializer: LiteralNode(0),
+        isFinal: false,
+      );
+      final encoded = codec.encode(node);
+      final decoded = codec.decode(encoded);
+      expect(decoded, node);
+    });
+
+    test('IrStatefulNode with one field', () {
+      const node = IrStatefulNode(
+        fields: [
+          IrStatefulFieldNode(
+            name: 'count',
+            initializer: LiteralNode(0),
+            isFinal: false,
+          ),
+        ],
+        body: ReturnNode(value: RefNode(['count'])),
+      );
+      final encoded = codec.encode(node);
+      final decoded = codec.decode(encoded);
+      expect(decoded, node);
+    });
+
+    test('IrStatefulNode with multiple fields referencing earlier ones', () {
+      const node = IrStatefulNode(
+        fields: [
+          IrStatefulFieldNode(
+            name: 'a',
+            initializer: LiteralNode(1),
+            isFinal: false,
+          ),
+          IrStatefulFieldNode(
+            name: 'b',
+            initializer: ArithOpNode(
+              op: ArithOp.add,
+              left: RefNode(['a']),
+              right: LiteralNode(1),
+            ),
+            isFinal: false,
+          ),
+        ],
+        body: ReturnNode(value: RefNode(['b'])),
+      );
+      final encoded = codec.encode(node);
+      final decoded = codec.decode(encoded);
+      expect(decoded, node);
+    });
   });
 }

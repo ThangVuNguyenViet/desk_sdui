@@ -188,6 +188,20 @@ Object? _resolveArg(
     case EventNode():
       return _bindEvent(node, input, runtime);
 
+    case ActionSequenceNode(:final steps):
+      return () async {
+        var localEnv = input;
+        for (final step in steps) {
+          final result = evalExpression(step.call, localEnv, runtime);
+          final value = step.awaitResult && result is Future
+              ? await result
+              : result;
+          if (step.bindResult != null) {
+            localEnv = {...localEnv, step.bindResult!: value};
+          }
+        }
+      };
+
     default:
       return evalExpression(node, input, runtime);
   }

@@ -180,6 +180,10 @@ IrNode inferKeys(IrNode node, {TypeLookup? lookupType}) {
         name: node.name,
         args: node.args.map((a) => inferKeys(a, lookupType: lookupType)).toList(),
       );
+    case LambdaNode():
+      // Lambda bodies are not traversed for key inference — the body is
+      // evaluated at invocation time, not in a for-loop context.
+      return node;
     case LiteralNode():
     case ConstNode():
     case RefNode():

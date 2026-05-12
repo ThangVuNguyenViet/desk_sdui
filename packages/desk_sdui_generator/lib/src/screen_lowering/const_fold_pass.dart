@@ -143,6 +143,9 @@ IrNode _foldChildren(IrNode node) {
         name: node.name,
         args: node.args.map(constFold).toList(),
       );
+    case LambdaNode():
+      // Lambda bodies are not const-folded (they capture env at resolve time).
+      return node;
     case LiteralNode():
     case ConstNode():
     case RefNode():
@@ -176,6 +179,7 @@ bool _isPureLiteral(IrNode node) {
     case LengthOfNode():
     case IsNullCheckNode():
     case StringInterpNode():
+    case LambdaNode():
     case MethodCallNode():
     case ValueCtorNode():
       return false;

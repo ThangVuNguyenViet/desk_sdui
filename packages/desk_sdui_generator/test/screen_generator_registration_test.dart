@@ -19,7 +19,6 @@ import 'package:analyzer/dart/analysis/results.dart';
 import 'package:analyzer/dart/analysis/utilities.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_style/dart_style.dart';
-import 'package:desk_sdui_generator/src/diagnostics.dart';
 import 'package:desk_sdui_generator/src/registration_emitter.dart';
 import 'package:desk_sdui_generator/src/screen_lowering/ast_to_ir.dart';
 import 'package:desk_sdui_generator/src/screen_lowering/const_fold_pass.dart';
@@ -177,7 +176,12 @@ Widget s() {
       expect(arrowOutput, blockOutput);
     });
 
-    test('block-body @Screen with var local rejected', () async {
+    // Plan #8 (mutable-env / AssignNode) intentionally enabled `var` locals
+    // in @Screen block bodies; assignment lowering coverage now lives in
+    // assign_node_lowering_test.dart. This test pins the contract that the
+    // full registration pipeline succeeds for a block body containing a
+    // var local.
+    test('block-body @Screen with var local lowers successfully', () async {
       final fnDecl = await _resolveScreen('''
 import 'package:flutter/material.dart';
 
@@ -187,10 +191,8 @@ Widget s() {
 }
 ''');
 
-      expect(
-        () => _runPipeline(fnDecl, 's'),
-        throwsA(isA<LoweringError>()),
-      );
+      final output = _runPipeline(fnDecl, 's');
+      expect(output, isNotEmpty);
     });
   });
 }

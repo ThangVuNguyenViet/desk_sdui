@@ -146,8 +146,8 @@ class RegistrationEmitter {
   /// Emits a `rt.registerValueBuilder(...)` that switches on the
   /// `__typeArgs__` key to produce the correct typed instance.
   String _emitGenericValueBuilder(
-    String qualifiedName,
-    String callTarget,
+    String? qualifiedName,
+    String? callTarget,
     List<FormalParameterElement> params,
     Set<String> typeArgOptions,
   ) {

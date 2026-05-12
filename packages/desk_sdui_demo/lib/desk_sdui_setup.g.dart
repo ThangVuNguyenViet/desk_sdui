@@ -18,6 +18,7 @@ import 'package:desk_sdui_demo/screens/counter_minimal.dart' show counter_minima
 import 'package:desk_sdui_demo/screens/counter_record.dart' show counter_recordBinding;
 import 'package:desk_sdui_demo/screens/counter_shorthand.dart' show counter_shorthandBinding;
 import 'package:desk_sdui_demo/screens/counter_stress.dart' show counter_stressBinding;
+import 'package:desk_sdui_demo/screens/lambda_demo.dart' show lambda_demoBinding;
 import 'package:desk_sdui_demo/screens/let_demo.dart' show let_demoBinding;
 import 'package:desk_sdui_demo/screens/themed_counter.dart' show themed_counterBinding;
 import 'package:desk_sdui_demo/screens/chef_view.sdui_reg.g.dart' show registerChef_viewDependencies;
@@ -29,6 +30,7 @@ import 'package:desk_sdui_demo/screens/counter_minimal.sdui_reg.g.dart' show reg
 import 'package:desk_sdui_demo/screens/counter_record.sdui_reg.g.dart' show registerCounter_recordDependencies;
 import 'package:desk_sdui_demo/screens/counter_shorthand.sdui_reg.g.dart' show registerCounter_shorthandDependencies;
 import 'package:desk_sdui_demo/screens/counter_stress.sdui_reg.g.dart' show registerCounter_stressDependencies;
+import 'package:desk_sdui_demo/screens/lambda_demo.sdui_reg.g.dart' show registerLambda_demoDependencies;
 import 'package:desk_sdui_demo/screens/let_demo.sdui_reg.g.dart' show registerLet_demoDependencies;
 import 'package:desk_sdui_demo/screens/themed_counter.sdui_reg.g.dart' show registerThemed_counterDependencies;
 
@@ -397,6 +399,8 @@ void registerAllScreens(Runtime rt) {
   registerCounter_shorthandDependencies(rt);
   rt.registerScreen(counter_stressBinding);
   registerCounter_stressDependencies(rt);
+  rt.registerScreen(lambda_demoBinding);
+  registerLambda_demoDependencies(rt);
   rt.registerScreen(let_demoBinding);
   registerLet_demoDependencies(rt);
   rt.registerScreen(themed_counterBinding);

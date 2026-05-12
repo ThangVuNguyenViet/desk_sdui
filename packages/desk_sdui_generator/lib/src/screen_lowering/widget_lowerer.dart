@@ -5,6 +5,10 @@ import '../diagnostics.dart';
 import 'expression_lowerer.dart';
 import 'closure_lowerer.dart';
 
+// Note: FunctionExpression in a callback slot (onPressed, etc.) still goes
+// through lowerClosure → EventNode. FunctionExpression in a non-callback
+// value slot goes through lowerLambda → LambdaNode.
+
 const _constCtors = {
   'EdgeInsets.all',
   'EdgeInsets.symmetric',
@@ -121,7 +125,12 @@ IrNode lowerListElement(CollectionElement el) {
 
 IrNode _lowerArg(Expression a, {Object? Function(InstanceCreationExpression)? constEvaluator, String? paramName}) {
   if (a is FunctionExpression) {
-    return lowerClosure(a);
+    // Callback slots (onPressed, onChanged, etc.) use EventNode via lowerClosure.
+    // Non-callback slots (iterable method args, etc.) use LambdaNode.
+    if (paramName != null && _isCallbackParam(paramName)) {
+      return lowerClosure(a);
+    }
+    return lowerLambda(a, inActionContext: false);
   }
   if (a is InstanceCreationExpression) {
     return lowerWidgetInstance(a, constEvaluator: constEvaluator);

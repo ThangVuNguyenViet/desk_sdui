@@ -100,6 +100,11 @@ class JsonIrDecoder {
           value: _decodeNode(map['value']! as Map<String, Object?>),
           body: _decodeNode(map['body']! as Map<String, Object?>),
         ),
+      'lambda' => LambdaNode(
+          params: (map['params']! as List).cast<String>(),
+          body: _decodeNode(map['body']! as Map<String, Object?>),
+          isAsync: map['isAsync'] as bool? ?? false,
+        ),
       'member' => MemberAccessNode(
           target: _decodeNode(map['target']! as Map<String, Object?>),
           name: map['name']! as String,

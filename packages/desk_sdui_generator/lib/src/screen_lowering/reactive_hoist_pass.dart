@@ -232,6 +232,10 @@ IrNode reactiveHoist(IrNode node) {
         ValueCtorNode(name: node.name, args: newArgs),
         allArgPaths,
       );
+    case LambdaNode():
+      // Lambda bodies capture env at resolve time; we don't hoist reactive
+      // paths out of them (they're invoked on demand, not per-frame).
+      return (node, <String>{});
     case LiteralNode():
     case ConstNode():
     case EventNode():

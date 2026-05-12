@@ -117,6 +117,12 @@ class JsonIrEncoder {
           'value': _encodeNode(node.value),
           'body': _encodeNode(node.body),
         },
+      LambdaNode() => {
+          r'$type': 'lambda',
+          'params': node.params,
+          'body': _encodeNode(node.body),
+          if (node.isAsync) 'isAsync': true,
+        },
       MemberAccessNode() => {
           r'$type': 'member',
           'target': _encodeNode(node.target),

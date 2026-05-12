@@ -147,7 +147,101 @@ IrNode lowerExpression(Expression expr) {
     );
   }
 
+  if (expr is MethodInvocation && expr.target != null) {
+    final receiver = lowerExpression(expr.target!);
+    final bucket = coreTypeBucket(expr.target!.staticType);
+    final methodName = expr.methodName.name;
+    final qualifiedName = bucket != null ? '$bucket.$methodName' : methodName;
+    final args = expr.argumentList.arguments
+        .map((a) => lowerExpression(a.argumentExpression))
+        .toList();
+    return MethodCallNode(receiver: receiver, name: qualifiedName, args: args);
+  }
+
+  if (expr is FunctionExpression) {
+    return lowerLambda(expr, inActionContext: false);
+  }
+
   throw LoweringError('unsupported expression: ${expr.runtimeType}', expr);
+}
+
+/// Lowers a [FunctionExpression] to a [LambdaNode]. Called from
+/// [lowerExpression] (always `inActionContext: false`) and from the widget
+/// lowerer when the expression appears in an argument position.
+LambdaNode lowerLambda(FunctionExpression expr, {bool inActionContext = false}) {
+  // 1. Extract params — only simple positional params allowed.
+  final rawParams = expr.parameters?.parameters ?? <FormalParameter>[];
+  final params = <String>[];
+  for (final p in rawParams) {
+    if (p is! RegularFormalParameter) {
+      throw LoweringError(
+        'LambdaNode: only simple positional parameters are supported '
+        '(no defaults, no named, no optional). Got ${p.runtimeType}.',
+        p,
+      );
+    }
+    params.add(p.name!.lexeme);
+  }
+
+  // 2. Determine if async.
+  final body = expr.body;
+  final isAsync = body.isAsynchronous;
+
+  // 3. Reject async lambdas outside action context.
+  if (isAsync && !inActionContext) {
+    throw LoweringError(
+      'Async lambdas are only allowed inside async event handlers '
+      '(ActionSequenceNode bodies). This lambda is being constructed in a '
+      'per-frame path.',
+      expr,
+    );
+  }
+
+  // 4. Lower body.
+  final IrNode loweredBody;
+  if (body is ExpressionFunctionBody) {
+    // Reject await in sync context (already guarded by isAsync above, but
+    // also catch `await` in a sync body).
+    if (!isAsync && _containsAwait(body.expression)) {
+      throw LoweringError(
+        'AwaitExpression inside a sync LambdaNode body is not supported.',
+        expr,
+      );
+    }
+    loweredBody = lowerExpression(body.expression);
+  } else if (body is BlockFunctionBody) {
+    final stmts = body.block.statements;
+    if (stmts.length == 1 && stmts.first is ReturnStatement) {
+      final ret = stmts.first as ReturnStatement;
+      if (ret.expression == null) {
+        throw LoweringError(
+          'LambdaNode bodies must be a single expression (or a block with a '
+          'single return). Use ActionSequenceNode for async sequences.',
+          expr,
+        );
+      }
+      loweredBody = lowerExpression(ret.expression!);
+    } else {
+      throw LoweringError(
+        'LambdaNode bodies must be a single expression (or a block with a '
+        'single return). Use ActionSequenceNode for async sequences.',
+        expr,
+      );
+    }
+  } else {
+    throw LoweringError(
+      'LambdaNode: unsupported body shape ${body.runtimeType}.',
+      expr,
+    );
+  }
+
+  return LambdaNode(params: params, body: loweredBody, isAsync: isAsync);
+}
+
+bool _containsAwait(Expression expr) {
+  if (expr is AwaitExpression) return true;
+  // Simple recursive check for common nested shapes.
+  return false;
 }
 
 /// Returns the core-type bucket name used as the GetterNode key prefix

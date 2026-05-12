@@ -241,6 +241,8 @@ void _collectRefs(
       _collectRefs(node.target, widgetRefs, methodRefs, fnRefs);
     case IsNullCheckNode():
       _collectRefs(node.operand, widgetRefs, methodRefs, fnRefs);
+    case IsTypeNode():
+      _collectRefs(node.receiver, widgetRefs, methodRefs, fnRefs);
     case StringInterpNode():
       for (final part in node.parts) {
         if (part is IrNode) {
@@ -262,11 +264,5 @@ void _collectRefs(
     case ConstNode():
     case RefNode():
       break;
-    case ActionSequenceNode():
-      for (final step in node.steps) {
-        _collectRefs(step.call, widgetRefs, methodRefs, fnRefs);
-      }
-    case ActionStepNode():
-      _collectRefs(node.call, widgetRefs, methodRefs, fnRefs);
   }
 }

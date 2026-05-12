@@ -120,6 +120,8 @@ IrNode _demoteAllConst(IrNode node) {
       return LengthOfNode(_demoteAllConst(node.target));
     case IsNullCheckNode():
       return IsNullCheckNode(_demoteAllConst(node.operand));
+    case IsTypeNode():
+      return IsTypeNode(receiver: _demoteAllConst(node.receiver), typeName: node.typeName);
     case StringInterpNode():
       return StringInterpNode(
         node.parts.map((p) => p is IrNode ? _demoteAllConst(p) : p).toList(),
@@ -139,21 +141,5 @@ IrNode _demoteAllConst(IrNode node) {
     case LiteralNode():
     case EventNode():
       return node;
-    case ActionSequenceNode():
-      return ActionSequenceNode(
-        steps: node.steps
-            .map((s) => ActionStepNode(
-                  call: _demoteAllConst(s.call),
-                  awaitResult: s.awaitResult,
-                  bindResult: s.bindResult,
-                ))
-            .toList(),
-      );
-    case ActionStepNode():
-      return ActionStepNode(
-        call: _demoteAllConst(node.call),
-        awaitResult: node.awaitResult,
-        bindResult: node.bindResult,
-      );
   }
 }

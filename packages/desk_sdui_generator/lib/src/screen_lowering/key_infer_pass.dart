@@ -158,6 +158,12 @@ IrNode inferKeys(IrNode node, {TypeLookup? lookupType}) {
     case IsNullCheckNode():
       return IsNullCheckNode(inferKeys(node.operand, lookupType: lookupType));
 
+    case IsTypeNode():
+      return IsTypeNode(
+        receiver: inferKeys(node.receiver, lookupType: lookupType),
+        typeName: node.typeName,
+      );
+
     case StringInterpNode():
       final newParts = <Object>[];
       for (final part in node.parts) {
@@ -185,22 +191,6 @@ IrNode inferKeys(IrNode node, {TypeLookup? lookupType}) {
     case RefNode():
     case EventNode():
       return node;
-    case ActionSequenceNode():
-      return ActionSequenceNode(
-        steps: node.steps
-            .map((s) => ActionStepNode(
-                  call: inferKeys(s.call, lookupType: lookupType),
-                  awaitResult: s.awaitResult,
-                  bindResult: s.bindResult,
-                ))
-            .toList(),
-      );
-    case ActionStepNode():
-      return ActionStepNode(
-        call: inferKeys(node.call, lookupType: lookupType),
-        awaitResult: node.awaitResult,
-        bindResult: node.bindResult,
-      );
   }
 }
 

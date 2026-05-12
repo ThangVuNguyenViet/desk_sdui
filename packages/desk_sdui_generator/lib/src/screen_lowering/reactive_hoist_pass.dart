@@ -187,6 +187,10 @@ IrNode reactiveHoist(IrNode node) {
       final (operand, paths) = _hoist(node.operand);
       return (IsNullCheckNode(operand), paths);
 
+    case IsTypeNode():
+      final (receiver, paths) = _hoist(node.receiver);
+      return (IsTypeNode(receiver: receiver, typeName: node.typeName), paths);
+
     case StringInterpNode():
       final newParts = <Object>[];
       final allPaths = <String>{};
@@ -235,12 +239,6 @@ IrNode reactiveHoist(IrNode node) {
     case LiteralNode():
     case ConstNode():
     case EventNode():
-      return (node, <String>{});
-    case ActionSequenceNode():
-      // ActionSequenceNode steps run at event time, not during build —
-      // no reactive paths to hoist from them.
-      return (node, <String>{});
-    case ActionStepNode():
       return (node, <String>{});
   }
 }

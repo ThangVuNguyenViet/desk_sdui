@@ -90,6 +90,10 @@ Object? evalExpression(
     case IsNullCheckNode(:final operand):
       return evalExpression(operand, input, runtime) == null;
 
+    case IsTypeNode(:final receiver, :final typeName):
+      final r = evalExpression(receiver, input, runtime);
+      return runtime.checkType(typeName, r);
+
     case StringInterpNode(:final parts):
       final buf = StringBuffer();
       for (final p in parts) {

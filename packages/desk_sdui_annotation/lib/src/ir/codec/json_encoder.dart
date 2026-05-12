@@ -38,6 +38,7 @@ class JsonIrEncoder {
           if (node.key != null) 'key': _encodeNode(node.key!),
           if (node.listenablePaths.isNotEmpty)
             'listenablePaths': node.listenablePaths.toList(),
+          if (node.typeArgs != null) 'typeArgs': node.typeArgs,
         },
       BuiltinWidgetNode() => {
           r'$type': 'builtin',
@@ -142,11 +143,13 @@ class JsonIrEncoder {
           if (node.receiver != null) 'receiver': _encodeNode(node.receiver!),
           'name': node.name,
           'args': node.args.map(_encodeNode).toList(),
+          if (node.typeArgs != null) 'typeArgs': node.typeArgs,
         },
       ValueCtorNode() => {
           r'$type': 'ValueCtor',
           'name': node.name,
           'args': node.args.map(_encodeNode).toList(),
+          if (node.typeArgs != null) 'typeArgs': node.typeArgs,
         },
     };
   }

@@ -35,6 +35,7 @@ class JsonIrDecoder {
           listenablePaths: ((map['listenablePaths'] as List?) ?? const [])
               .cast<String>()
               .toSet(),
+          typeArgs: _decodeStringList(map['typeArgs']),
         ),
       'builtin' => BuiltinWidgetNode(
           name: map['name']! as String,
@@ -123,12 +124,14 @@ class JsonIrDecoder {
           args: ((map['args']! as List).cast<Map<String, Object?>>())
               .map(_decodeNode)
               .toList(),
+          typeArgs: _decodeStringList(map['typeArgs']),
         ),
       'ValueCtor' => ValueCtorNode(
           name: map['name']! as String,
           args: ((map['args']! as List).cast<Map<String, Object?>>())
               .map(_decodeNode)
               .toList(),
+          typeArgs: _decodeStringList(map['typeArgs']),
         ),
       _ => throw FormatException('Unknown IR node type: $type'),
     };
@@ -143,6 +146,14 @@ class JsonIrDecoder {
     if (value == null) return {};
     final raw = (value as Map).cast<String, Map<String, Object?>>();
     return raw.map((k, v) => MapEntry(k, _decodeNode(v)));
+  }
+
+  /// Decodes an optional `List<String>` field. Returns `null` if absent or
+  /// if the list is empty (treats empty as null per the IR semantics).
+  List<String>? _decodeStringList(Object? value) {
+    if (value == null) return null;
+    final list = (value as List).cast<String>();
+    return list.isEmpty ? null : list;
   }
 
   IrNode _decodeFor(Map<String, Object?> map) {

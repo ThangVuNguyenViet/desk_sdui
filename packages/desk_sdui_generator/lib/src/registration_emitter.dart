@@ -166,7 +166,7 @@ class RegistrationEmitter {
         "$cases\n"
         "    case null: return $callTarget($argsCode);\n"
         "    default:\n"
-        "      throw StateError('$qualifiedName<\$typeArg>: typeArg not registered. '\n"
+        "      throw StateError('$qualifiedName<\\\$typeArg>: typeArg not registered. '\n"
         "          'Add the type to the @Screen body or register manually.');\n"
         "  }\n"
         "});";

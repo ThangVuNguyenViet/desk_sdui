@@ -269,6 +269,11 @@ void _collectRefs(
       for (final arg in node.args) {
         _collectRefs(arg, widgetRefs, methodRefs, fnRefs);
       }
+    case SequenceNode():
+      for (final step in node.steps) {
+        _collectRefs(step, widgetRefs, methodRefs, fnRefs);
+      }
+      _collectRefs(node.returnExpr, widgetRefs, methodRefs, fnRefs);
     case LiteralNode():
     case ConstNode():
     case RefNode():

@@ -167,6 +167,10 @@ IrNode lowerExpression(Expression expr) {
     return _lowerSwitchExpression(expr);
   }
 
+  if (expr is CascadeExpression) {
+    return _lowerCascade(expr);
+  }
+
   throw LoweringError('unsupported expression: ${expr.runtimeType}', expr);
 }
 
@@ -356,6 +360,75 @@ String? _patternFieldVariableName(PatternField field) {
   if (p is VariablePattern) return p.name.lexeme;
   // Wildcard sub-pattern or other: no binding.
   return null;
+}
+
+// ---------------------------------------------------------------------------
+// Cascade expression lowering
+// ---------------------------------------------------------------------------
+
+var _cascadeCounter = 0;
+
+IrNode _lowerCascade(CascadeExpression expr) {
+  // Reject null-aware cascade (?..): not supported.
+  if (expr.isNullAware) {
+    throw LoweringError(
+      'Null-aware cascades (?..a()) are not supported in @Screen bodies. '
+      'Use a non-null receiver or guard with an if expression.',
+      expr,
+    );
+  }
+
+  final receiver = lowerExpression(expr.target);
+  final casName = '__cas${_cascadeCounter++}__';
+  final ref = RefNode([casName]);
+
+  final steps = <IrNode>[];
+  for (final section in expr.cascadeSections) {
+    steps.add(_lowerCascadeSection(section, ref, expr));
+  }
+
+  return LetNode(
+    name: casName,
+    value: receiver,
+    body: SequenceNode(steps: steps, returnExpr: ref),
+  );
+}
+
+IrNode _lowerCascadeSection(Expression section, RefNode receiver, AstNode origin) {
+  if (section is MethodInvocation) {
+    // section.target is null for cascade sections (the cascade target is implicit).
+    final methodName = section.methodName.name;
+    final args = section.argumentList.arguments
+        .map((a) => lowerExpression(a.argumentExpression))
+        .toList();
+    return MethodCallNode(
+      receiver: receiver,
+      name: methodName,
+      args: args,
+    );
+  }
+  if (section is AssignmentExpression) {
+    final lhs = section.leftHandSide;
+    if (lhs is PropertyAccess && lhs.isCascaded) {
+      final setterName = lhs.propertyName.name;
+      // Lower as MethodCallNode named '<setter>=' (Dart setter dispatch convention).
+      return MethodCallNode(
+        receiver: receiver,
+        name: '$setterName=',
+        args: [lowerExpression(section.rightHandSide)],
+      );
+    }
+    throw LoweringError(
+      'Unsupported cascade section: ${section.runtimeType}. '
+      'Only method invocations (..a()) and simple setter assignments (..foo = x) are supported.',
+      origin,
+    );
+  }
+  throw LoweringError(
+    'Unsupported cascade section: ${section.runtimeType}. '
+    'Only method invocations (..a()) and setter assignments (..foo = x) are supported.',
+    origin,
+  );
 }
 
 /// Returns the core-type bucket name used as the GetterNode key prefix

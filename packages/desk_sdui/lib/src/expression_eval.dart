@@ -64,6 +64,13 @@ Object? evalExpression(
       final v = evalExpression(value, input, runtime);
       return evalExpression(body, {...input, name: v}, runtime);
 
+    case SequenceNode(:final steps, :final returnExpr):
+      for (final step in steps) {
+        evalExpression(step, input, runtime);
+        // Side effect: step is a method call on the receiver. Return value ignored.
+      }
+      return evalExpression(returnExpr, input, runtime);
+
     case MethodCallNode(:final receiver, :final name, :final args):
       if (receiver == null) {
         if (!runtime.hasFunction(name)) {

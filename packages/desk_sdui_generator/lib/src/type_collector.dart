@@ -23,6 +23,7 @@ class CollectedTypes {
     Set<String>? extraLibraryUris,
     List<String>? notes,
     Map<String, Set<String>>? genericCtorTypeArgs,
+    Set<SetterElement>? cascadeSetters,
   })  : widgets = widgets ?? {},
         valueTypes = valueTypes ?? {},
         constants = constants ?? {},
@@ -31,7 +32,8 @@ class CollectedTypes {
         functions = functions ?? {},
         extraLibraryUris = extraLibraryUris ?? {},
         notes = notes ?? [],
-        genericCtorTypeArgs = genericCtorTypeArgs ?? {};
+        genericCtorTypeArgs = genericCtorTypeArgs ?? {},
+        cascadeSetters = cascadeSetters ?? {};
 
   /// Widget subclasses constructed in the screen body (e.g. `Column`, `Text`).
   final Set<ClassElement> widgets;
@@ -78,6 +80,14 @@ class CollectedTypes {
   /// annotation-based collector doesn't walk call-site type args.
   final Map<String, Set<String>> genericCtorTypeArgs;
 
+  /// Setter elements accessed via cascade sections (`..foo = x`). These are
+  /// emitted as `registerMethod('ClassName.foo=', ...)` so that cascade
+  /// lowering (SequenceNode steps with name `'foo='`) can be dispatched at
+  /// runtime.
+  ///
+  /// Only public `SetterElement`s are included.
+  final Set<SetterElement> cascadeSetters;
+
   /// Merges [other] into this (in-place union).
   void unionWith(CollectedTypes other) {
     widgets.addAll(other.widgets);
@@ -91,6 +101,7 @@ class CollectedTypes {
     for (final entry in other.genericCtorTypeArgs.entries) {
       genericCtorTypeArgs.putIfAbsent(entry.key, Set.new).addAll(entry.value);
     }
+    cascadeSetters.addAll(other.cascadeSetters);
   }
 }
 
@@ -320,6 +331,31 @@ class _TypeVisitor extends RecursiveAstVisitor<void> {
       collected.subscriptables.add(type);
     }
     super.visitIndexExpression(node);
+  }
+
+  // -------------------------------------------------------------------------
+  // Cascade expressions: obj..method()..setter = x
+  // Collect setter elements used in cascade setter sections so the runtime
+  // can register them as 'ClassName.setter=' methods.
+  // -------------------------------------------------------------------------
+
+  @override
+  void visitCascadeExpression(CascadeExpression node) {
+    for (final section in node.cascadeSections) {
+      if (section is AssignmentExpression) {
+        final lhs = section.leftHandSide;
+        if (lhs is PropertyAccess && lhs.isCascaded) {
+          final element = lhs.propertyName.element;
+          // The element for a setter assignment is typically a
+          // PropertyAccessorElement (setter).
+          if (element is SetterElement && !element.isPrivate) {
+            collected.cascadeSetters.add(element);
+            _recordElementLibrary(element.enclosingElement);
+          }
+        }
+      }
+    }
+    super.visitCascadeExpression(node);
   }
 
   // -------------------------------------------------------------------------

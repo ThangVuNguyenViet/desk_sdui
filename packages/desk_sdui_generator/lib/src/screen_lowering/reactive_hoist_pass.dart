@@ -244,6 +244,19 @@ IrNode reactiveHoist(IrNode node) {
     case ConstNode():
     case EventNode():
       return (node, <String>{});
+    case SequenceNode():
+      final allStepPaths = <String>{};
+      final newSteps = <IrNode>[];
+      for (final step in node.steps) {
+        final (hoisted, paths) = _hoist(step);
+        newSteps.add(hoisted);
+        allStepPaths.addAll(paths);
+      }
+      final (returnExpr, returnPaths) = _hoist(node.returnExpr);
+      return (
+        SequenceNode(steps: newSteps, returnExpr: returnExpr),
+        {...allStepPaths, ...returnPaths},
+      );
     case ActionSequenceNode():
       // ActionSequenceNode steps run at event time, not during build —
       // no reactive paths to hoist from them.

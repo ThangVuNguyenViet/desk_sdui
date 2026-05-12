@@ -5,6 +5,35 @@ import '../diagnostics.dart';
 import 'expression_lowerer.dart';
 import 'closure_lowerer.dart';
 
+/// Extracts simple type-argument names from a [TypeArgumentList].
+///
+/// Each [TypeAnnotation] is reduced to a simple name string:
+/// - `NamedType` with or without nested args → simple name (nested args erased,
+///   bucket-1 doesn't carry them).
+/// - `void` / `dynamic` / `Never` → the literal name.
+/// - Function types / record types → throws a [LoweringError].
+List<String>? _extractTypeArgs(TypeArgumentList? typeArgList, AstNode context) {
+  if (typeArgList == null || typeArgList.arguments.isEmpty) return null;
+  return typeArgList.arguments.map((t) => _typeArgName(t, context)).toList();
+}
+
+String _typeArgName(TypeAnnotation t, AstNode context) {
+  if (t is NamedType) {
+    // Special names like void/dynamic/Never resolve directly from the token.
+    final name = t.name2.lexeme;
+    return name;
+  }
+  if (t is GenericFunctionType || t is RecordTypeAnnotation) {
+    throw LoweringError(
+      'Generic type arguments of function/record types are not supported '
+      '(bucket-1 only supports simple named types). Got: ${t.runtimeType}',
+      context,
+    );
+  }
+  // Fallback: use source representation.
+  return t.toSource();
+}
+
 const _constCtors = {
   'EdgeInsets.all',
   'EdgeInsets.symmetric',
@@ -69,7 +98,8 @@ IrNode lowerWidgetInstance(InstanceCreationExpression expr, {Object? Function(In
     }
   }
 
-  return WidgetNode(name: widgetName, args: args, key: key);
+  final typeArgs = _extractTypeArgs(expr.constructorName.type.typeArguments, expr);
+  return WidgetNode(name: widgetName, args: args, key: key, typeArgs: typeArgs);
 }
 
 IrNode lowerWidgetInvocation(MethodInvocation expr, {Object? Function(InstanceCreationExpression)? constEvaluator}) {
@@ -100,7 +130,8 @@ IrNode lowerWidgetInvocation(MethodInvocation expr, {Object? Function(InstanceCr
     }
   }
 
-  return WidgetNode(name: widgetName, args: args, key: key);
+  final typeArgs = _extractTypeArgs(expr.typeArguments, expr);
+  return WidgetNode(name: widgetName, args: args, key: key, typeArgs: typeArgs);
 }
 
 IrNode lowerListElement(CollectionElement el) {
@@ -154,10 +185,12 @@ IrNode _lowerArg(Expression a, {Object? Function(InstanceCreationExpression)? co
     for (final arg in a.argumentList.arguments) {
       allArgs.add(_lowerArg(arg as Expression, constEvaluator: constEvaluator));
     }
+    final typeArgs = _extractTypeArgs(a.typeArguments, a);
     return MethodCallNode(
       receiver: null,
       name: '$className.$methodName',
       args: allArgs,
+      typeArgs: typeArgs,
     );
   }
   // Qualified static-factory / named-constructor call without `const` keyword:

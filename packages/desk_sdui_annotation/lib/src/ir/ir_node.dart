@@ -550,6 +550,25 @@ final class LengthOfNode extends ExpressionNode {
   String toString() => 'LengthOfNode($target.length)';
 }
 
+/// Non-null type test: `receiver is TypeName`. Resolved by checking the
+/// runtime type against a registered Dart type name. Type names are matched
+/// by simple name string — payload generics are erased.
+final class IsTypeNode extends ExpressionNode {
+  const IsTypeNode({required this.receiver, required this.typeName});
+  final IrNode receiver;
+  final String typeName;
+
+  @override
+  bool operator ==(Object other) =>
+      other is IsTypeNode &&
+      other.receiver == receiver &&
+      other.typeName == typeName;
+  @override
+  int get hashCode => Object.hash(receiver, typeName);
+  @override
+  String toString() => 'IsTypeNode($receiver is $typeName)';
+}
+
 /// `a == null` — separate from CompareOpNode because the runtime fast-paths
 /// null checks without unboxing.
 final class IsNullCheckNode extends ExpressionNode {

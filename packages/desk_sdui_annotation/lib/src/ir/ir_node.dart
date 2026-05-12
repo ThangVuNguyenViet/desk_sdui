@@ -164,12 +164,18 @@ final class EventNode extends IrNode {
 /// [args] map argument names to IrNodes; [key] is an optional ValueKey
 /// expression. [listenablePaths] is metadata emitted by the lowerer's
 /// reactive-scope-hoisting pass.
+///
+/// [typeArgs] carries the explicit generic type arguments of the constructor
+/// invocation (e.g. `['MyType']` for `MyWidget<MyType>(...)`). `null` means
+/// no explicit type args were present in source. An empty list is never
+/// emitted; treat it as `null` if encountered.
 final class WidgetNode extends IrNode {
   const WidgetNode({
     required this.name,
     required this.args,
     this.key,
     this.listenablePaths = const {},
+    this.typeArgs,
   });
 
   final String name;
@@ -177,13 +183,18 @@ final class WidgetNode extends IrNode {
   final IrNode? key;
   final Set<String> listenablePaths;
 
+  /// Explicit generic type arguments, or `null` if none. Simple names only
+  /// (no library URIs, no nested generics). E.g. `['MyType']`, `['String', 'int']`.
+  final List<String>? typeArgs;
+
   @override
   bool operator ==(Object other) =>
       other is WidgetNode &&
       other.name == name &&
       _mapEquals(other.args, args) &&
       other.key == key &&
-      _setEquals(other.listenablePaths, listenablePaths);
+      _setEquals(other.listenablePaths, listenablePaths) &&
+      _listEquals(other.typeArgs, typeArgs);
 
   @override
   int get hashCode => Object.hash(
@@ -191,10 +202,13 @@ final class WidgetNode extends IrNode {
         Object.hashAll(args.entries),
         key,
         Object.hashAll(listenablePaths),
+        typeArgs == null ? null : Object.hashAll(typeArgs!),
       );
 
   @override
-  String toString() => 'WidgetNode($name)';
+  String toString() => typeArgs != null
+      ? 'WidgetNode($name<${typeArgs!.join(', ')}>)'
+      : 'WidgetNode($name)';
 }
 
 /// A built-in widget — same shape as [WidgetNode] but reserved for SDK
@@ -676,11 +690,16 @@ final class StringInterpNode extends ExpressionNode {
 
 /// Method invocation: `receiver.name(args)`. Resolved at runtime via
 /// Runtime.invokeMethod(name, receiver, args).
+///
+/// [typeArgs] carries explicit generic type arguments on the call, e.g.
+/// `vm.fetch<MyType>()` → `typeArgs: ['MyType']`. `null` means no explicit
+/// type args. Builders that don't care about generics may ignore this.
 final class MethodCallNode extends IrNode {
   const MethodCallNode({
     required this.receiver,
     required this.name,
     required this.args,
+    this.typeArgs,
   });
 
   final IrNode? receiver;
@@ -691,15 +710,25 @@ final class MethodCallNode extends IrNode {
   final String name;
   final List<IrNode> args;
 
+  /// Explicit generic type arguments, or `null` if none. Simple names only
+  /// (no library URIs, no nested generics).
+  final List<String>? typeArgs;
+
   @override
   bool operator ==(Object other) =>
       other is MethodCallNode &&
       other.receiver == receiver &&
       other.name == name &&
-      _listEquals(other.args, args);
+      _listEquals(other.args, args) &&
+      _listEquals(other.typeArgs, typeArgs);
 
   @override
-  int get hashCode => Object.hash(receiver, name, Object.hashAll(args));
+  int get hashCode => Object.hash(
+        receiver,
+        name,
+        Object.hashAll(args),
+        typeArgs == null ? null : Object.hashAll(typeArgs!),
+      );
 
   @override
   String toString() => 'MethodCallNode(${receiver ?? 'null'}.$name(${args.length} args))';
@@ -708,27 +737,46 @@ final class MethodCallNode extends IrNode {
 /// Value-type constructor invocation: `name(args)`. Resolved at runtime via
 /// Runtime.invokeValueBuilder(name, args). Used for non-Widget value classes
 /// like EdgeInsets, BoxDecoration, Color when not const-folded.
+///
+/// [typeArgs] carries explicit generic type arguments of the constructor, e.g.
+/// `List<MyType>()` → `typeArgs: ['MyType']`. `null` means no explicit type
+/// args were present in source. Builders that don't care about generics may
+/// ignore this. If the IR ctor invocation carried generic type args, they
+/// appear in `args` under the reserved key `__typeArgs__` as a `List<String>`
+/// of simple type names when passed to a registered [SduiValueBuilder].
 final class ValueCtorNode extends IrNode {
   const ValueCtorNode({
     required this.name,
     required this.args,
+    this.typeArgs,
   });
 
   /// Qualified constructor name, e.g. `'EdgeInsets.all'`, `'BoxDecoration'`.
   final String name;
   final List<IrNode> args;
 
+  /// Explicit generic type arguments, or `null` if none. Simple names only
+  /// (no library URIs, no nested generics). E.g. `['MyType']`, `['String', 'int']`.
+  final List<String>? typeArgs;
+
   @override
   bool operator ==(Object other) =>
       other is ValueCtorNode &&
       other.name == name &&
-      _listEquals(other.args, args);
+      _listEquals(other.args, args) &&
+      _listEquals(other.typeArgs, typeArgs);
 
   @override
-  int get hashCode => Object.hash(name, Object.hashAll(args));
+  int get hashCode => Object.hash(
+        name,
+        Object.hashAll(args),
+        typeArgs == null ? null : Object.hashAll(typeArgs!),
+      );
 
   @override
-  String toString() => 'ValueCtorNode($name(${args.length} args))';
+  String toString() => typeArgs != null
+      ? 'ValueCtorNode($name<${typeArgs!.join(', ')}>(${args.length} args))'
+      : 'ValueCtorNode($name(${args.length} args))';
 }
 
 // ───────────────────────────── helpers ─────────────────────────────

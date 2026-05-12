@@ -55,6 +55,12 @@ typedef WidgetBuilderFn = Widget Function(
 // ---------------------------------------------------------------------------
 
 /// Builds a widget from a resolved args map. No BuildContext needed.
+///
+/// If the IR ctor invocation carried generic type args (e.g.
+/// `MyWidget<MyType>(...)`), they appear in `args` under the reserved key
+/// `__typeArgs__` as a `List<String>` of simple type names (no library URIs,
+/// no nested generics). Builders that don't care about generics may ignore
+/// this key.
 typedef SduiWidgetBuilder = Widget Function(Map<String, Object?> args);
 
 /// Handles a method call: `receiver.name(args)`.
@@ -75,6 +81,12 @@ typedef SduiSubscriptHandler = Object? Function(Object? receiver, Object? key);
 ///
 /// Named parameters are keyed by their Dart name. Positional parameters are
 /// keyed by their declaration-order index as `'arg0'`, `'arg1'`, etc.
+///
+/// If the IR ctor invocation carried generic type args (e.g. `List<MyType>()`),
+/// they appear in `args` under the reserved key `__typeArgs__` as a
+/// `List<String>` of simple type names. Type args are erased to simple names
+/// (no library URIs, no nested generics). Builders that don't care about
+/// generics may ignore this key.
 typedef SduiValueBuilder = Object? Function(Map<String, Object?> args);
 
 /// Handles a free function call.

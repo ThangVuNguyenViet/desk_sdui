@@ -109,7 +109,15 @@ class RegistrationEmitter {
   ///
   /// Works for both unnamed (`EdgeInsets(...)`) and named (`EdgeInsets.all(...)`)
   /// constructors.
-  String emitValueBuilder(ConstructorElement ctor) {
+  ///
+  /// If [typeArgOptions] is non-null and non-empty, emits a typeArgs-aware
+  /// closure that switches on `args['__typeArgs__']?.firstOrNull` to construct
+  /// the correctly typed instance (e.g. `<MyType>[]`). The [qualifiedName]
+  /// must be a simple class name (not a named ctor) for the switch to apply.
+  String emitValueBuilder(
+    ConstructorElement ctor, {
+    Set<String>? typeArgOptions,
+  }) {
     final className = ctor.enclosingElement.name;
     final rawCtorName = ctor.name ?? '';
     // In analyzer 13, the unnamed constructor's name is 'new'; treat it as unnamed.
@@ -118,7 +126,50 @@ class RegistrationEmitter {
     final callTarget = ctorName.isEmpty ? className : '$className.$ctorName';
     final params = ctor.formalParameters;
     final argsCode = _buildCallArgList(params);
+
+    // Emit a typeArgs-aware closure only for the unnamed ctor (simple class
+    // name) and when the caller provided a non-empty type-arg whitelist.
+    if (ctorName.isEmpty &&
+        typeArgOptions != null &&
+        typeArgOptions.isNotEmpty) {
+      return _emitGenericValueBuilder(
+        qualifiedName,
+        callTarget,
+        params,
+        typeArgOptions,
+      );
+    }
+
     return "rt.registerValueBuilder('$qualifiedName', (args) => $callTarget($argsCode));";
+  }
+
+  /// Emits a `rt.registerValueBuilder(...)` that switches on the
+  /// `__typeArgs__` key to produce the correct typed instance.
+  String _emitGenericValueBuilder(
+    String? qualifiedName,
+    String? callTarget,
+    List<FormalParameterElement> params,
+    Set<String> typeArgOptions,
+  ) {
+    final argsCode = _buildCallArgList(params);
+    // Each case produces a typed constructor call. For collection-like ctors
+    // with no params (e.g. `List()`) the call is `<T>[]`; for ctors with
+    // params (e.g. `ValueNotifier(0)`) it's `<T>ValueNotifier(...)`. We
+    // use the simple form here — callers with non-trivial generic ctors
+    // register manually.
+    final cases = typeArgOptions
+        .map((t) => "    case '$t': return <$t>[];")
+        .join('\n');
+    return "rt.registerValueBuilder('$qualifiedName', (args) {\n"
+        "  final typeArg = (args['__typeArgs__'] as List?)?.firstOrNull;\n"
+        "  switch (typeArg) {\n"
+        "$cases\n"
+        "    case null: return $callTarget($argsCode);\n"
+        "    default:\n"
+        "      throw StateError('$qualifiedName<\\\$typeArg>: typeArg not registered. '\n"
+        "          'Add the type to the @Screen body or register manually.');\n"
+        "  }\n"
+        "});";
   }
 
   /// Emit a `rt.registerFunction(...)` call for a top-level function.
@@ -224,7 +275,10 @@ class RegistrationEmitter {
       if (!valueType.isAbstract) {
         final unnamed = _unnamedCtor(valueType);
         if (unnamed != null) {
-          lines.add(emitValueBuilder(unnamed));
+          // Pass type-arg options discovered in the screen body (if any).
+          final typeArgOptions =
+              collected.genericCtorTypeArgs[valueType.name ?? ''];
+          lines.add(emitValueBuilder(unnamed, typeArgOptions: typeArgOptions));
         }
       }
       for (final ctor in valueType.constructors) {

@@ -85,17 +85,81 @@ List<String>? _extractTarget(MethodInvocation call) {
 bool inActionContext = false;
 
 ActionSequenceNode _lowerActionSequence(Block block, AstNode origin) {
-  final steps = <ActionStepNode>[];
+  final steps = <IrNode>[];
   final prev = inActionContext;
   inActionContext = true;
   try {
     for (final stmt in block.statements) {
-      steps.add(_lowerStep(stmt));
+      steps.add(_lowerStepStatement(stmt));
     }
   } finally {
     inActionContext = prev;
   }
   return ActionSequenceNode(steps: steps);
+}
+
+/// Lowers a single statement inside an async action block. Returns either an
+/// [ActionStepNode] (plain call/await) or a [TryStepNode] (try/catch block).
+IrNode _lowerStepStatement(Statement stmt) {
+  if (stmt is TryStatement) {
+    return _lowerTryStatement(stmt);
+  }
+  return _lowerStep(stmt);
+}
+
+/// Lowers a block of statements inside a try or catch body. Only plain call
+/// statements are permitted here (no nested control-flow except try/catch).
+List<ActionStepNode> _lowerStepBlock(Block block) {
+  final steps = <ActionStepNode>[];
+  for (final stmt in block.statements) {
+    // Reject nested try inside try/catch block sub-list — they must be
+    // top-level steps in the sequence. Actually, recursion is fine, but we
+    // deliberately keep trySteps/catchSteps as List<ActionStepNode> for now
+    // (the plan allows nesting at the ActionSequenceNode level, not inside
+    // trySteps).
+    steps.add(_lowerStep(stmt));
+  }
+  return steps;
+}
+
+/// Lowers a [TryStatement] into a [TryStepNode].
+///
+/// Restrictions (to keep the IR simple):
+/// - No `finally` blocks.
+/// - Exactly one catch clause.
+/// - No typed catch (`on FormatException catch (e)`).
+TryStepNode _lowerTryStatement(TryStatement stmt) {
+  if (stmt.finallyBlock != null) {
+    throw LoweringError(
+      '`finally` blocks are not supported in action handlers (yet). '
+      'Use only try/catch.',
+      stmt,
+    );
+  }
+  if (stmt.catchClauses.length != 1) {
+    throw LoweringError(
+      'Action handlers support exactly one catch clause '
+      '(no typed `on Type catch (e)` chains).',
+      stmt,
+    );
+  }
+  final catchClause = stmt.catchClauses.single;
+  if (catchClause.exceptionType != null) {
+    throw LoweringError(
+      'Action handlers do not support typed catch (`on FormatException catch (e)`). '
+      'Use a single untyped catch and dispatch on `e.runtimeType` in a '
+      'registered VM method if needed.',
+      catchClause,
+    );
+  }
+  final excBind = catchClause.exceptionParameter?.name.lexeme;
+  final trySteps = _lowerStepBlock(stmt.body);
+  final catchSteps = _lowerStepBlock(catchClause.body);
+  return TryStepNode(
+    trySteps: trySteps,
+    catchSteps: catchSteps,
+    exceptionBind: excBind,
+  );
 }
 
 ActionStepNode _lowerStep(Statement stmt) {

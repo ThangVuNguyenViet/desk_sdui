@@ -149,19 +149,31 @@ IrNode _demoteAllConst(IrNode node) {
       return node;
     case ActionSequenceNode():
       return ActionSequenceNode(
-        steps: node.steps
-            .map((s) => ActionStepNode(
-                  call: _demoteAllConst(s.call),
-                  awaitResult: s.awaitResult,
-                  bindResult: s.bindResult,
-                ))
-            .toList(),
+        steps: node.steps.map(_demoteAllConst).toList(),
       );
     case ActionStepNode():
       return ActionStepNode(
         call: _demoteAllConst(node.call),
         awaitResult: node.awaitResult,
         bindResult: node.bindResult,
+      );
+    case TryStepNode():
+      return TryStepNode(
+        trySteps: node.trySteps
+            .map((s) => ActionStepNode(
+                  call: _demoteAllConst(s.call),
+                  awaitResult: s.awaitResult,
+                  bindResult: s.bindResult,
+                ))
+            .toList(),
+        catchSteps: node.catchSteps
+            .map((s) => ActionStepNode(
+                  call: _demoteAllConst(s.call),
+                  awaitResult: s.awaitResult,
+                  bindResult: s.bindResult,
+                ))
+            .toList(),
+        exceptionBind: node.exceptionBind,
       );
   }
 }

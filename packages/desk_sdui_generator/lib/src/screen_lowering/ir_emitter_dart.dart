@@ -129,6 +129,13 @@ String _emitNode(IrNode node) {
     case ActionStepNode():
       final bind = node.bindResult != null ? ', bindResult: ${_dartString(node.bindResult!)}' : '';
       return 'ActionStepNode(call: ${_emitNode(node.call)}, awaitResult: ${node.awaitResult}$bind)';
+    case TryStepNode():
+      final trySteps = node.trySteps.map(_emitNode).join(', ');
+      final catchSteps = node.catchSteps.map(_emitNode).join(', ');
+      final excBind = node.exceptionBind != null
+          ? ', exceptionBind: ${_dartString(node.exceptionBind!)}'
+          : '';
+      return 'TryStepNode(trySteps: [$trySteps], catchSteps: [$catchSteps]$excBind)';
   }
 }
 

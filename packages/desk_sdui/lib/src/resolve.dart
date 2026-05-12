@@ -220,19 +220,52 @@ Object? _resolveArg(
       return () async {
         var localEnv = input;
         for (final step in steps) {
-          final result = evalExpression(step.call, localEnv, runtime);
-          final value = step.awaitResult && result is Future
-              ? await result
-              : result;
-          if (step.bindResult != null) {
-            localEnv = {...localEnv, step.bindResult!: value};
-          }
+          localEnv = await _runActionStep(step, localEnv, runtime);
         }
       };
 
     default:
       return evalExpression(node, input, runtime);
   }
+}
+
+/// Runs one step of an [ActionSequenceNode] and returns the updated env.
+///
+/// Handles both [ActionStepNode] (plain call/await) and [TryStepNode]
+/// (try/catch block). Throws [StateError] for unknown step kinds.
+Future<Map<String, Object?>> _runActionStep(
+  IrNode step,
+  Map<String, Object?> env,
+  Runtime runtime,
+) async {
+  if (step is ActionStepNode) {
+    final result = evalExpression(step.call, env, runtime);
+    final value = step.awaitResult && result is Future ? await result : result;
+    if (step.bindResult != null) {
+      return {...env, step.bindResult!: value};
+    }
+    return env;
+  }
+  if (step is TryStepNode) {
+    try {
+      var e = env;
+      for (final s in step.trySteps) {
+        e = await _runActionStep(s, e, runtime);
+      }
+      // Try succeeded: return the try-branch env to the outer sequence.
+      return e;
+    } catch (err) {
+      var e = step.exceptionBind != null
+          ? {...env, step.exceptionBind!: err}
+          : env;
+      for (final s in step.catchSteps) {
+        e = await _runActionStep(s, e, runtime);
+      }
+      // Catch's local bindings don't leak to the outer scope.
+      return env;
+    }
+  }
+  throw StateError('Unknown action step kind: ${step.runtimeType}');
 }
 
 /// Resolves a branch (then/else/spread) which may be a single widget or a list.

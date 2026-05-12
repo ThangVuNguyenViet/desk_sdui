@@ -182,6 +182,20 @@ class JsonIrDecoder {
           value: _decodeNode(map['value']! as Map<String, Object?>),
           isFinal: map['isFinal']! as bool,
         ),
+      'while' => WhileNode(
+          condition: _decodeNode(map['condition']! as Map<String, Object?>),
+          body: _decodeNode(map['body']! as Map<String, Object?>),
+        ),
+      'do' => DoNode(
+          body: _decodeNode(map['body']! as Map<String, Object?>),
+          condition: _decodeNode(map['condition']! as Map<String, Object?>),
+        ),
+      'imperativeFor' => ImperativeForNode(
+          init: _decodeOptional(map['init']),
+          condition: _decodeOptional(map['condition']),
+          update: _decodeOptional(map['update']),
+          body: _decodeNode(map['body']! as Map<String, Object?>),
+        ),
       _ => throw FormatException('Unknown IR node type: $type'),
     };
   }

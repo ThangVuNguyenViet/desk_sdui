@@ -986,6 +986,78 @@ final class LetStatementNode extends StatementNode {
       'LetStatementNode(${isFinal ? 'final' : 'var'} $name = $value)';
 }
 
+/// `while (condition) body` — loop form. Condition is evaluated before each
+/// iteration; if false initially, body never runs. [FlowBreak] exits the loop;
+/// [FlowContinue] re-evaluates the condition; [FlowReturn] propagates up.
+final class WhileNode extends StatementNode {
+  const WhileNode({required this.condition, required this.body});
+  final IrNode condition;
+  final IrNode body; // typically BlockNode
+
+  @override
+  bool operator ==(Object other) =>
+      other is WhileNode &&
+      other.condition == condition &&
+      other.body == body;
+  @override
+  int get hashCode => Object.hash(condition, body);
+  @override
+  String toString() => 'WhileNode($condition)';
+}
+
+/// `do { body } while (condition);` — loop form. Body runs at least once;
+/// condition is evaluated after each iteration. Same flow-signal semantics as
+/// [WhileNode].
+final class DoNode extends StatementNode {
+  const DoNode({required this.body, required this.condition});
+  final IrNode body;
+  final IrNode condition;
+
+  @override
+  bool operator ==(Object other) =>
+      other is DoNode &&
+      other.body == body &&
+      other.condition == condition;
+  @override
+  int get hashCode => Object.hash(body, condition);
+  @override
+  String toString() => 'DoNode($condition)';
+}
+
+/// C-style `for (init; condition; update) body`. Distinct from collection-for
+/// ([ForNode]), which stays sugar over `for (x in xs)`.
+///
+/// [init] is typically a [LetStatementNode] introducing the loop variable.
+/// [condition] is null for an infinite loop (`for (;;)`).
+/// [update] is an expression evaluated (discarded) after each body execution.
+///
+/// [ImperativeForNode] introduces a fresh scope for the loop variable — like
+/// Dart's `for (int i = 0; ...; ...)` where `i` is block-scoped to the loop.
+final class ImperativeForNode extends StatementNode {
+  const ImperativeForNode({
+    this.init,
+    this.condition,
+    this.update,
+    required this.body,
+  });
+  final IrNode? init;       // LetStatementNode or expression-statement
+  final IrNode? condition;  // null = infinite loop until break
+  final IrNode? update;     // expression evaluated after each iteration
+  final IrNode body;
+
+  @override
+  bool operator ==(Object other) =>
+      other is ImperativeForNode &&
+      other.init == init &&
+      other.condition == condition &&
+      other.update == update &&
+      other.body == body;
+  @override
+  int get hashCode => Object.hash(init, condition, update, body);
+  @override
+  String toString() => 'ImperativeForNode($init; $condition; $update)';
+}
+
 // ───────────────────────────── helpers ─────────────────────────────
 
 bool _listEquals<T>(List<T>? a, List<T>? b) {

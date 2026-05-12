@@ -210,6 +210,23 @@ class JsonIrEncoder {
           'value': _encodeNode(node.value),
           'isFinal': node.isFinal,
         },
+      WhileNode() => {
+          r'$type': 'while',
+          'condition': _encodeNode(node.condition),
+          'body': _encodeNode(node.body),
+        },
+      DoNode() => {
+          r'$type': 'do',
+          'body': _encodeNode(node.body),
+          'condition': _encodeNode(node.condition),
+        },
+      ImperativeForNode() => {
+          r'$type': 'imperativeFor',
+          if (node.init != null) 'init': _encodeNode(node.init!),
+          if (node.condition != null) 'condition': _encodeNode(node.condition!),
+          if (node.update != null) 'update': _encodeNode(node.update!),
+          'body': _encodeNode(node.body),
+        },
     };
   }
 

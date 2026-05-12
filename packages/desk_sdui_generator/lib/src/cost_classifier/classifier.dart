@@ -173,6 +173,9 @@ void _walk(IrNode node, _Findings f, {required String? selfName}) {
       _walk(node.value, f, selfName: selfName);
       _walk(node.body, f, selfName: selfName);
 
+    case AssignNode():
+      _walk(node.value, f, selfName: selfName);
+
     case LambdaNode():
       _walk(node.body, f, selfName: selfName);
 

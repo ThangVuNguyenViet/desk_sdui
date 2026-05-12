@@ -575,6 +575,23 @@ final class LetNode extends ExpressionNode {
   String toString() => 'LetNode($name = $value in $body)';
 }
 
+/// `name = value`. Mutates the cell bound at `name` in the current env.
+/// Codegen guarantees `name` resolves to a writable cell (lowerer rejects
+/// assignment against `final`-bound names). Returns the RHS value.
+final class AssignNode extends ExpressionNode {
+  const AssignNode({required this.name, required this.value});
+  final String name;
+  final IrNode value;
+
+  @override
+  bool operator ==(Object other) =>
+      other is AssignNode && other.name == name && other.value == value;
+  @override
+  int get hashCode => Object.hash(name, value);
+  @override
+  String toString() => 'AssignNode($name = $value)';
+}
+
 /// Evaluates each step in [steps] in order (synchronously), then evaluates
 /// and returns [returnExpr]. Used by cascade lowering: each step is a
 /// side-effecting call on the cascade receiver, and [returnExpr] references

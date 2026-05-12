@@ -239,6 +239,8 @@ void _collectRefs(
     case LetNode():
       _collectRefs(node.value, widgetRefs, methodRefs, fnRefs);
       _collectRefs(node.body, widgetRefs, methodRefs, fnRefs);
+    case AssignNode():
+      _collectRefs(node.value, widgetRefs, methodRefs, fnRefs);
     case LambdaNode():
       _collectRefs(node.body, widgetRefs, methodRefs, fnRefs);
     case MemberAccessNode():

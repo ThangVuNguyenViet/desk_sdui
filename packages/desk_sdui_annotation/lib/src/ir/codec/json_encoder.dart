@@ -128,6 +128,11 @@ class JsonIrEncoder {
           'value': _encodeNode(node.value),
           'body': _encodeNode(node.body),
         },
+      AssignNode() => {
+          r'$type': 'assign',
+          'name': node.name,
+          'value': _encodeNode(node.value),
+        },
       SequenceNode() => {
           r'$type': 'sequence',
           'steps': node.steps.map(_encodeNode).toList(),

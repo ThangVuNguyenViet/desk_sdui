@@ -89,6 +89,8 @@ String _emitNode(IrNode node) {
       return 'GetterNode(receiver: ${_emitNode(node.receiver)}, name: ${_dartString(node.name)})';
     case LetNode():
       return 'LetNode(name: ${_dartString(node.name)}, value: ${_emitNode(node.value)}, body: ${_emitNode(node.body)})';
+    case AssignNode():
+      return 'AssignNode(name: ${_dartString(node.name)}, value: ${_emitNode(node.value)})';
     case MemberAccessNode():
       return 'MemberAccessNode(target: ${_emitNode(node.target)}, name: ${_dartString(node.name)})';
     case IndexAccessNode():

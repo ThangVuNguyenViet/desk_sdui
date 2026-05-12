@@ -106,6 +106,8 @@ IrNode _demoteAllConst(IrNode node) {
         value: _demoteAllConst(node.value),
         body: _demoteAllConst(node.body),
       );
+    case AssignNode():
+      return AssignNode(name: node.name, value: _demoteAllConst(node.value));
     case MemberAccessNode():
       return MemberAccessNode(
         target: _demoteAllConst(node.target),

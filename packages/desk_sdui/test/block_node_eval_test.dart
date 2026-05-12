@@ -145,5 +145,31 @@ void main() {
       // Mutation is visible because the Cell object is shared.
       expect(x.value, 999);
     });
+
+    // Test 11: ReturnNode(value: null) yields FlowReturn(null).
+    // Bare `return;` is not reachable from @Screen bodies (which must return
+    // widgets) but will be exercised by Plan #12 payload-function bodies.
+    // This test pins the IR / FlowReturn(null) contract directly.
+    test('ReturnNode(value: null) yields FlowReturn(null)', () {
+      const node = ReturnNode();
+      final result = executeStatement(node, <String, Cell>{}, rt);
+      expect(result, isA<FlowReturn>());
+      expect((result as FlowReturn).value, isNull);
+    });
+
+    // Test 12: a BlockNode containing ReturnNode(value: null) propagates
+    // FlowReturn(null) and aborts subsequent statements.
+    test('BlockNode propagates FlowReturn(null) and aborts the rest', () {
+      final x = Cell(0);
+      final env = <String, Cell>{'x': x};
+      const node = BlockNode(statements: [
+        ReturnNode(),
+        AssignNode(name: 'x', value: LiteralNode(99)), // should NOT run
+      ]);
+      final result = executeStatement(node, env, rt);
+      expect(result, isA<FlowReturn>());
+      expect((result as FlowReturn).value, isNull);
+      expect(x.value, 0);
+    });
   });
 }

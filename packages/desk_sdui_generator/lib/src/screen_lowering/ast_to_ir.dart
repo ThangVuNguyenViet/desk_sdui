@@ -128,7 +128,7 @@ IrNode _lowerBlockBody(BlockFunctionBody body, FunctionDeclaration fn) {
 
   if (hasComplexStatement) {
     // New block-body path: lower all statements to a BlockNode.
-    return _lowerGeneralBlock(stmts, fn);
+    return _lowerGeneralBlock(stmts);
   }
 
   // Legacy simple path: (VarDecl)* ExpressionStatement* ReturnStatement.
@@ -207,10 +207,7 @@ IrNode _lowerBlockBody(BlockFunctionBody body, FunctionDeclaration fn) {
 /// Lowers a general block statement list (containing if/else, nested blocks,
 /// etc.) to a [BlockNode]. All variable declarations in the block are
 /// collected first (for scope tracking) then each statement is lowered.
-IrNode _lowerGeneralBlock(
-  List<Statement> stmts,
-  FunctionDeclaration fn,
-) {
+IrNode _lowerGeneralBlock(List<Statement> stmts) {
   // Collect top-level variable declarations in this block for scope tracking.
   final bindings = <String, BindingKind>{};
   for (final stmt in stmts) {
@@ -269,38 +266,23 @@ IrNode lowerStatement(Statement stmt) {
     );
   }
   if (stmt is Block) {
-    // Nested block: collect bindings for inner scope.
-    final bindings = <String, BindingKind>{};
-    for (final s in stmt.statements) {
-      if (s is VariableDeclarationStatement) {
-        final decl = s.variables;
-        for (final v in decl.variables) {
-          final name = v.name.lexeme;
-          if (name.startsWith('__')) {
-            throw LoweringError(
-              'Local name "$name" is reserved: names beginning with "__" are '
-              'used internally by the lowerer. Pick a different name.',
-              v,
-            );
-          }
-          bindings[name] =
-              decl.isFinal ? BindingKind.finalBinding : BindingKind.varBinding;
-        }
-      }
-    }
-    pushScope(bindings);
-    try {
-      final lowered = stmt.statements.map(lowerStatement).toList();
-      return BlockNode(statements: lowered);
-    } finally {
-      popScope();
-    }
+    return _lowerGeneralBlock(stmt.statements);
   }
   if (stmt is VariableDeclarationStatement) {
     return _lowerVarDeclStatement(stmt);
   }
   if (stmt is ExpressionStatement) {
     return _lowerExpression(stmt.expression);
+  }
+  if (stmt is LabeledStatement) {
+    final labelName = stmt.labels.isNotEmpty
+        ? stmt.labels.first.name.lexeme
+        : '<unknown>';
+    throw LoweringError(
+      'Labeled statements are not supported in @Screen bodies. '
+      'Remove the label "$labelName".',
+      stmt,
+    );
   }
   throw LoweringError(
     'Unsupported statement: ${stmt.runtimeType}',

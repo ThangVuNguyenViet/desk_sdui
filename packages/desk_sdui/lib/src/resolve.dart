@@ -69,9 +69,209 @@ Widget resolveNode(
         'LiteralNode at widget position holds non-widget $value',
       );
 
+    case BlockNode():
+      // Execute the block's statements over a cell-backed copy of `input`
+      // until a ReturnNode produces a widget IrNode, then recurse into
+      // resolveNode on that IR. The runtime uses `executeStatement` for
+      // side-effecting statements (LetStatementNode, AssignNode-as-stmt,
+      // IfStatementNode, etc.) and intercepts the terminating `FlowReturn`.
+      return _resolveBlockAtWidgetPosition(context, node, input, runtime);
+
     default:
       throw StateError('resolveNode: $node not valid at widget position');
   }
+}
+
+/// Resolves a [BlockNode] root by running [executeStatement] until a
+/// [FlowReturn] is produced; the returned value is expected to be an
+/// [IrNode] (the widget IR from a `return <widget>;` statement) which is
+/// then resolved as a widget via [resolveNode].
+///
+/// Special cases:
+/// - [FlowNormal] (fell off the end without returning) → StateError.
+/// - [FlowBreak] / [FlowContinue] at the root → StateError.
+/// - [FlowReturn] with a non-IrNode payload → StateError.
+///
+/// The block's return-expression is NOT evaluated as a value (it's a widget
+/// constructor IrNode); instead we recurse via [resolveNode] on the raw IR.
+/// This requires special handling: we walk statements directly here rather
+/// than calling the generic [executeStatement] (which would try to
+/// evaluate the return-value IR as an expression). We delegate to
+/// [executeStatement] for non-ReturnNode statements so all the
+/// scope/control-flow semantics live in one place.
+Widget _resolveBlockAtWidgetPosition(
+  BuildContext context,
+  BlockNode node,
+  Map<String, Object?> input,
+  Runtime runtime,
+) {
+  // Cell-backed shallow-copy of input, scoped to this block.
+  final env = toEnv(input);
+  for (final stmt in node.statements) {
+    if (stmt is ReturnNode) {
+      final value = stmt.value;
+      if (value == null) {
+        throw StateError(
+          'BlockNode at widget position: bare `return;` not allowed — '
+          'every screen path must `return <widget>;`',
+        );
+      }
+      // Render the returned widget IR using the current env's value map.
+      return resolveNode(context, value, _envToInput(env), runtime);
+    }
+    if (stmt is BreakNode) {
+      throw StateError(
+        'BlockNode at widget position: `break` at screen root is illegal.',
+      );
+    }
+    if (stmt is ContinueNode) {
+      throw StateError(
+        'BlockNode at widget position: `continue` at screen root is illegal.',
+      );
+    }
+    if (stmt is IfStatementNode) {
+      // If-statement at widget position: an early-return branch must yield a
+      // widget; the falling-through branch continues the block.
+      final maybe = _resolveIfAtWidgetPosition(context, stmt, env, runtime);
+      if (maybe != null) return maybe;
+      continue;
+    }
+    // Side-effecting statement (LetStatementNode, AssignNode-as-statement,
+    // nested BlockNode, etc.): delegate to executeStatement and observe its
+    // control-flow signal.
+    final flow = executeStatement(stmt, env, runtime);
+    switch (flow) {
+      case FlowNormal():
+        continue;
+      case FlowReturn(:final value):
+        if (value is! IrNode) {
+          throw StateError(
+            'BlockNode at widget position: return value must be a widget '
+            'IrNode (got ${value.runtimeType}).',
+          );
+        }
+        return resolveNode(context, value, _envToInput(env), runtime);
+      case FlowBreak():
+        throw StateError(
+          'BlockNode at widget position: `break` at screen root is illegal.',
+        );
+      case FlowContinue():
+        throw StateError(
+          'BlockNode at widget position: `continue` at screen root is illegal.',
+        );
+    }
+  }
+  throw StateError(
+    'BlockNode at widget position fell through without a return — '
+    'every code path must `return <widget>;`',
+  );
+}
+
+/// Handles an [IfStatementNode] at widget position. If a branch terminates
+/// with a `return <widget>;`, returns the resolved widget. Otherwise returns
+/// null (the if-statement was a no-op for widget production; the enclosing
+/// block continues to the next statement).
+Widget? _resolveIfAtWidgetPosition(
+  BuildContext context,
+  IfStatementNode node,
+  Map<String, Cell> env,
+  Runtime runtime,
+) {
+  final c = evalExpressionWithEnv(node.cond, env, runtime);
+  final branch = (c == true) ? node.then : node.else_;
+  if (branch == null) return null;
+  return _resolveStatementBranchAtWidgetPosition(context, branch, env, runtime);
+}
+
+/// Resolves a statement-branch (a `then`/`else_` body of an [IfStatementNode])
+/// that *may* return a widget. Returns the widget if a `return <widget>;` is
+/// hit; returns null if the branch fell through normally.
+Widget? _resolveStatementBranchAtWidgetPosition(
+  BuildContext context,
+  IrNode branch,
+  Map<String, Cell> env,
+  Runtime runtime,
+) {
+  if (branch is ReturnNode) {
+    final value = branch.value;
+    if (value == null) {
+      throw StateError(
+        'BlockNode at widget position: bare `return;` not allowed — '
+        'every screen path must `return <widget>;`',
+      );
+    }
+    return resolveNode(context, value, _envToInput(env), runtime);
+  }
+  if (branch is BlockNode) {
+    // Walk the nested block with a fresh scoped env clone.
+    final scoped = Map<String, Cell>.of(env);
+    for (final s in branch.statements) {
+      if (s is ReturnNode) {
+        final value = s.value;
+        if (value == null) {
+          throw StateError(
+            'BlockNode at widget position: bare `return;` not allowed.',
+          );
+        }
+        return resolveNode(context, value, _envToInput(scoped), runtime);
+      }
+      if (s is IfStatementNode) {
+        final maybe = _resolveIfAtWidgetPosition(context, s, scoped, runtime);
+        if (maybe != null) return maybe;
+        continue;
+      }
+      if (s is BreakNode || s is ContinueNode) {
+        throw StateError(
+          'BlockNode at widget position: `break`/`continue` at screen root is illegal.',
+        );
+      }
+      final flow = executeStatement(s, scoped, runtime);
+      switch (flow) {
+        case FlowNormal():
+          continue;
+        case FlowReturn(:final value):
+          if (value is! IrNode) {
+            throw StateError(
+              'BlockNode at widget position: return value must be a widget '
+              'IrNode (got ${value.runtimeType}).',
+            );
+          }
+          return resolveNode(context, value, _envToInput(scoped), runtime);
+        case FlowBreak():
+        case FlowContinue():
+          throw StateError(
+            'BlockNode at widget position: `break`/`continue` at screen root is illegal.',
+          );
+      }
+    }
+    return null; // fell through
+  }
+  // Single-statement branch (e.g. `if (cond) someCall();`): delegate to
+  // executeStatement; only FlowReturn produces a widget here.
+  final flow = executeStatement(branch, env, runtime);
+  switch (flow) {
+    case FlowNormal():
+      return null;
+    case FlowReturn(:final value):
+      if (value is! IrNode) {
+        throw StateError(
+          'BlockNode at widget position: return value must be a widget '
+          'IrNode (got ${value.runtimeType}).',
+        );
+      }
+      return resolveNode(context, value, _envToInput(env), runtime);
+    case FlowBreak():
+    case FlowContinue():
+      throw StateError(
+        'BlockNode at widget position: `break`/`continue` at screen root is illegal.',
+      );
+  }
+}
+
+/// Converts a cell-backed env to a value map for callers that take
+/// `Map<String, Object?>` inputs (e.g. [resolveNode]).
+Map<String, Object?> _envToInput(Map<String, Cell> env) {
+  return {for (final e in env.entries) e.key: e.value.value};
 }
 
 /// Resolves a non-widget argument (any IrNode used as a property value).

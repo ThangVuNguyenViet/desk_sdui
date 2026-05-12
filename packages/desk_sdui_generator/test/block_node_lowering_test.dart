@@ -87,9 +87,15 @@ Widget s() {
       expect(ret.value, isNotNull);
     });
 
-    // Test 2: bare `return;` (no value) lowers to ReturnNode(value: null).
-    test('return; (no value) lowers to ReturnNode with null value', () async {
-      // A non-Widget returning function to get a bare return.
+    // Test 2: a multi-statement screen body with early-return inside an if
+    // branch lowers to BlockNode([IfStatementNode, ReturnNode]).
+    //
+    // NOTE: bare `return;` (no value) is unreachable from @Screen bodies
+    // because every screen path must return a Widget. It will be exercised
+    // when Plan #12 (payload functions with imperative bodies) lands.
+    // The `value: null` constructor and FlowReturn(null) shape are covered
+    // directly in block_node_eval_test.dart by constructing IR nodes.
+    test('if-with-return + trailing return → BlockNode([If, Return])', () async {
       final fnDecl = await _resolveScreen('''
 import 'package:flutter/material.dart';
 
@@ -107,6 +113,8 @@ Widget s() {
       expect(block.statements, hasLength(2));
       expect(block.statements[0], isA<IfStatementNode>());
       expect(block.statements[1], isA<ReturnNode>());
+      // Trailing return has a non-null value.
+      expect((block.statements[1] as ReturnNode).value, isNotNull);
     });
 
     // Test 3: labeled break should throw a LoweringError.
@@ -127,22 +135,29 @@ Widget s() {
       );
     });
 
-    // Test 4: labeled statements (LabeledStatement node wrapping a block) are
-    // not supported and result in a LoweringError.
-    test('labeled statements are rejected with LoweringError', () async {
-      // `lbl: { ... }` parses as a LabeledStatement wrapping a block — the
-      // lowerer throws because LabeledStatement is unsupported.
+    // Test 4: labeled statements are rejected with a user-actionable
+    // LoweringError naming the offending label.
+    test('labeled statements rejected with named LoweringError', () async {
       final fnDecl = await _resolveScreen('''
 import 'package:flutter/material.dart';
 
 Widget s() {
-  lbl: {}
+  myLabel: {}
   return const Text('x');
 }
 ''');
       expect(
         () => _lower(fnDecl),
-        throwsA(isA<LoweringError>()),
+        throwsA(
+          isA<LoweringError>().having(
+            (e) => e.message,
+            'message',
+            allOf(
+              contains('Labeled statements are not supported'),
+              contains('myLabel'),
+            ),
+          ),
+        ),
       );
     });
 

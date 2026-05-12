@@ -892,7 +892,16 @@ final class IfStatementNode extends StatementNode {
     this.else_,
   });
   final IrNode cond;
+
+  /// The then-branch. Typed as [IrNode] (NOT [BlockNode]) because bare
+  /// `if (x) return y;` (no braces) lowers to a non-Block branch — typically
+  /// a single [ReturnNode] or expression-statement. Curly-brace bodies still
+  /// nest a [BlockNode] here.
   final IrNode then;
+
+  /// The else-branch. Same typing rationale as [then]: bare `else return y;`
+  /// lowers to a non-Block branch; `else { ... }` nests a [BlockNode];
+  /// `else if (...)` nests another [IfStatementNode].
   final IrNode? else_;
 
   @override

@@ -163,9 +163,12 @@ void main() {
   });
 
   // ---------------------------------------------------------------------------
-  // 4. Outer step after try sees only pre-try env (try's bindings discarded).
+  // 4. Outer step after try sees the try-branch env (try's bindings propagate).
+  //    Per plan: on success the resolver returns the try-branch env to the
+  //    outer sequence, so bindResult from inside the try IS visible to later
+  //    steps. Catch bindings do NOT propagate.
   // ---------------------------------------------------------------------------
-  testWidgets('outer steps after try see pre-try env', (tester) async {
+  testWidgets('outer steps after try see try-branch env', (tester) async {
     Object? afterValue;
     final rt = Runtime();
     rt.registerFunction('getVal', (args) => Future<Object?>.value('try_result'));
@@ -175,12 +178,7 @@ void main() {
     });
 
     // try { final x = await getVal(); } catch { }
-    // readEnv(x) — x should NOT be visible here per Dart scoping semantics
-    // (the plan says try's env is returned on success, which contradicts
-    //  strict Dart scoping; here we test the plan's stated behaviour:
-    //  try's env is returned to the outer sequence).
-    // Per the plan: "on success, the try's local-env extensions (bindResult
-    // from steps inside the try) are discarded after the try-block"
+    // readEnv(x) — x IS visible here because the try's env is propagated.
     const node = ActionSequenceNode(
       steps: [
         TryStepNode(
@@ -207,12 +205,10 @@ void main() {
 
     final captured = await resolveAsHandler(tester, node, rt, const {});
     final closure = captured as Future<void> Function();
-    // 'x' was bound inside the TryStepNode's try env; after the try-step
-    // the outer env is restored to the pre-try env (per the plan's scoping).
-    // 'x' should NOT be in the env for the outer step, so RefNode(['x'])
-    // resolves to null (missing key → null in the ref resolver).
     await closure();
-    expect(afterValue, isNull);
+    // 'x' was bound in the try-branch env; per the resolver implementation
+    // that env is returned to the outer sequence on success.
+    expect(afterValue, 'try_result');
   });
 
   // ---------------------------------------------------------------------------

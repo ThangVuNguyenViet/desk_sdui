@@ -233,6 +233,58 @@ class _Cov {}
     );
 
     test(
+      '@Register([Cue]) → emits reachability-driven import for package:cue',
+      () async {
+        const source = '''
+import 'package:cue/cue.dart';
+import 'package:desk_sdui_annotation/desk_sdui_annotation.dart';
+
+@Register([Cue])
+class _Cov {}
+''';
+
+        final result = await _resolveSource(source);
+        final libReader = LibraryReader(result.libraryElement);
+        final checker = TypeChecker.typeNamed(Register, inPackage: 'desk_sdui_annotation');
+
+        final annotated = libReader.annotatedWith(checker).first;
+        final el = annotated.element as ClassElement;
+        final dartObj = annotated.annotation.objectValue;
+        final catalogTypes = collectTypesFromAnnotation(el, dartObj);
+
+        final builder = RegistryBuilder();
+        final output = builder.emitRegistryForTest(
+          screens: [],
+          packageName: 'desk_sdui_demo',
+          catalogTypes: catalogTypes,
+        );
+
+        expect(
+          output,
+          contains("import 'package:cue/cue.dart';"),
+          reason: 'Cue constructor references cue types → must import package:cue',
+        );
+      },
+    );
+
+    test(
+      'no catalog → no package:cue import emitted',
+      () {
+        final builder = RegistryBuilder();
+        final output = builder.emitRegistryForTest(
+          screens: [],
+          packageName: 'desk_sdui_demo',
+        );
+
+        expect(
+          output,
+          isNot(contains("import 'package:cue/cue.dart';")),
+          reason: 'Empty catalog → no extra third-party imports',
+        );
+      },
+    );
+
+    test(
       'catalog + screen → both screen registrations and catalog block present',
       () async {
         const source = '''

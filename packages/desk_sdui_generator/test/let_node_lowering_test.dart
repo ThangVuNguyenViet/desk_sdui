@@ -116,7 +116,9 @@ Widget s() {
       expect((inner.value as RefNode).path, ['a']);
     });
 
-    test('reject var t = ...', () async {
+    test('accept var t = ... (mutable local; feature #8)', () async {
+      // var-declared locals are now accepted (Feature 8: mutable-env-assign).
+      // They lower to LetNode just like final, but are writable.
       final fnDecl = await _resolveScreen('''
 import 'package:flutter/material.dart';
 
@@ -125,16 +127,10 @@ Widget s() {
   return Text('hi');
 }
 ''');
-      expect(
-        () => _lower(fnDecl),
-        throwsA(
-          isA<LoweringError>().having(
-            (e) => e.message,
-            'message',
-            contains("must be 'final'"),
-          ),
-        ),
-      );
+      final result = _lower(fnDecl);
+      expect(result.root, isA<LetNode>());
+      final let = result.root as LetNode;
+      expect(let.name, 't');
     });
 
     test('reject uninitialized final', () async {
@@ -179,7 +175,11 @@ Widget s() {
       );
     });
 
-    test('reject non-declaration statement before return', () async {
+    test('reject non-assignment expression statement before return', () async {
+      // ExpressionStatement is now accepted, but only assignment / increment
+      // shapes are lowerable. A bare function call (MethodInvocation with no
+      // receiver) lowers via the normal expression path; since it has no
+      // matching IR form it surfaces as "unsupported expression".
       final fnDecl = await _resolveScreen('''
 import 'package:flutter/material.dart';
 
@@ -194,7 +194,7 @@ Widget s() {
           isA<LoweringError>().having(
             (e) => e.message,
             'message',
-            contains('may only contain final locals'),
+            contains('unsupported expression'),
           ),
         ),
       );

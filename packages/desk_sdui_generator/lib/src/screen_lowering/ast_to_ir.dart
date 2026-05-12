@@ -121,42 +121,69 @@ IrNode _lowerBlockBody(BlockFunctionBody body, FunctionDeclaration fn) {
       fn,
     );
   }
-  IrNode acc = _lowerExpression(returnStmt.expression!);
-  for (final stmt in stmts.take(stmts.length - 1).toList().reversed) {
-    if (stmt is! VariableDeclarationStatement) {
-      throw LoweringError(
-        '@Screen body may only contain final locals before the return.',
-        fn,
-      );
+  // First pass — collect binding kinds for every declared local so that
+  // [AssignmentExpression] lowering inside initializers can validate writability.
+  // `final x = ...`              → BindingKind.finalBinding
+  // `var x = ...`                → BindingKind.varBinding
+  // `int x = ...` / typed decl   → BindingKind.varBinding (Dart's default mutability)
+  final bindings = <String, BindingKind>{};
+  for (final stmt in stmts.take(stmts.length - 1)) {
+    if (stmt is VariableDeclarationStatement) {
+      final decl = stmt.variables;
+      for (final v in decl.variables) {
+        bindings[v.name.lexeme] =
+            decl.isFinal ? BindingKind.finalBinding : BindingKind.varBinding;
+      }
     }
-    final decl = stmt.variables;
-    if (!decl.isFinal) {
-      throw LoweringError(
-        "@Screen locals must be 'final' (single-assignment). "
-        'Use a registered VM method for mutable state.',
-        fn,
-      );
-    }
-    if (decl.variables.length != 1) {
-      throw LoweringError(
-        '@Screen locals: declare one variable per statement.',
-        fn,
-      );
-    }
-    final v = decl.variables.single;
-    if (v.initializer == null) {
-      throw LoweringError(
-        '@Screen locals must have an initializer.',
-        fn,
-      );
-    }
-    acc = LetNode(
-      name: v.name.lexeme,
-      value: lowerExpression(v.initializer!),
-      body: acc,
-    );
   }
-  return acc;
+
+  pushScope(bindings);
+  try {
+    IrNode acc = _lowerExpression(returnStmt.expression!);
+    for (final stmt in stmts.take(stmts.length - 1).toList().reversed) {
+      if (stmt is VariableDeclarationStatement) {
+        final decl = stmt.variables;
+        if (decl.variables.length != 1) {
+          throw LoweringError(
+            '@Screen locals: declare one variable per statement.',
+            fn,
+          );
+        }
+        final v = decl.variables.single;
+        if (v.initializer == null) {
+          throw LoweringError(
+            '@Screen locals must have an initializer.',
+            fn,
+          );
+        }
+        acc = LetNode(
+          name: v.name.lexeme,
+          value: lowerExpression(v.initializer!),
+          body: acc,
+        );
+        continue;
+      }
+      if (stmt is ExpressionStatement) {
+        // Allow standalone assignment / increment statements: `x = e;`, `x++;`,
+        // `x += e;`. The expression lowerer enforces writability via the
+        // active binding scope. We wrap the resulting AssignNode in a LetNode
+        // shim to sequence it with the rest of the body — using a fresh
+        // throwaway name so the result is discarded (the assignment's side
+        // effect on the mutable cell is what matters).
+        final lowered = lowerExpression(stmt.expression);
+        acc = LetNode(name: '__stmt__', value: lowered, body: acc);
+        continue;
+      }
+      throw LoweringError(
+        '@Screen body: only local declarations and assignment statements '
+        'are supported before the return. Got ${stmt.runtimeType}.',
+        fn,
+      );
+    }
+    return acc;
+  } finally {
+    popScope();
+  }
 }
 
 void _collectRefs(

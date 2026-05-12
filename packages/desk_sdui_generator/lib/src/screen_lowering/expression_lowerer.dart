@@ -4,6 +4,37 @@ import 'package:desk_sdui_annotation/desk_sdui_annotation.dart';
 import '../diagnostics.dart';
 import 'ast_to_ir.dart' show lowerExpressionOrWidget;
 
+// ---------------------------------------------------------------------------
+// Binding-kind tracking for block bodies
+// ---------------------------------------------------------------------------
+
+enum BindingKind { finalBinding, varBinding }
+
+/// Scope stack for the current @Screen block body. Each frame maps a variable
+/// name to its [BindingKind]. Pushed by [_lowerBlockBody] in ast_to_ir.dart
+/// before lowering the body, cleared afterwards.
+///
+/// Only one frame is active at a time (BlockNode / nested scopes are Feature 9).
+final List<Map<String, BindingKind>> _scopeStack = [];
+
+/// Push a new scope frame. Called before entering a block body.
+void pushScope(Map<String, BindingKind> bindings) => _scopeStack.add(bindings);
+
+/// Pop the innermost scope frame. Called after leaving a block body.
+void popScope() {
+  if (_scopeStack.isNotEmpty) _scopeStack.removeLast();
+}
+
+/// Look up the [BindingKind] for [name] by walking the scope stack outwards.
+/// Returns null if [name] has no visible binding.
+BindingKind? lookupBinding(String name) {
+  for (var i = _scopeStack.length - 1; i >= 0; i--) {
+    final kind = _scopeStack[i][name];
+    if (kind != null) return kind;
+  }
+  return null;
+}
+
 IrNode lowerExpression(Expression expr) {
   if (expr is ParenthesizedExpression) {
     return lowerExpression(expr.expression);
@@ -169,6 +200,19 @@ IrNode lowerExpression(Expression expr) {
 
   if (expr is CascadeExpression) {
     return _lowerCascade(expr);
+  }
+
+  if (expr is AssignmentExpression) {
+    return _lowerAssignment(expr);
+  }
+
+  if (expr is PostfixExpression) {
+    return _lowerPostfix(expr);
+  }
+
+  if (expr is PrefixExpression &&
+      (expr.operator.lexeme == '++' || expr.operator.lexeme == '--')) {
+    return _lowerPrefix(expr);
   }
 
   throw LoweringError('unsupported expression: ${expr.runtimeType}', expr);
@@ -428,6 +472,166 @@ IrNode _lowerCascadeSection(Expression section, RefNode receiver, AstNode origin
     'Unsupported cascade section: ${section.runtimeType}. '
     'Only method invocations (..a()) and setter assignments (..foo = x) are supported.',
     origin,
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Assignment expression lowering
+// ---------------------------------------------------------------------------
+
+IrNode _lowerAssignment(AssignmentExpression expr) {
+  final lhs = expr.leftHandSide;
+
+  // Only simple-identifier LHS is supported for variable assignment.
+  if (lhs is! SimpleIdentifier) {
+    // Cascade-style or property assignment — handled by Cascades feature
+    // (the cascade lowerer handles ..foo = x via _lowerCascadeSection).
+    throw LoweringError(
+      'Only simple-identifier assignments (`x = expr`) are supported in screen bodies. '
+      'Field/property assignment requires Cascades (Feature 7).',
+      expr,
+    );
+  }
+
+  final name = lhs.name;
+  final op = expr.operator.lexeme;
+
+  // --- compound assignments: x += e  →  AssignNode(x, ArithOpNode(+, x, e)) ---
+  if (op != '=') {
+    final ref = RefNode([name]);
+    final rhs = lowerExpression(expr.rightHandSide);
+
+    IrNode compoundValue;
+    switch (op) {
+      case '+=':
+        compoundValue = ArithOpNode(op: ArithOp.add, left: ref, right: rhs);
+      case '-=':
+        compoundValue = ArithOpNode(op: ArithOp.sub, left: ref, right: rhs);
+      case '*=':
+        compoundValue = ArithOpNode(op: ArithOp.mul, left: ref, right: rhs);
+      case '/=':
+        compoundValue = ArithOpNode(op: ArithOp.div, left: ref, right: rhs);
+      case '~/=':
+        compoundValue = ArithOpNode(op: ArithOp.intDiv, left: ref, right: rhs);
+      case '%=':
+        compoundValue = ArithOpNode(op: ArithOp.mod, left: ref, right: rhs);
+      default:
+        throw LoweringError(
+          'Unsupported compound assignment operator "$op". '
+          'Supported: =, +=, -=, *=, /=, ~/=, %=.',
+          expr,
+        );
+    }
+    return _buildAssignNode(name, compoundValue, expr);
+  }
+
+  // --- simple assignment: x = e ---
+  return _buildAssignNode(name, lowerExpression(expr.rightHandSide), expr);
+}
+
+/// Validates the binding kind and constructs an [AssignNode].
+IrNode _buildAssignNode(String name, IrNode value, AstNode origin) {
+  final kind = lookupBinding(name);
+  if (kind == null) {
+    throw LoweringError(
+      'Assignment to "$name": no local binding visible at this site. '
+      'Was the variable declared in an outer scope that does not reach here?',
+      origin,
+    );
+  }
+  if (kind == BindingKind.finalBinding) {
+    throw LoweringError(
+      'Cannot assign to final local "$name". Declare it with `var` or an explicit type.',
+      origin,
+    );
+  }
+  return AssignNode(name: name, value: value);
+}
+
+// ---------------------------------------------------------------------------
+// Postfix increment/decrement: x++, x--
+// ---------------------------------------------------------------------------
+
+IrNode _lowerPostfix(PostfixExpression expr) {
+  final op = expr.operator.lexeme;
+  if (op != '++' && op != '--') {
+    throw LoweringError(
+      'Unsupported postfix operator "$op".',
+      expr,
+    );
+  }
+
+  final operand = expr.operand;
+
+  // Post-increment as expression (result consumed): unsupported.
+  // Check if the parent is an ExpressionStatement — if not, it's expression form.
+  final parent = expr.parent;
+  if (parent is! ExpressionStatement) {
+    throw LoweringError(
+      'Pre/post increment as an expression is not supported. '
+      'Use `x${op[0]}${op[0]};` as a statement, or '
+      '`x = x ${op == '++' ? '+' : '-'} 1; final t = x ${op == '++' ? '-' : '+'} 1;` '
+      'to capture the pre-value.',
+      expr,
+    );
+  }
+
+  if (operand is! SimpleIdentifier) {
+    throw LoweringError(
+      'Only simple-identifier operands are supported for $op (got ${operand.runtimeType}).',
+      expr,
+    );
+  }
+
+  final name = operand.name;
+  final delta = op == '++' ? 1 : -1;
+  return _buildAssignNode(
+    name,
+    ArithOpNode(
+      op: op == '++' ? ArithOp.add : ArithOp.sub,
+      left: RefNode([name]),
+      right: LiteralNode(delta),
+    ),
+    expr,
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Prefix increment/decrement: ++x, --x
+// ---------------------------------------------------------------------------
+
+IrNode _lowerPrefix(PrefixExpression expr) {
+  final op = expr.operator.lexeme;
+  final operand = expr.operand;
+
+  // Prefix as expression (result consumed): unsupported.
+  final parent = expr.parent;
+  if (parent is! ExpressionStatement) {
+    throw LoweringError(
+      'Pre/post increment as an expression is not supported. '
+      'Use `${op}x;` as a statement, or '
+      '`x = x ${op == '++' ? '+' : '-'} 1; final t = x;` '
+      'to capture the new value.',
+      expr,
+    );
+  }
+
+  if (operand is! SimpleIdentifier) {
+    throw LoweringError(
+      'Only simple-identifier operands are supported for $op (got ${operand.runtimeType}).',
+      expr,
+    );
+  }
+
+  final name = operand.name;
+  return _buildAssignNode(
+    name,
+    ArithOpNode(
+      op: op == '++' ? ArithOp.add : ArithOp.sub,
+      left: RefNode([name]),
+      right: const LiteralNode(1),
+    ),
+    expr,
   );
 }
 

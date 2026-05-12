@@ -6,6 +6,7 @@ import 'package:build/build.dart';
 import 'package:glob/glob.dart';
 import 'package:source_gen/source_gen.dart';
 import 'package:desk_sdui_annotation/desk_sdui_annotation.dart';
+import '../import_emitter.dart';
 import '../registration_emitter.dart';
 import '../type_collector.dart';
 import '../screen_lowering/ast_to_ir.dart';
@@ -344,12 +345,11 @@ class RegistryBuilder implements Builder {
     final bindingImportLines = bindingImports.entries.map((e) {
       final symbols = e.value.join(', ');
       return "import 'package:$packageName/${e.key}' show $symbols;";
-    });
+    }).toList();
     final regImportLines = regImports.entries.map((e) {
       final symbols = e.value.join(', ');
       return "import 'package:$packageName/${e.key}' show $symbols;";
-    });
-    final importLines = [...bindingImportLines, ...regImportLines].join('\n');
+    }).toList();
 
     final registrations = screens.map((s) {
       return '  rt.registerScreen(${s.bindingSymbol});\n  ${s.registrationFn}(rt);';
@@ -358,15 +358,42 @@ class RegistryBuilder implements Builder {
     // Build optional registerSduiCatalog block.
     final catalogBlock = _emitCatalogBlock(catalogTypes);
     final catalogCall = catalogBlock.isNotEmpty ? '\n  registerSduiCatalog(rt);' : '';
-    final flutterImport = catalogBlock.isNotEmpty
-        ? "import 'package:flutter/gestures.dart';\nimport 'package:flutter/material.dart';\nimport 'package:flutter/rendering.dart';\n"
-        : '';
+
+    // Compute reachability-driven imports for the catalog.
+    final catalogImportLines = <String>[];
+    if (catalogBlock.isNotEmpty && catalogTypes != null) {
+      catalogImportLines.addAll(
+        emitImportsForCollectedTypes(
+          collected: catalogTypes,
+          packageName: packageName,
+          excludedPackages: const {'desk_sdui', 'flutter', 'vector_math'},
+        ),
+      );
+    }
+
+    // Assemble the full import block.
+    final baselineImports = <String>[
+      "import 'package:desk_sdui/desk_sdui.dart';",
+      if (catalogBlock.isNotEmpty) ...[
+        "import 'package:flutter/gestures.dart';",
+        "import 'package:flutter/material.dart';",
+        "import 'package:flutter/rendering.dart';",
+      ],
+    ];
+
+    final allImportLines = <String>[
+      ...baselineImports,
+      ...catalogImportLines,
+      ...bindingImportLines,
+      ...regImportLines,
+    ];
+
+    final importBlock = allImportLines.join('\n');
 
     return '''
 // GENERATED CODE — DO NOT MODIFY BY HAND
 // ignore_for_file: cast_nullable_to_non_nullable, cascade_invocations, prefer_const_constructors, lines_longer_than_80_chars, unnecessary_const, unused_import, directives_ordering, always_use_package_imports
-import 'package:desk_sdui/desk_sdui.dart';
-$flutterImport$importLines
+$importBlock
 $catalogBlock
 void registerAllScreens(Runtime rt) {
   registerCoreAccessors(rt);

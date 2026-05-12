@@ -6,6 +6,7 @@ ScreenBinding get stateful_counter_demoBinding => ScreenBinding(
     name: 'stateful_counter_demo',
     version: 1,
     root: IrStatefulNode(
+      id: 'stateful_counter_demo',
       fields: [
         IrStatefulFieldNode(
           name: 'count',

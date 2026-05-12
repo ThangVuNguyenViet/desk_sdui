@@ -197,6 +197,7 @@ class JsonIrDecoder {
           body: _decodeNode(map['body']! as Map<String, Object?>),
         ),
       'stateful' => IrStatefulNode(
+          id: map['id'] as String?,
           fields: ((map['fields']! as List).cast<Map<String, Object?>>())
               .map<IrStatefulFieldNode>(_decodeStatefulField)
               .toList(),

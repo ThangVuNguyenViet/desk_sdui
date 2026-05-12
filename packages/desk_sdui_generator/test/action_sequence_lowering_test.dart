@@ -75,14 +75,18 @@ void main() {
 
   // ---------------------------------------------------------------------------
   // 4. Sync block body (`() { vm.bump(); }`) is NOT lowered to ActionSequenceNode
-  //    — the existing ExpressionFunctionBody path should throw (sync blocks
-  //    are unsupported by the current closure lowerer unless expression-bodied).
+  //    (ActionSequenceNode is the async-only path). Per Plan #11 the closure
+  //    lowerer now routes sync block bodies to lowerLambda → LambdaNode with
+  //    a BlockNode body, not to ActionSequenceNode.
   // ---------------------------------------------------------------------------
-  test('sync block body → LoweringError (not ActionSequenceNode)', () {
-    expect(
-      () => lower('() { vm.bump(); }'),
-      throwsA(isA<LoweringError>()),
-    );
+  test('sync block body → LambdaNode with BlockNode body, not ActionSequenceNode',
+      () {
+    final ir = lower('() { vm.bump(); }');
+    expect(ir, isA<LambdaNode>());
+    expect(ir, isNot(isA<ActionSequenceNode>()));
+    final lambda = ir as LambdaNode;
+    expect(lambda.isAsync, isFalse);
+    expect(lambda.body, isA<BlockNode>());
   });
 
   // ---------------------------------------------------------------------------

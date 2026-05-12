@@ -350,7 +350,7 @@ IrNode reactiveHoist(IrNode node) {
       }
       final (body, bodyPaths) = _hoist(node.body);
       return (
-        IrStatefulNode(fields: newFields, body: body),
+        IrStatefulNode(id: node.id, fields: newFields, body: body),
         bodyPaths,
       );
     case IrStatefulFieldNode():

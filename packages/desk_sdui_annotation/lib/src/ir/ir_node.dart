@@ -1067,20 +1067,36 @@ final class ImperativeForNode extends StatementNode {
 ///
 /// Only `var`-declared root-level locals in a `@Screen` body produce an
 /// [IrStatefulNode]; `final` locals lower to [LetNode] (per-build derivation).
+///
+/// [id] is a stable, codegen-emitted identifier (per-screen unique). The
+/// runtime host uses it as the `ValueKey` for the State<> so Flutter
+/// element-reuse assigns cell state by IR identity, not by sibling position.
+/// Without a stable key, two sibling stateful subscreens (or a conditional
+/// swap pattern via AnimatedSwitcher / `if`) would mis-assign state. `null`
+/// is tolerated by the runtime (it falls back to `ObjectKey(node)` for
+/// reference identity), but every IR produced by the lowerer should carry
+/// one.
 final class IrStatefulNode extends IrNode {
-  const IrStatefulNode({required this.fields, required this.body});
+  const IrStatefulNode({
+    required this.fields,
+    required this.body,
+    this.id,
+  });
   final List<IrStatefulFieldNode> fields;
   final IrNode body;
+  final String? id;
 
   @override
   bool operator ==(Object other) =>
       other is IrStatefulNode &&
+      other.id == id &&
       _listEquals(other.fields, fields) &&
       other.body == body;
   @override
-  int get hashCode => Object.hash(Object.hashAll(fields), body);
+  int get hashCode => Object.hash(id, Object.hashAll(fields), body);
   @override
-  String toString() => 'IrStatefulNode(${fields.length} fields)';
+  String toString() =>
+      'IrStatefulNode(${id ?? "<no-id>"}, ${fields.length} fields)';
 }
 
 /// One field in an [IrStatefulNode]. The [initializer] is evaluated once in

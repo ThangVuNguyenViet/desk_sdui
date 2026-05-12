@@ -224,6 +224,7 @@ IrNode _demoteAllConst(IrNode node) {
       );
     case IrStatefulNode():
       return IrStatefulNode(
+        id: node.id,
         fields: node.fields
             .map((f) => IrStatefulFieldNode(
                   name: f.name,

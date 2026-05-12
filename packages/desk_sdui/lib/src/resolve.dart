@@ -6,13 +6,6 @@ import 'expression_eval.dart';
 import 'ref_resolver.dart';
 import 'runtime.dart';
 
-/// Reserved input key holding the `setState` callback installed by an
-/// enclosing [_StatefulIrHost]. Event handlers that mutate cells in the
-/// screen-level state should invoke this after running, so Flutter schedules
-/// a rebuild. Stateless screens have no such key (the wrapper is absent and
-/// mutations have nothing to rebuild against).
-const String kStatefulSetStateKey = '__setState__';
-
 /// Resolves an IR node to a Widget. May recurse.
 Widget resolveNode(
   BuildContext context,
@@ -22,7 +15,17 @@ Widget resolveNode(
 ) {
   switch (node) {
     case IrStatefulNode():
+      // Stable key so Flutter element-reuse assigns the State<> by IR
+      // identity (the lowerer-emitted `id`, typically the screen name)
+      // rather than by sibling position. Without this, two stateful sibling
+      // subscreens — or an AnimatedSwitcher / conditional that swaps two
+      // stateful subtrees at the same position — would mis-assign cell
+      // state. Falls back to `ObjectKey(node)` when the IR carries no `id`
+      // (legacy/hand-written IR); reference identity is still correct,
+      // it just isn't JSON-codec stable.
+      final key = node.id != null ? ValueKey<String>(node.id!) : ObjectKey(node);
       return _StatefulIrHost(
+        key: key,
         node: node,
         input: input,
         runtime: runtime,
@@ -296,6 +299,12 @@ Object? _resolveArg(
   Runtime runtime,
 ) {
   switch (node) {
+    case IrStatefulNode():
+      // A nested stateful subscreen used as a widget-position child. Route
+      // through resolveNode so the [_StatefulIrHost] keying applies even
+      // here (sibling subscreens via composed `Pair(top: stateful, bottom:
+      // stateful)` etc.).
+      return resolveNode(context, node, input, runtime);
     case LiteralNode(:final value):
       return value;
     case ConstNode(:final value):
@@ -670,6 +679,7 @@ void _installReactiveGetter(
 /// callback installed in the input.
 class _StatefulIrHost extends StatefulWidget {
   const _StatefulIrHost({
+    super.key,
     required this.node,
     required this.input,
     required this.runtime,

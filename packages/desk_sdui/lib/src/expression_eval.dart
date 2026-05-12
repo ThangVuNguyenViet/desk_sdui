@@ -145,7 +145,7 @@ Object? evalExpressionWithEnv(
       // schedules a rebuild.
       final isBlockBody = body is BlockNode;
       void runSetStateHook(Map<String, Cell> e) {
-        final hookCell = e[r'__setState__'];
+        final hookCell = e[kStatefulSetStateKey];
         final hook = hookCell?.value;
         if (hook is void Function()) hook();
       }

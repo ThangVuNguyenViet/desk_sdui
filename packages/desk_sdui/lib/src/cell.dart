@@ -20,6 +20,13 @@ class Cell {
 /// cells survive across resolver invocations (cross-build screen state).
 const String kStateCellsKey = r'__stateCells__';
 
+/// Reserved input-map key holding a `void Function()` installed by the
+/// enclosing `IrStatefulNode` host. Event handlers that mutate persistent
+/// state cells invoke this after running so Flutter schedules a rebuild.
+/// Absent in stateless screens — both the resolver and the lambda evaluator
+/// treat absence as a no-op.
+const String kStatefulSetStateKey = r'__setState__';
+
 /// Converts a public-API `Map<String, Object?>` input map into the internal
 /// cell-backed env. Called once at every resolver entry point.
 ///

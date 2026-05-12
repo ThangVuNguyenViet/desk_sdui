@@ -229,6 +229,7 @@ class JsonIrEncoder {
         },
       IrStatefulNode() => {
           r'$type': 'stateful',
+          if (node.id != null) 'id': node.id,
           'fields': node.fields.map(_encodeNode).toList(),
           'body': _encodeNode(node.body),
         },

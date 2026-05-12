@@ -47,11 +47,18 @@ void main() {
     );
   });
 
-  test('() { var x = 1; return controller.foo(x); } → LoweringError', () {
-    expect(
-      () => lower('() { var x = 1; return controller.foo(x); }'),
-      throwsA(isA<LoweringError>()),
-    );
+  test(
+      '() { var x = 1; return controller.foo(x); } → BlockNode-bodied LambdaNode (Plan #11)',
+      () {
+    // Plan #11: sync block-bodied closures lower to a LambdaNode whose body
+    // is a BlockNode (executed via executeStatement at run time). Previously
+    // they were rejected outright.
+    final ir = lower('() { var x = 1; return controller.foo(x); }')
+        as LambdaNode;
+    expect(ir.isAsync, isFalse);
+    expect(ir.body, isA<BlockNode>());
+    final block = ir.body as BlockNode;
+    expect(block.statements, hasLength(2));
   });
 
   test('(_) => controller.foo() → EventNode, wildcard ignored', () {

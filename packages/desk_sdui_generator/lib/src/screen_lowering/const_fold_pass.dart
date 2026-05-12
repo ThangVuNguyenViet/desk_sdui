@@ -230,6 +230,7 @@ IrNode _foldChildren(IrNode node) {
       );
     case IrStatefulNode():
       return IrStatefulNode(
+        id: node.id,
         fields: node.fields
             .map((f) => IrStatefulFieldNode(
                   name: f.name,

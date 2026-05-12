@@ -50,7 +50,7 @@ ScreenLowerResult lowerScreen(FunctionDeclaration fn, ScreenAnnotationData ann) 
   if (body is ExpressionFunctionBody) {
     rootIr = _lowerExpression(body.expression);
   } else if (body is BlockFunctionBody) {
-    rootIr = _lowerBlockBody(body, fn);
+    rootIr = _lowerBlockBody(body, fn, ann);
   } else {
     throw LoweringError(
       '@Screen body must be a single return statement or expression body; '
@@ -106,7 +106,8 @@ IrNode lowerExpressionOrWidget(Expression expr) {
   }
 }
 
-IrNode _lowerBlockBody(BlockFunctionBody body, FunctionDeclaration fn) {
+IrNode _lowerBlockBody(
+    BlockFunctionBody body, FunctionDeclaration fn, ScreenAnnotationData ann) {
   final stmts = body.block.statements;
   if (stmts.isEmpty) {
     throw LoweringError(
@@ -238,7 +239,16 @@ IrNode _lowerBlockBody(BlockFunctionBody body, FunctionDeclaration fn) {
       );
     }
     if (statefulFields.isNotEmpty) {
-      return IrStatefulNode(fields: statefulFields, body: acc);
+      // ID is the screen name. The lowerer currently emits at most one
+      // IrStatefulNode per screen (the screen-body root); the screen name is
+      // unique within the host app and stable across builds, which is exactly
+      // what `ValueKey` needs to make Flutter assign State<> by IR identity
+      // rather than sibling position.
+      return IrStatefulNode(
+        id: ann.name,
+        fields: statefulFields,
+        body: acc,
+      );
     }
     return acc;
   } finally {

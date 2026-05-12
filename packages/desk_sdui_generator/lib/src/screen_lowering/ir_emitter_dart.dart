@@ -84,6 +84,8 @@ String _emitNode(IrNode node) {
       return 'CoalesceOpNode(left: ${_emitNode(node.left)}, right: ${_emitNode(node.right)})';
     case GetterNode():
       return 'GetterNode(receiver: ${_emitNode(node.receiver)}, name: ${_dartString(node.name)})';
+    case LetNode():
+      return 'LetNode(name: ${_dartString(node.name)}, value: ${_emitNode(node.value)}, body: ${_emitNode(node.body)})';
     case MemberAccessNode():
       return 'MemberAccessNode(target: ${_emitNode(node.target)}, name: ${_dartString(node.name)})';
     case IndexAccessNode():

@@ -60,6 +60,10 @@ Object? evalExpression(
       if (handler != null) return handler(r);
       throw StateError('No getter registered for "$name" (receiver: ${r.runtimeType})');
 
+    case LetNode(:final name, :final value, :final body):
+      final v = evalExpression(value, input, runtime);
+      return evalExpression(body, {...input, name: v}, runtime);
+
     case MemberAccessNode(:final target, :final name):
       final t = evalExpression(target, input, runtime);
       if (t is Map) return t[name];

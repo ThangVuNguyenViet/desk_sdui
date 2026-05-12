@@ -177,12 +177,12 @@ Widget s() {
       expect(arrowOutput, blockOutput);
     });
 
-    test('block-body @Screen with multi-statement rejected', () async {
+    test('block-body @Screen with var local rejected', () async {
       final fnDecl = await _resolveScreen('''
 import 'package:flutter/material.dart';
 
 Widget s() {
-  final x = 1;
+  var x = 1;
   return Text('hi');
 }
 ''');

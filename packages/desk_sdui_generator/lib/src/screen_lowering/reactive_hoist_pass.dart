@@ -389,11 +389,45 @@ IrNode reactiveHoist(IrNode node) {
       );
     case ScreenWithFunctionsNode():
       // Function bodies: no reactive hoisting (they run at call time).
+      // Payload classes: no hoisting (they're metadata).
       // Screen body: hoist normally.
       final (body, bodyPaths) = _hoist(node.screenBody);
       return (
-        ScreenWithFunctionsNode(functions: node.functions, screenBody: body),
+        ScreenWithFunctionsNode(
+          functions: node.functions,
+          classes: node.classes,
+          screenBody: body,
+        ),
         bodyPaths,
       );
+    case PayloadClassNode():
+      // Payload class declarations are metadata; no reactive paths to hoist.
+      return (node, <String>{});
+    case PayloadInstanceCreationNode():
+      // Constructor args may contain reactive references.
+      final allArgPaths = <String>{};
+      final newArgs = <String, IrNode>{};
+      for (final entry in node.args.entries) {
+        final (hoisted, paths) = _hoist(entry.value);
+        newArgs[entry.key] = hoisted;
+        allArgPaths.addAll(paths);
+      }
+      return (
+        PayloadInstanceCreationNode(
+          className: node.className,
+          ctorName: node.ctorName,
+          args: newArgs,
+        ),
+        allArgPaths,
+      );
+    case PayloadFieldDeclNode():
+      // Field initializers run once (not per-frame); no hoisting.
+      return (node, <String>{});
+    case PayloadCtorNode():
+      // Constructor initializers and body run once (not per-frame); no hoisting.
+      return (node, <String>{});
+    case PayloadFieldInitNode():
+      // Field init value; no hoisting.
+      return (node, <String>{});
   }
 }

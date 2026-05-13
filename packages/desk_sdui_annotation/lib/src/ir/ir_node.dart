@@ -1084,6 +1084,162 @@ final class ImperativeForNode extends StatementNode {
   String toString() => 'ImperativeForNode($init; $condition; $update)';
 }
 
+// ────────────────────────── payload class nodes ────────────────────────────
+
+/// A payload-defined class declaration. Contains field declarations, constructors,
+/// and methods.
+final class PayloadClassNode extends IrNode {
+  const PayloadClassNode({
+    required this.name,
+    this.supertypeName,
+    this.mixinNames = const [],
+    required this.fields,
+    required this.ctors,
+    required this.methods,
+  });
+
+  final String name;
+  final String? supertypeName;
+  final List<String> mixinNames;
+  final List<PayloadFieldDeclNode> fields;
+  final List<PayloadCtorNode> ctors;
+  final List<PayloadFunctionNode> methods;
+
+  @override
+  bool operator ==(Object other) =>
+      other is PayloadClassNode &&
+      other.name == name &&
+      other.supertypeName == supertypeName &&
+      _listEquals(other.mixinNames, mixinNames) &&
+      _listEquals(other.fields, fields) &&
+      _listEquals(other.ctors, ctors) &&
+      _listEquals(other.methods, methods);
+
+  @override
+  int get hashCode => Object.hash(
+        name,
+        supertypeName,
+        Object.hashAll(mixinNames),
+        Object.hashAll(fields),
+        Object.hashAll(ctors),
+        Object.hashAll(methods),
+      );
+
+  @override
+  String toString() =>
+      'PayloadClassNode($name, ${fields.length} fields, ${ctors.length} ctors)';
+}
+
+/// A field declaration in a payload class.
+final class PayloadFieldDeclNode extends IrNode {
+  const PayloadFieldDeclNode({
+    required this.name,
+    this.initializer,
+    required this.isFinal,
+  });
+
+  final String name;
+  final IrNode? initializer;
+  final bool isFinal;
+
+  @override
+  bool operator ==(Object other) =>
+      other is PayloadFieldDeclNode &&
+      other.name == name &&
+      other.initializer == initializer &&
+      other.isFinal == isFinal;
+
+  @override
+  int get hashCode => Object.hash(name, initializer, isFinal);
+
+  @override
+  String toString() =>
+      'PayloadFieldDeclNode(${isFinal ? 'final' : 'var'} $name)';
+}
+
+/// A constructor declaration in a payload class.
+final class PayloadCtorNode extends IrNode {
+  const PayloadCtorNode({
+    required this.name,
+    required this.params,
+    required this.fieldInits,
+    this.body,
+  });
+
+  final String name;
+  final List<String> params;
+  final List<PayloadFieldInitNode> fieldInits;
+  final IrNode? body;
+
+  @override
+  bool operator ==(Object other) =>
+      other is PayloadCtorNode &&
+      other.name == name &&
+      _listEquals(other.params, params) &&
+      _listEquals(other.fieldInits, fieldInits) &&
+      other.body == body;
+
+  @override
+  int get hashCode =>
+      Object.hash(name, Object.hashAll(params), Object.hashAll(fieldInits), body);
+
+  @override
+  String toString() => 'PayloadCtorNode($name(${params.join(", ")}))';
+}
+
+/// A field initialization in a constructor (e.g., `this.x = value`).
+final class PayloadFieldInitNode extends IrNode {
+  const PayloadFieldInitNode({
+    required this.fieldName,
+    required this.value,
+  });
+
+  final String fieldName;
+  final IrNode value;
+
+  @override
+  bool operator ==(Object other) =>
+      other is PayloadFieldInitNode &&
+      other.fieldName == fieldName &&
+      other.value == value;
+
+  @override
+  int get hashCode => Object.hash(fieldName, value);
+
+  @override
+  String toString() => 'PayloadFieldInitNode(this.$fieldName = $value)';
+}
+
+/// An instance creation expression for a payload-defined class.
+final class PayloadInstanceCreationNode extends ExpressionNode {
+  const PayloadInstanceCreationNode({
+    required this.className,
+    this.ctorName = '',
+    required this.args,
+  });
+
+  final String className;
+  final String ctorName;
+  final Map<String, IrNode> args;
+
+  @override
+  bool operator ==(Object other) =>
+      other is PayloadInstanceCreationNode &&
+      other.className == className &&
+      other.ctorName == ctorName &&
+      _mapEquals(other.args, args);
+
+  @override
+  int get hashCode =>
+      Object.hash(className, ctorName, Object.hashAll(args.entries));
+
+  @override
+  String toString() {
+    final ctorPart = ctorName.isEmpty ? '' : '.${ctorName}';
+    return 'PayloadInstanceCreationNode($className$ctorPart(...))';
+  }
+}
+
 // ────────────────────────── payload function nodes ──────────────────────────
 
 /// A payload-private function declaration. Lives in a per-file local function
@@ -1131,26 +1287,31 @@ final class PayloadFunctionCallNode extends ExpressionNode {
 
 /// Wraps a screen body alongside its payload function declarations. Used as
 /// the top-level root of a screen [IrTree] when the screen file defines one
-/// or more top-level payload functions. The runtime entry builds a function
-/// table from [functions] before resolving [screenBody].
+/// or more top-level payload functions and classes. The runtime entry builds
+/// a function table and registers payload classes from [functions] and [classes]
+/// before resolving [screenBody].
 final class ScreenWithFunctionsNode extends IrNode {
   const ScreenWithFunctionsNode({
     required this.functions,
     required this.screenBody,
+    this.classes = const [],
   });
   final List<PayloadFunctionNode> functions;
+  final List<PayloadClassNode> classes;
   final IrNode screenBody; // IrStatefulNode, BlockNode, or expression
 
   @override
   bool operator ==(Object other) =>
       other is ScreenWithFunctionsNode &&
       _listEquals(other.functions, functions) &&
+      _listEquals(other.classes, classes) &&
       other.screenBody == screenBody;
   @override
-  int get hashCode => Object.hash(Object.hashAll(functions), screenBody);
+  int get hashCode =>
+      Object.hash(Object.hashAll(functions), Object.hashAll(classes), screenBody);
   @override
   String toString() =>
-      'ScreenWithFunctionsNode(${functions.length} fns, $screenBody)';
+      'ScreenWithFunctionsNode(${functions.length} fns, ${classes.length} classes, $screenBody)';
 }
 
 // ────────────────────────── screen-state nodes ──────────────────────────

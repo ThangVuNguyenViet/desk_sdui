@@ -181,7 +181,29 @@ String _emitNode(IrNode node) {
       return 'PayloadFunctionCallNode(name: ${_dartString(node.name)}, args: [$args])';
     case ScreenWithFunctionsNode():
       final fns = node.functions.map(_emitNode).join(', ');
-      return 'ScreenWithFunctionsNode(functions: [$fns], screenBody: ${_emitNode(node.screenBody)})';
+      final classes = node.classes.map(_emitNode).join(', ');
+      final classesStr = node.classes.isEmpty ? '' : ', classes: [$classes]';
+      return 'ScreenWithFunctionsNode(functions: [$fns]$classesStr, screenBody: ${_emitNode(node.screenBody)})';
+    case PayloadClassNode():
+      final supertypeStr = node.supertypeName != null ? ', supertypeName: ${_dartString(node.supertypeName!)}' : '';
+      final mixins = _dartList(node.mixinNames.map(_dartString));
+      final fields = node.fields.map(_emitNode).join(', ');
+      final ctors = node.ctors.map(_emitNode).join(', ');
+      final methods = node.methods.map(_emitNode).join(', ');
+      return 'PayloadClassNode(name: ${_dartString(node.name)}$supertypeStr, mixinNames: $mixins, fields: [$fields], ctors: [$ctors], methods: [$methods])';
+    case PayloadInstanceCreationNode():
+      final args = _dartMap(node.args.entries.map((e) => MapEntry(_dartString(e.key), _emitNode(e.value))));
+      return 'PayloadInstanceCreationNode(className: ${_dartString(node.className)}, ctorName: ${_dartString(node.ctorName)}, args: $args)';
+    case PayloadFieldDeclNode():
+      final initStr = node.initializer != null ? ', initializer: ${_emitNode(node.initializer!)}' : '';
+      return 'PayloadFieldDeclNode(name: ${_dartString(node.name)}$initStr, isFinal: ${node.isFinal})';
+    case PayloadCtorNode():
+      final params = _dartList(node.params.map(_dartString));
+      final fieldInits = node.fieldInits.map(_emitNode).join(', ');
+      final bodyStr = node.body != null ? ', body: ${_emitNode(node.body!)}' : '';
+      return 'PayloadCtorNode(name: ${_dartString(node.name)}, params: $params, fieldInits: [$fieldInits]$bodyStr)';
+    case PayloadFieldInitNode():
+      return 'PayloadFieldInitNode(fieldName: ${_dartString(node.fieldName)}, value: ${_emitNode(node.value)})';
   }
 }
 
@@ -196,6 +218,9 @@ String _dartValue(Object? v) {
 }
 
 String _dartList(Iterable<String> items) => '[${items.join(', ')}]';
+
+String _dartMap(Iterable<MapEntry<String, String>> entries) =>
+    '{${entries.map((e) => '${e.key}: ${e.value}').join(', ')}}';
 
 String _emitStringList(List<String> items) =>
     '[${items.map(_dartString).join(', ')}]';

@@ -307,6 +307,37 @@ void _walk(IrNode node, _Findings f, {required String? selfName}) {
       // Walk the screen body; individual function bodies are classified
       // separately by the generator with their own selfName.
       _walk(node.screenBody, f, selfName: selfName);
+
+    case PayloadClassNode():
+      // Payload class declarations are walked from the classifier entry
+      // point. The constructor and method bodies are walked separately
+      // by the generator with their own context.
+      break;
+
+    case PayloadInstanceCreationNode():
+      // Constructor call site: walk args for nested cost.
+      for (final arg in node.args.values) {
+        _walk(arg, f, selfName: selfName);
+      }
+
+    case PayloadFieldDeclNode():
+      // Field declarations may have initializers.
+      if (node.initializer != null) {
+        _walk(node.initializer!, f, selfName: selfName);
+      }
+
+    case PayloadCtorNode():
+      // Constructor parameters and body are walked separately.
+      for (final fieldInit in node.fieldInits) {
+        _walk(fieldInit, f, selfName: selfName);
+      }
+      if (node.body != null) {
+        _walk(node.body!, f, selfName: selfName);
+      }
+
+    case PayloadFieldInitNode():
+      // Field initializer value in a constructor.
+      _walk(node.value, f, selfName: selfName);
   }
 }
 

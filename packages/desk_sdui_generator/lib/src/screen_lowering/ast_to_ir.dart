@@ -15,8 +15,14 @@ import 'expression_lowerer.dart';
 /// instead of a registered-method dispatch.
 final Set<String> _payloadFnNames = {};
 
+/// Set of payload class names visible in the current screen file.
+final Set<String> _payloadClassNames = {};
+
 /// Returns true if [name] is a payload function declared in the current file.
 bool isPayloadFn(String name) => _payloadFnNames.contains(name);
+
+/// Returns true if [name] is a payload class declared in the current file.
+bool isPayloadClass(String name) => _payloadClassNames.contains(name);
 
 class ScreenLowerResult {
   ScreenLowerResult({
@@ -460,6 +466,29 @@ void _walkAllowlist(
       // Nested payload-function declarations / screens are not produced by
       // the lowerer inside a function body; nothing to do.
       break;
+    case PayloadClassNode():
+      // Payload class declarations are not produced inside function bodies.
+      break;
+    case PayloadInstanceCreationNode():
+      // Constructor call site: walk args for nested call validation.
+      for (final arg in node.args.values) {
+        _walkAllowlist(arg, payloadFnName: payloadFnName, decl: decl);
+      }
+    case PayloadFieldDeclNode():
+      // Field declarations are metadata; handled at class level.
+      if (node.initializer != null) {
+        _walkAllowlist(node.initializer!, payloadFnName: payloadFnName, decl: decl);
+      }
+    case PayloadCtorNode():
+      // Constructor parameters and body.
+      for (final fieldInit in node.fieldInits) {
+        _walkAllowlist(fieldInit, payloadFnName: payloadFnName, decl: decl);
+      }
+      if (node.body != null) {
+        _walkAllowlist(node.body!, payloadFnName: payloadFnName, decl: decl);
+      }
+    case PayloadFieldInitNode():
+      _walkAllowlist(node.value, payloadFnName: payloadFnName, decl: decl);
     case EventNode():
     case ActionSequenceNode():
     case ActionStepNode():
@@ -1101,5 +1130,29 @@ void _collectRefs(
         _collectRefs(fn.body, widgetRefs, methodRefs, fnRefs);
       }
       _collectRefs(node.screenBody, widgetRefs, methodRefs, fnRefs);
+    case PayloadClassNode():
+      // Payload classes are metadata; no widget/method/fn refs to collect.
+      break;
+    case PayloadInstanceCreationNode():
+      // Constructor args may reference widgets/methods.
+      for (final arg in node.args.values) {
+        _collectRefs(arg, widgetRefs, methodRefs, fnRefs);
+      }
+    case PayloadFieldDeclNode():
+      // Field declarations may have initializers that reference widgets/methods.
+      if (node.initializer != null) {
+        _collectRefs(node.initializer!, widgetRefs, methodRefs, fnRefs);
+      }
+    case PayloadCtorNode():
+      // Constructor body may reference widgets/methods.
+      for (final fieldInit in node.fieldInits) {
+        _collectRefs(fieldInit, widgetRefs, methodRefs, fnRefs);
+      }
+      if (node.body != null) {
+        _collectRefs(node.body!, widgetRefs, methodRefs, fnRefs);
+      }
+    case PayloadFieldInitNode():
+      // Field initializer value.
+      _collectRefs(node.value, widgetRefs, methodRefs, fnRefs);
   }
 }

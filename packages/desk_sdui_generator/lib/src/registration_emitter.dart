@@ -105,6 +105,91 @@ class RegistrationEmitter {
         "(recv, key) => (recv as $typeName)[key as $keyTypeName]);";
   }
 
+  /// Emit a `registerPayloadClass(...)` call for a payload class descriptor.
+  ///
+  /// Generates code that constructs a [PayloadClass] descriptor with all
+  /// fields, constructors, and methods, then registers it via the global
+  /// registerPayloadClass function.
+  ///
+  /// Payload classes are user-defined classes in @Screen bodies that can be
+  /// instantiated at runtime via PayloadInstanceCreationNode.
+  String emitPayloadClass(ClassElement cls) {
+    final className = cls.name;
+
+    // 1. Collect supertype reference (null for Object, otherwise qualified name).
+    final supertypeRef = _emitSupertypeRef(cls);
+
+    // 2. Collect mixins.
+    final mixinsRef = _emitMixinsRef(cls);
+
+    // 3. Collect field initializers (non-static fields initialized in their
+    //    declaration or init expression). For now, we emit an empty map since
+    //    field init expressions require lowering context not available here.
+    //    Payload lowerer will populate fieldInitializers during class lowering.
+    const fieldInitializersRef = '{}';
+
+    // 4. Collect constructors.
+    final ctorsRef = _emitCtorsRef(cls);
+
+    // 5. Collect methods.
+    final methodsRef = _emitMethodsRef(cls);
+
+    // Emit the PayloadClass construction and registration.
+    return "registerPayloadClass(\n"
+        "  PayloadClass(\n"
+        "    name: '$className',\n"
+        "    supertype: $supertypeRef,\n"
+        "    mixins: $mixinsRef,\n"
+        "    fieldInitializers: $fieldInitializersRef,\n"
+        "    ctors: $ctorsRef,\n"
+        "    methods: $methodsRef,\n"
+        "  ),\n"
+        ");";
+  }
+
+  /// Emit the supertype reference for a payload class.
+  ///
+  /// Returns 'null' for Object, or a name reference for other payload classes.
+  String _emitSupertypeRef(ClassElement cls) {
+    final supertype = cls.supertype;
+    if (supertype == null || supertype.isDartCoreObject) {
+      return 'null';
+    }
+    // Payload classes can only extend other payload classes or Object.
+    return "payloadClasses['${supertype.element.name}']";
+  }
+
+  /// Emit the mixins list for a payload class.
+  String _emitMixinsRef(ClassElement cls) {
+    if (cls.mixins.isEmpty) return '[]';
+    final refs = cls.mixins
+        .map((m) => "payloadClasses['${m.element.name}']!")
+        .toList();
+    return '[ ${refs.join(', ')} ]';
+  }
+
+  /// Emit the ctors map for a payload class.
+  ///
+  /// Maps constructor names ('' for unnamed) to PayloadCtor descriptors.
+  /// Note: This is a placeholder; actual constructor bodies and field inits
+  /// require lowering context and are populated during ast_to_ir lowering.
+  String _emitCtorsRef(ClassElement cls) {
+    // During codegen, we don't have access to lowered IR nodes (field inits,
+    // body expressions). The lowerer in ast_to_ir will populate these when it
+    // processes the PayloadClassNode. Here we emit an empty map as a placeholder.
+    return '{}';
+  }
+
+  /// Emit the methods map for a payload class.
+  ///
+  /// Payload class methods are handled by the lowerer and require IR lowering
+  /// context. Here we emit an empty map as a placeholder.
+  String _emitMethodsRef(ClassElement cls) {
+    // Methods require lowering context (expression -> IrNode conversion).
+    // The lowerer populates this during ast_to_ir processing.
+    return '{}';
+  }
+
   /// Emit a `rt.registerValueBuilder(...)` call for a constructor element.
   ///
   /// Works for both unnamed (`EdgeInsets(...)`) and named (`EdgeInsets.all(...)`)

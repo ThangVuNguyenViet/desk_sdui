@@ -272,7 +272,38 @@ IrNode _foldChildren(IrNode node) {
                   body: constFold(f.body),
                 ))
             .toList(),
+        classes: node.classes,
         screenBody: constFold(node.screenBody),
+      );
+    case PayloadClassNode():
+      // Payload class declarations are metadata; not const-folded.
+      return node;
+    case PayloadInstanceCreationNode():
+      return PayloadInstanceCreationNode(
+        className: node.className,
+        ctorName: node.ctorName,
+        args: node.args.map((k, v) => MapEntry(k, constFold(v))),
+      );
+    case PayloadFieldDeclNode():
+      return PayloadFieldDeclNode(
+        name: node.name,
+        initializer: node.initializer != null ? constFold(node.initializer!) : null,
+        isFinal: node.isFinal,
+      );
+    case PayloadCtorNode():
+      return PayloadCtorNode(
+        name: node.name,
+        params: node.params,
+        fieldInits: node.fieldInits.map((f) => PayloadFieldInitNode(
+          fieldName: f.fieldName,
+          value: constFold(f.value),
+        )).toList(),
+        body: node.body != null ? constFold(node.body!) : null,
+      );
+    case PayloadFieldInitNode():
+      return PayloadFieldInitNode(
+        fieldName: node.fieldName,
+        value: constFold(node.value),
       );
   }
 }
@@ -326,6 +357,11 @@ bool _isPureLiteral(IrNode node) {
     case PayloadFunctionNode():
     case PayloadFunctionCallNode():
     case ScreenWithFunctionsNode():
+    case PayloadClassNode():
+    case PayloadInstanceCreationNode():
+    case PayloadFieldDeclNode():
+    case PayloadCtorNode():
+    case PayloadFieldInitNode():
       return false;
     case RefNode():
     case EventNode():

@@ -1,6 +1,7 @@
 import 'package:desk_sdui_annotation/desk_sdui_annotation.dart';
 import 'package:flutter/material.dart';
 import 'cell.dart';
+import 'payload_class.dart';
 import 'ref_resolver.dart';
 import 'runtime.dart';
 
@@ -49,6 +50,34 @@ Object? resolveScreen(
 ) {
   final env = toEnv(input);
   if (node is ScreenWithFunctionsNode) {
+    // Register payload classes (in declaration order; dependencies are enforced
+    // by the lowerer).
+    for (final cls in node.classes) {
+      final payloadClasses_map = payloadClasses;
+      final payloadCls = PayloadClass(
+        name: cls.name,
+        supertype: cls.supertypeName != null
+            ? (payloadClasses_map[cls.supertypeName] ??
+                (throw StateError(
+                  'PayloadClass "${cls.name}" references unknown supertype '
+                  '"${cls.supertypeName}"; make sure it is declared before ${cls.name}.'
+                )))
+            : null,
+        mixins: cls.mixinNames
+            .map((name) =>
+                payloadClasses_map[name] ??
+                (throw StateError(
+                  'PayloadClass "${cls.name}" references unknown mixin '
+                  '"$name"; make sure it is declared before ${cls.name}.'
+                )))
+            .toList(),
+        methods: const {},
+        fieldInitializers: const {},
+        ctors: const {},
+      );
+      registerPayloadClass(payloadCls);
+    }
+
     final ctx = RuntimeContext(
       payloadFunctions: {for (final fn in node.functions) fn.name: fn},
     );
@@ -334,6 +363,70 @@ Object? evalExpressionWithEnv(
       }
       return evalExpressionWithEnv(fn.body, calleeEnv, runtime, ctx: ctx);
 
+    case PayloadInstanceCreationNode(:final className, :final ctorName, :final args):
+      // Look up the payload class descriptor.
+      final cls = payloadClasses[className];
+      if (cls == null) {
+        throw StateError(
+          'PayloadInstanceCreationNode: class "$className" not registered. '
+          'Ensure registerPayloadClass was called for this class.',
+        );
+      }
+
+      // Look up the constructor (use ctorName or unnamed).
+      final ctor = cls.ctors[ctorName];
+      if (ctor == null) {
+        throw StateError(
+          'PayloadInstanceCreationNode: constructor "${ctorName.isEmpty ? "(unnamed)" : ctorName}" '
+          'not found in class "$className".',
+        );
+      }
+
+      // Allocate field cells from fieldInitializers.
+      final fields = <String, Cell>{};
+      for (final entry in cls.fieldInitializers.entries) {
+        final fieldName = entry.key;
+        final initializer = entry.value;
+        final value = evalExpressionWithEnv(initializer, env, runtime, ctx: ctx);
+        fields[fieldName] = Cell(value);
+      }
+
+      // Create the payload instance.
+      final instance = PayloadInstance(type: cls, fields: fields);
+
+      // Evaluate args in caller's env.
+      final argValues = <String, Object?>{};
+      for (final entry in args.entries) {
+        argValues[entry.key] =
+            evalExpressionWithEnv(entry.value, env, runtime, ctx: ctx);
+      }
+
+      // Bind args to params and apply field inits (this.x = value).
+      final ctorEnv = <String, Cell>{};
+      for (var i = 0; i < ctor.params.length; i++) {
+        ctorEnv[ctor.params[i]] = Cell(argValues[ctor.params[i]] ?? argValues['arg$i']);
+      }
+      // Bind 'this' to the in-progress instance.
+      ctorEnv['this'] = Cell(instance);
+
+      // Execute field inits.
+      for (final entry in ctor.fieldInits.entries) {
+        final value = evalExpressionWithEnv(entry.value, ctorEnv, runtime, ctx: ctx);
+        fields[entry.key]?.value = value;
+      }
+
+      // Execute ctor body if present.
+      if (ctor.body != null) {
+        final body = ctor.body!;
+        if (body is BlockNode) {
+          executeStatement(body, ctorEnv, runtime, ctx: ctx);
+        } else {
+          evalExpressionWithEnv(body, ctorEnv, runtime, ctx: ctx);
+        }
+      }
+
+      return instance;
+
     // Widget / layout nodes — not valid at expression position.
     case WidgetNode():
     case BuiltinWidgetNode():
@@ -361,6 +454,10 @@ Object? evalExpressionWithEnv(
     // Screen-structure nodes — not valid at expression position.
     case IrStatefulNode():
     case IrStatefulFieldNode():
+    case PayloadClassNode():
+    case PayloadFieldDeclNode():
+    case PayloadCtorNode():
+    case PayloadFieldInitNode():
     case PayloadFunctionNode():
     case ScreenWithFunctionsNode():
       throw StateError(

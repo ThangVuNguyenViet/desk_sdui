@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'cell.dart';
 import 'expression_eval.dart';
+import 'payload_class.dart';
 import 'ref_resolver.dart';
 import 'runtime.dart';
 
@@ -27,10 +28,38 @@ Widget resolveNode(
   RuntimeContext ctx = RuntimeContext.empty,
 }) {
   switch (node) {
-    case ScreenWithFunctionsNode(:final functions, :final screenBody):
-      // Build the payload-function table once per screen resolution and
-      // propagate it downward. Nested screens are not produced by the
-      // lowerer; a single wrapper at the root is the only shape.
+    case ScreenWithFunctionsNode(:final functions, :final classes, :final screenBody):
+      // Build the payload-function table and register payload classes once per
+      // screen resolution. Register classes first (they may be referenced by
+      // constructors), then propagate the function table downward. Nested screens
+      // are not produced by the lowerer; a single wrapper at the root is the only shape.
+      for (final cls in classes) {
+        // Construct PayloadClass descriptor with field initializers and ctors
+        // populated by the lowerer. Methods are empty by default.
+        final payloadCls = PayloadClass(
+          name: cls.name,
+          supertype: cls.supertypeName != null
+              ? (payloadClasses[cls.supertypeName] ??
+                  (throw StateError(
+                    'PayloadClass "${cls.name}" references unknown supertype '
+                    '"${cls.supertypeName}"; make sure it is declared before ${cls.name}.'
+                  )))
+              : null,
+          mixins: cls.mixinNames
+              .map((name) =>
+                  payloadClasses[name] ??
+                  (throw StateError(
+                    'PayloadClass "${cls.name}" references unknown mixin '
+                    '"$name"; make sure it is declared before ${cls.name}.'
+                  )))
+              .toList(),
+          methods: const {},
+          fieldInitializers: const {},
+          ctors: const {},
+        );
+        registerPayloadClass(payloadCls);
+      }
+
       final screenCtx = RuntimeContext(
         payloadFunctions: {for (final fn in functions) fn.name: fn},
       );

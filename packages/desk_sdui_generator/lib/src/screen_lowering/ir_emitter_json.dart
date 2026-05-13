@@ -266,7 +266,70 @@ IrNode _demoteAllConst(IrNode node) {
                   body: _demoteAllConst(f.body),
                 ))
             .toList(),
+        classes: node.classes,
         screenBody: _demoteAllConst(node.screenBody),
+      );
+    case PayloadClassNode():
+      return PayloadClassNode(
+        name: node.name,
+        supertypeName: node.supertypeName,
+        mixinNames: node.mixinNames,
+        fields: node.fields
+            .map((f) => PayloadFieldDeclNode(
+                  name: f.name,
+                  initializer: f.initializer != null ? _demoteAllConst(f.initializer!) : null,
+                  isFinal: f.isFinal,
+                ))
+            .toList(),
+        ctors: node.ctors
+            .map((c) => PayloadCtorNode(
+                  name: c.name,
+                  params: c.params,
+                  fieldInits: c.fieldInits
+                      .map((f) => PayloadFieldInitNode(
+                            fieldName: f.fieldName,
+                            value: _demoteAllConst(f.value),
+                          ))
+                      .toList(),
+                  body: c.body != null ? _demoteAllConst(c.body!) : null,
+                ))
+            .toList(),
+        methods: node.methods
+            .map((m) => PayloadFunctionNode(
+                  name: m.name,
+                  params: m.params,
+                  body: _demoteAllConst(m.body),
+                ))
+            .toList(),
+      );
+    case PayloadInstanceCreationNode():
+      return PayloadInstanceCreationNode(
+        className: node.className,
+        ctorName: node.ctorName,
+        args: node.args.map((k, v) => MapEntry(k, _demoteAllConst(v))),
+      );
+    case PayloadFieldDeclNode():
+      return PayloadFieldDeclNode(
+        name: node.name,
+        initializer: node.initializer != null ? _demoteAllConst(node.initializer!) : null,
+        isFinal: node.isFinal,
+      );
+    case PayloadCtorNode():
+      return PayloadCtorNode(
+        name: node.name,
+        params: node.params,
+        fieldInits: node.fieldInits
+            .map((f) => PayloadFieldInitNode(
+                  fieldName: f.fieldName,
+                  value: _demoteAllConst(f.value),
+                ))
+            .toList(),
+        body: node.body != null ? _demoteAllConst(node.body!) : null,
+      );
+    case PayloadFieldInitNode():
+      return PayloadFieldInitNode(
+        fieldName: node.fieldName,
+        value: _demoteAllConst(node.value),
       );
   }
 }

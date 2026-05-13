@@ -213,6 +213,31 @@ class JsonIrDecoder {
           initializer: _decodeNode(map['initializer']! as Map<String, Object?>),
           isFinal: map['isFinal']! as bool,
         ),
+      'payloadClass' => PayloadClassNode(
+          name: map['name']! as String,
+          supertypeName: map['supertypeName'] as String?,
+          mixinNames: ((map['mixinNames'] as List?) ?? const []).cast<String>(),
+          fields: ((map['fields']! as List).cast<Map<String, Object?>>())
+              .map(_decodePayloadField)
+              .toList(),
+          ctors: ((map['ctors']! as List).cast<Map<String, Object?>>())
+              .map(_decodePayloadCtor)
+              .toList(),
+          methods: ((map['methods']! as List).cast<Map<String, Object?>>())
+              .map<PayloadFunctionNode>(_decodePayloadFn)
+              .toList(),
+        ),
+      'payloadField' => _decodePayloadField(map),
+      'payloadCtor' => _decodePayloadCtor(map),
+      'payloadFieldInit' => PayloadFieldInitNode(
+          fieldName: map['fieldName']! as String,
+          value: _decodeNode(map['value']! as Map<String, Object?>),
+        ),
+      'payloadInstanceCreate' => PayloadInstanceCreationNode(
+          className: map['className']! as String,
+          ctorName: map['ctorName'] as String? ?? '',
+          args: _decodeNamedArgs(map['args']),
+        ),
       'payloadFn' => _decodePayloadFn(map),
       'payloadFnCall' => PayloadFunctionCallNode(
           name: map['name']! as String,
@@ -223,6 +248,10 @@ class JsonIrDecoder {
       'screenWithFunctions' => ScreenWithFunctionsNode(
           functions: ((map['functions']! as List).cast<Map<String, Object?>>())
               .map<PayloadFunctionNode>(_decodePayloadFn)
+              .toList(),
+          classes: ((map['classes'] as List?) ?? const [])
+              .cast<Map<String, Object?>>()
+              .map<PayloadClassNode>((m) => _decodeNode(m) as PayloadClassNode)
               .toList(),
           screenBody:
               _decodeNode(map['screenBody']! as Map<String, Object?>),
@@ -281,6 +310,28 @@ class JsonIrDecoder {
       name: map['name']! as String,
       initializer: _decodeNode(map['initializer']! as Map<String, Object?>),
       isFinal: map['isFinal']! as bool,
+    );
+  }
+
+  PayloadFieldDeclNode _decodePayloadField(Map<String, Object?> map) {
+    return PayloadFieldDeclNode(
+      name: map['name']! as String,
+      initializer: _decodeOptional(map['initializer']),
+      isFinal: map['isFinal']! as bool,
+    );
+  }
+
+  PayloadCtorNode _decodePayloadCtor(Map<String, Object?> map) {
+    return PayloadCtorNode(
+      name: map['name']! as String,
+      params: (map['params']! as List).cast<String>(),
+      fieldInits: ((map['fieldInits']! as List).cast<Map<String, Object?>>())
+          .map((m) => PayloadFieldInitNode(
+                fieldName: m['fieldName']! as String,
+                value: _decodeNode(m['value']! as Map<String, Object?>),
+              ))
+          .toList(),
+      body: _decodeOptional(map['body']),
     );
   }
 

@@ -2,6 +2,21 @@ import 'package:desk_sdui_annotation/desk_sdui_annotation.dart';
 
 import 'cell.dart';
 
+/// Runtime descriptor for a single constructor in a payload class.
+class PayloadCtor {
+  PayloadCtor({
+    required this.name,
+    required this.params,
+    required this.fieldInits,
+    this.body,
+  });
+
+  final String name;
+  final List<String> params;
+  final Map<String, IrNode> fieldInits;
+  final IrNode? body;
+}
+
 /// Descriptor for a payload-defined class.
 ///
 /// Holds the class metadata including supertype, mixins, methods, field
@@ -14,6 +29,8 @@ class PayloadClass {
     this.mixins = const [],
     this.methods = const {},
     this.fieldInitializers = const {},
+    this.ctors = const {},
+    // Backward compatibility: single unnamed ctor (F15 compatibility)
     this.ctorParams = const [],
     this.ctorBody,
   });
@@ -23,6 +40,12 @@ class PayloadClass {
   final List<PayloadClass> mixins;
   final Map<String, PayloadFunctionNode> methods;
   final Map<String, IrNode> fieldInitializers;
+
+  /// Map of constructor names to PayloadCtor descriptors.
+  /// The key is the constructor name ('' for unnamed).
+  final Map<String, PayloadCtor> ctors;
+
+  // Backward compatibility fields (F15 single-ctor support)
   final List<String> ctorParams;
   final IrNode? ctorBody;
 

@@ -334,7 +334,38 @@ IrNode inferKeys(IrNode node, {TypeLookup? lookupType}) {
                   body: inferKeys(f.body, lookupType: lookupType),
                 ))
             .toList(),
+        classes: node.classes,
         screenBody: inferKeys(node.screenBody, lookupType: lookupType),
+      );
+    case PayloadClassNode():
+      // Payload class declarations are metadata; not transformed.
+      return node;
+    case PayloadInstanceCreationNode():
+      return PayloadInstanceCreationNode(
+        className: node.className,
+        ctorName: node.ctorName,
+        args: node.args.map((k, v) => MapEntry(k, inferKeys(v, lookupType: lookupType))),
+      );
+    case PayloadFieldDeclNode():
+      return PayloadFieldDeclNode(
+        name: node.name,
+        initializer: node.initializer != null ? inferKeys(node.initializer!, lookupType: lookupType) : null,
+        isFinal: node.isFinal,
+      );
+    case PayloadCtorNode():
+      return PayloadCtorNode(
+        name: node.name,
+        params: node.params,
+        fieldInits: node.fieldInits.map((f) => PayloadFieldInitNode(
+          fieldName: f.fieldName,
+          value: inferKeys(f.value, lookupType: lookupType),
+        )).toList(),
+        body: node.body != null ? inferKeys(node.body!, lookupType: lookupType) : null,
+      );
+    case PayloadFieldInitNode():
+      return PayloadFieldInitNode(
+        fieldName: node.fieldName,
+        value: inferKeys(node.value, lookupType: lookupType),
       );
   }
 }

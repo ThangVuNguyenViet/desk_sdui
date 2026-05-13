@@ -245,6 +245,39 @@ class JsonIrEncoder {
           'initializer': _encodeNode(node.initializer),
           'isFinal': node.isFinal,
         },
+      PayloadClassNode() => {
+          r'$type': 'payloadClass',
+          'name': node.name,
+          if (node.supertypeName != null) 'supertypeName': node.supertypeName,
+          if (node.mixinNames.isNotEmpty) 'mixinNames': node.mixinNames,
+          'fields': node.fields.map(_encodeNode).toList(),
+          'ctors': node.ctors.map(_encodeNode).toList(),
+          'methods': node.methods.map(_encodeNode).toList(),
+        },
+      PayloadFieldDeclNode() => {
+          r'$type': 'payloadField',
+          'name': node.name,
+          if (node.initializer != null) 'initializer': _encodeNode(node.initializer!),
+          'isFinal': node.isFinal,
+        },
+      PayloadCtorNode() => {
+          r'$type': 'payloadCtor',
+          'name': node.name,
+          'params': node.params,
+          'fieldInits': node.fieldInits.map(_encodeNode).toList(),
+          if (node.body != null) 'body': _encodeNode(node.body!),
+        },
+      PayloadFieldInitNode() => {
+          r'$type': 'payloadFieldInit',
+          'fieldName': node.fieldName,
+          'value': _encodeNode(node.value),
+        },
+      PayloadInstanceCreationNode() => {
+          r'$type': 'payloadInstanceCreate',
+          'className': node.className,
+          if (node.ctorName.isNotEmpty) 'ctorName': node.ctorName,
+          'args': node.args.map((k, v) => MapEntry(k, _encodeNode(v))),
+        },
       PayloadFunctionNode() => {
           r'$type': 'payloadFn',
           'name': node.name,
@@ -259,6 +292,8 @@ class JsonIrEncoder {
       ScreenWithFunctionsNode() => {
           r'$type': 'screenWithFunctions',
           'functions': node.functions.map(_encodeNode).toList(),
+          if (node.classes.isNotEmpty)
+            'classes': node.classes.map(_encodeNode).toList(),
           'screenBody': _encodeNode(node.screenBody),
         },
     };

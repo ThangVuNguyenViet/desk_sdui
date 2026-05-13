@@ -271,7 +271,7 @@ class RegistrationEmitter {
 
     // Emit setters for eligible fields.
     for (final field in cls.fields) {
-      if (_isSetterEligible(field)) {
+      if (_isSetterEligible(field, cls)) {
         lines.add(emitFieldSetter(field));
       }
     }
@@ -283,15 +283,32 @@ class RegistrationEmitter {
   /// Check if a field is eligible for setter registration.
   ///
   /// A field is eligible if:
-  /// - It is public (not starting with '_')
-  /// - It is not final
+  /// - It is public
+  /// - It has an associated setter (i.e. it is settable — not getter-only,
+  ///   not final, not const). This is the authoritative check for settability
+  ///   in the analyzer element model and rejects:
+  ///   * read-only getters whose synthetic field would otherwise leak through
+  ///     (e.g. `EdgeInsetsGeometry.isNonNegative`, `Object.hashCode`)
+  ///   * final fields (e.g. `Widget.key`)
+  ///   * const fields
   /// - It is not late
   /// - It is not static
-  bool _isSetterEligible(FieldElement field) {
-    return field.isPublic &&
-        !field.isFinal &&
-        !field.isLate &&
-        !field.isStatic;
+  /// - It is declared on this class (not merely inherited from a supertype
+  ///   like `Widget` or `Object`).
+  bool _isSetterEligible(FieldElement field, ClassElement owner) {
+    if (!field.isPublic) return false;
+    if (field.isStatic) return false;
+    if (field.isLate) return false;
+    if (field.isFinal) return false;
+    // Reject getter-only synthetic fields and other non-settable properties.
+    if (field.setter == null) return false;
+    // Only emit setters for fields actually declared on `owner`, not those
+    // inherited from a superclass (which would otherwise pull in `Widget.key`,
+    // `Object.hashCode`, etc.).
+    final enclosing = field.enclosingElement;
+    if (enclosing is! InterfaceElement) return false;
+    if (enclosing.name != owner.name) return false;
+    return true;
   }
 
   /// Emit all registrations from a [CollectedTypes] set.

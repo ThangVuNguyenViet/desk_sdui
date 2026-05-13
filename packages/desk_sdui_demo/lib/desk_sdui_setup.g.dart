@@ -385,33 +385,23 @@ void registerSduiCatalog(Runtime rt) {
   rt.registerMethod('EdgeInsetsGeometry.add', (recv, args) => (recv as EdgeInsetsGeometry).add(args['arg0'] as EdgeInsetsGeometry));
   rt.registerMethod('EdgeInsetsGeometry.clamp', (recv, args) => (recv as EdgeInsetsGeometry).clamp(args['arg0'] as EdgeInsetsGeometry, args['arg1'] as EdgeInsetsGeometry));
   rt.registerMethod('EdgeInsetsGeometry.resolve', (recv, args) => (recv as EdgeInsetsGeometry).resolve(args['arg0'] as TextDirection?));
-  rt.registerSetter('EdgeInsetsGeometry.isNonNegative', (target, value) => (target as EdgeInsetsGeometry).isNonNegative = value as bool);
-  rt.registerSetter('EdgeInsetsGeometry.horizontal', (target, value) => (target as EdgeInsetsGeometry).horizontal = value as double);
-  rt.registerSetter('EdgeInsetsGeometry.vertical', (target, value) => (target as EdgeInsetsGeometry).vertical = value as double);
-  rt.registerSetter('EdgeInsetsGeometry.collapsedSize', (target, value) => (target as EdgeInsetsGeometry).collapsedSize = value as Size);
-  rt.registerSetter('EdgeInsetsGeometry.flipped', (target, value) => (target as EdgeInsetsGeometry).flipped = value as EdgeInsetsGeometry);
-  rt.registerSetter('EdgeInsetsGeometry.hashCode', (target, value) => (target as EdgeInsetsGeometry).hashCode = value as int);
   }
   // Methods for Act
   {
   rt.registerMethod('Act.resolve', (recv, args) => (recv as Act).resolve(args['arg0'] as ActContext));
   rt.registerMethod('Act.buildAnimation', (recv, args) => (recv as Act).buildAnimation(args['arg0'] as CueTimeline, args['arg1'] as ActContext));
   rt.registerMethod('Act.applyInternal', (recv, args) => (recv as Act).applyInternal(args['arg0'] as BuildContext, args['arg1'] as CueAnimation<Object?>, args['arg2'] as Widget));
-  rt.registerSetter('Act.key', (target, value) => (target as Act).key = value as ActKey);
   }
   // Methods for CueMotion
   {
   rt.registerMethod('CueMotion.build', (recv, args) => (recv as CueMotion).build(args['arg0'] as SimulationBuildData));
   rt.registerMethod('CueMotion.buildBase', (recv, args) => (recv as CueMotion).buildBase(forward: args['forward'] as bool? ?? true, phase: args['phase'] as int?));
   rt.registerMethod('CueMotion.delayed', (recv, args) => (recv as CueMotion).delayed(args['arg0'] as Duration));
-  rt.registerSetter('CueMotion.totalPhases', (target, value) => (target as CueMotion).totalPhases = value as int);
-  rt.registerSetter('CueMotion.baseDuration', (target, value) => (target as CueMotion).baseDuration = value as Duration);
   }
   // Methods for CounterController
   {
   rt.registerMethod('CounterController.increment', (recv, args) => (recv as CounterController).increment());
   rt.registerMethod('CounterController.decrement', (recv, args) => (recv as CounterController).decrement());
-  rt.registerSetter('CounterController.value', (target, value) => (target as CounterController).value = value as int);
   }
 }
 void registerAllScreens(Runtime rt) {

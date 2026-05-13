@@ -128,7 +128,7 @@ ScreenLoweringOutputs lowerScreenElement({
   // Skip if it's already in extraImports or if it's a built-in package.
   if (partOfUri.startsWith('package:')) {
     final pkg = partOfUri.substring('package:'.length).split('/').first;
-    if (pkg != 'desk_sdui' && pkg != 'flutter' && pkg != 'desk_sdui_demo') {
+    if (pkg != 'desk_sdui' && pkg != 'flutter') {
       extraImports.add(partOfUri);
     }
   }

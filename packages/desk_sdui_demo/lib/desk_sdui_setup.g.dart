@@ -10,9 +10,7 @@ import 'dart:ui';
 import 'package:cue/cue.dart';
 import 'package:desk_sdui_demo/screens/counter_demo.dart';
 import 'package:desk_sdui_demo/screens/counter_demo.dart' show counter_demoBinding;
-import 'package:desk_sdui_demo/screens/counter_stress.dart' show counter_stressBinding;
 import 'package:desk_sdui_demo/screens/counter_demo.sdui_reg.g.dart' show registerCounter_demoDependencies;
-import 'package:desk_sdui_demo/screens/counter_stress.sdui_reg.g.dart' show registerCounter_stressDependencies;
 
 void registerSduiCatalog(Runtime rt) {
   rt.registerWidget('Align', (args) => Align(key: args['key'] as Key?, alignment: args['alignment'] as AlignmentGeometry? ?? Alignment.center, widthFactor: args['widthFactor'] as double?, heightFactor: args['heightFactor'] as double?, child: args['child'] as Widget?));
@@ -377,7 +375,5 @@ void registerAllScreens(Runtime rt) {
   registerCoreAccessors(rt);
   rt.registerScreen(counter_demoBinding);
   registerCounter_demoDependencies(rt);
-  rt.registerScreen(counter_stressBinding);
-  registerCounter_stressDependencies(rt);
   registerSduiCatalog(rt);
 }

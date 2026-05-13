@@ -334,8 +334,39 @@ Object? evalExpressionWithEnv(
       }
       return evalExpressionWithEnv(fn.body, calleeEnv, runtime, ctx: ctx);
 
-    default:
-      throw StateError('evalExpression: unsupported node $node');
+    // Widget / layout nodes — not valid at expression position.
+    case WidgetNode():
+    case BuiltinWidgetNode():
+    case ListNode():
+    case MapNode():
+    case RecordNode():
+    case ConditionalNode():
+    case ForNode():
+    case SpreadNode():
+    case EventNode():
+    case ValueCtorNode():
+    case ActionSequenceNode():
+    case ActionStepNode():
+    case TryStepNode():
+    // Statement nodes — must go through executeStatement.
+    case BlockNode():
+    case IfStatementNode():
+    case BreakNode():
+    case ContinueNode():
+    case ReturnNode():
+    case LetStatementNode():
+    case WhileNode():
+    case DoNode():
+    case ImperativeForNode():
+    // Screen-structure nodes — not valid at expression position.
+    case IrStatefulNode():
+    case IrStatefulFieldNode():
+    case PayloadFunctionNode():
+    case ScreenWithFunctionsNode():
+      throw StateError(
+        'evalExpressionWithEnv: node ${node.runtimeType} is not valid at '
+        'expression position; use executeStatement or resolveNode instead.',
+      );
   }
 }
 

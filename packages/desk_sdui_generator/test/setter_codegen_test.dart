@@ -10,8 +10,9 @@ import 'package:desk_sdui_generator/src/registration_emitter.dart';
 import 'package:path/path.dart' as p;
 import 'package:test/test.dart';
 
-const _demoPackageRoot =
-    '/Users/vietthangvunguyen/Workspace/dart_desk_workspace/desk_sdui/packages/desk_sdui_demo';
+final _demoPackageRoot = p.normalize(
+  p.join(Directory.current.path, '..', 'desk_sdui_demo'),
+);
 
 /// Resolve [source] in the demo package context and return the first class
 /// declaration's [ClassElement].

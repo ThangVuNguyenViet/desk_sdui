@@ -11,8 +11,9 @@ import 'package:desk_sdui_generator/src/screen_lowering/ast_to_ir.dart';
 import 'package:path/path.dart' as p;
 import 'package:test/test.dart';
 
-const _demoPackageRoot =
-    '/Users/vietthangvunguyen/Workspace/dart_desk_workspace/desk_sdui/packages/desk_sdui_demo';
+final _demoPackageRoot = p.normalize(
+  p.join(Directory.current.path, '..', 'desk_sdui_demo'),
+);
 
 /// Resolve [source] inside the demo package context (so `package:` imports
 /// resolve) and return the first @Screen-shaped top-level FunctionDeclaration.

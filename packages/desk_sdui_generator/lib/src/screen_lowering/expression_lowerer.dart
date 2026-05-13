@@ -586,9 +586,14 @@ IrNode _lowerAssignment(AssignmentExpression expr) {
             : '';
     final receiverExpr =
         lhs is PrefixedIdentifier ? lhs.prefix : (lhs as PropertyAccess).target!;
+    // Lower the receiver exactly once and share the same IrNode between the
+    // GetterNode (read-back of the current value) and the SetterCallNode
+    // target. Lowering twice would be structurally wrong: any receiver
+    // expression with side effects would be evaluated twice at runtime.
+    final loweredReceiver = lowerExpression(receiverExpr);
     final rhs = lowerExpression(expr.rightHandSide);
     final currentValue = GetterNode(
-      receiver: lowerExpression(receiverExpr),
+      receiver: loweredReceiver,
       name: '$className.$fieldName',
     );
 
@@ -619,7 +624,7 @@ IrNode _lowerAssignment(AssignmentExpression expr) {
     }
 
     return SetterCallNode(
-      target: lowerExpression(receiverExpr),
+      target: loweredReceiver,
       setterKey: '$className.$fieldName',
       value: compoundValue,
     );
@@ -667,8 +672,8 @@ SetterCallNode _lowerSetterAssignment({
       receiverExpr,
     );
   }
-  final typeBucket2 = _classNameForType(receiverType);
-  if (typeBucket2 == null) {
+  final className = _classNameForType(receiverType);
+  if (className == null) {
     throw LoweringError(
       'Assignment to ${receiverExpr.toSource()}.$fieldName: receiver type '
       '${receiverType?.getDisplayString(withNullability: false)} is not a '
@@ -679,7 +684,7 @@ SetterCallNode _lowerSetterAssignment({
   }
   return SetterCallNode(
     target: lowerExpression(receiverExpr),
-    setterKey: '$typeBucket2.$fieldName',
+    setterKey: '$className.$fieldName',
     value: lowerExpression(value),
   );
 }

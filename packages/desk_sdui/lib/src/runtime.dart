@@ -1,3 +1,4 @@
+import 'dart:collection';
 import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
@@ -113,11 +114,13 @@ abstract class IrFetcher {
 final Map<String, PayloadClass> _payloadClasses = {};
 
 /// Returns a read-only view of registered payload classes.
-Map<String, PayloadClass> get payloadClasses => _payloadClasses;
+Map<String, PayloadClass> get payloadClasses =>
+    UnmodifiableMapView(_payloadClasses);
 
 /// Registers a payload class and computes its method lookup order.
 ///
-/// Throws [StateError] if a class with the same name is already registered.
+/// Throws [StateError] if a class with the same name is already registered,
+/// or if its supertype or any mixin has not been registered yet.
 void registerPayloadClass(PayloadClass cls) {
   if (_payloadClasses.containsKey(cls.name)) {
     throw StateError('PayloadClass "${cls.name}" already registered.');
@@ -126,15 +129,29 @@ void registerPayloadClass(PayloadClass cls) {
   cls.methodLookupOrder = _computeMro(cls);
 }
 
+/// Test-only helper to clear the payload class registry.
+@visibleForTesting
+void clearPayloadClassesForTest() => _payloadClasses.clear();
+
 /// Computes the C3 linearization-inspired method lookup order for a class.
 ///
 /// Order: self → reversed mixins → supertype's mro.
 List<PayloadClass> _computeMro(PayloadClass cls) {
   final order = <PayloadClass>[cls];
   for (final m in cls.mixins.reversed) {
+    if (!_payloadClasses.containsKey(m.name)) {
+      throw StateError(
+        'Cannot register "${cls.name}": mixin "${m.name}" has not been registered yet.',
+      );
+    }
     order.add(m);
   }
   if (cls.supertype != null) {
+    if (!_payloadClasses.containsKey(cls.supertype!.name)) {
+      throw StateError(
+        'Cannot register "${cls.name}": supertype "${cls.supertype!.name}" has not been registered yet.',
+      );
+    }
     order.addAll(cls.supertype!.methodLookupOrder);
   }
   return order;

@@ -7,7 +7,7 @@ void main() {
   group('PayloadClass registry', () {
     // Reset the global registry before each test
     setUp(() {
-      _payloadClasses.clear();
+      clearPayloadClassesForTest();
     });
 
     test('registerPayloadClass adds entry to payloadClasses', () {
@@ -79,8 +79,17 @@ void main() {
       expect(str, contains('age'));
       expect(str, contains('30'));
     });
+
+    test('registering child before supertype throws StateError', () {
+      final parent = PayloadClass(name: 'Parent');
+      final child = PayloadClass(name: 'Child', supertype: parent);
+      expect(() => registerPayloadClass(child), throwsA(isA<StateError>()));
+    });
+
+    test('registering class with unregistered mixin throws StateError', () {
+      final m = PayloadClass(name: 'M');
+      final cls = PayloadClass(name: 'C', mixins: [m]);
+      expect(() => registerPayloadClass(cls), throwsA(isA<StateError>()));
+    });
   });
 }
-
-// Access to the registry for cleanup in tests
-final _payloadClasses = payloadClasses;

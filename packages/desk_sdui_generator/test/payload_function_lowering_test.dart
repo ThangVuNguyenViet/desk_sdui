@@ -12,8 +12,19 @@ import 'package:desk_sdui_generator/src/screen_lowering/ast_to_ir.dart';
 import 'package:path/path.dart' as p;
 import 'package:test/test.dart';
 
-const _demoPackageRoot =
-    '/Users/vietthangvunguyen/Workspace/dart_desk_workspace/desk_sdui/packages/desk_sdui_demo';
+/// Absolute path to the `desk_sdui_demo` package root, resolved relative to
+/// the current working directory. When tests run via `dart test`, the cwd is
+/// the generator package root, so the demo sits at `../desk_sdui_demo`.
+///
+/// We use the demo package as the analysis context so the lowerer-time
+/// `package:flutter/material.dart` import inside test fixtures resolves.
+final _demoPackageRoot = p.normalize(
+  p.join(
+    Directory.current.path,
+    '..',
+    'desk_sdui_demo',
+  ),
+);
 
 /// Resolve a full source file and return the resolved unit.
 Future<ResolvedUnitResult> _resolveSource(String source) async {

@@ -100,6 +100,12 @@ IrNode _demoteAllConst(IrNode node) {
         receiver: _demoteAllConst(node.receiver),
         name: node.name,
       );
+    case SetterCallNode():
+      return SetterCallNode(
+        target: _demoteAllConst(node.target),
+        setterKey: node.setterKey,
+        value: _demoteAllConst(node.value),
+      );
     case LetNode():
       return LetNode(
         name: node.name,

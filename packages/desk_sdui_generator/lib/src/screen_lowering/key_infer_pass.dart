@@ -133,6 +133,13 @@ IrNode inferKeys(IrNode node, {TypeLookup? lookupType}) {
         name: node.name,
       );
 
+    case SetterCallNode():
+      return SetterCallNode(
+        target: inferKeys(node.target, lookupType: lookupType),
+        setterKey: node.setterKey,
+        value: inferKeys(node.value, lookupType: lookupType),
+      );
+
     case LetNode():
       return LetNode(
         name: node.name,

@@ -9,6 +9,7 @@ import 'dart:typed_data';
 import 'dart:ui';
 import 'package:cue/cue.dart';
 import 'package:desk_sdui_demo/screens/counter_actions.dart';
+import 'package:desk_sdui_demo/screens/setter_demo.dart';
 import 'package:desk_sdui_demo/screens/async_action_demo.dart' show async_action_demoBinding;
 import 'package:desk_sdui_demo/screens/cascade_demo.dart' show cascade_demoBinding;
 import 'package:desk_sdui_demo/screens/chef_view.dart' show chef_viewBinding;
@@ -25,6 +26,8 @@ import 'package:desk_sdui_demo/screens/lambda_demo.dart' show lambda_demoBinding
 import 'package:desk_sdui_demo/screens/let_demo.dart' show let_demoBinding;
 import 'package:desk_sdui_demo/screens/loop_demo.dart' show loop_demoBinding;
 import 'package:desk_sdui_demo/screens/pattern_demo.dart' show pattern_demoBinding;
+import 'package:desk_sdui_demo/screens/payload_fn_demo.dart' show payload_fn_demoBinding;
+import 'package:desk_sdui_demo/screens/setter_demo.dart' show setter_demoBinding;
 import 'package:desk_sdui_demo/screens/stateful_counter_demo.dart' show stateful_counter_demoBinding;
 import 'package:desk_sdui_demo/screens/themed_counter.dart' show themed_counterBinding;
 import 'package:desk_sdui_demo/screens/try_step_demo.dart' show try_step_demoBinding;
@@ -44,6 +47,8 @@ import 'package:desk_sdui_demo/screens/lambda_demo.sdui_reg.g.dart' show registe
 import 'package:desk_sdui_demo/screens/let_demo.sdui_reg.g.dart' show registerLet_demoDependencies;
 import 'package:desk_sdui_demo/screens/loop_demo.sdui_reg.g.dart' show registerLoop_demoDependencies;
 import 'package:desk_sdui_demo/screens/pattern_demo.sdui_reg.g.dart' show registerPattern_demoDependencies;
+import 'package:desk_sdui_demo/screens/payload_fn_demo.sdui_reg.g.dart' show registerPayload_fn_demoDependencies;
+import 'package:desk_sdui_demo/screens/setter_demo.sdui_reg.g.dart' show registerSetter_demoDependencies;
 import 'package:desk_sdui_demo/screens/stateful_counter_demo.sdui_reg.g.dart' show registerStateful_counter_demoDependencies;
 import 'package:desk_sdui_demo/screens/themed_counter.sdui_reg.g.dart' show registerThemed_counterDependencies;
 import 'package:desk_sdui_demo/screens/try_step_demo.sdui_reg.g.dart' show registerTry_step_demoDependencies;
@@ -145,6 +150,7 @@ void registerSduiCatalog(Runtime rt) {
   rt.registerWidget('Cue.onScroll', (args) => Cue.onScroll(key: args['key'] as Key?, debugLabel: args['debugLabel'] as String?, acts: args['acts'] as List<Act>?, child: args['child'] as Widget));
   rt.registerWidget('Cue.onScrollVisible', (args) => Cue.onScrollVisible(key: args['key'] as Key?, debugLabel: args['debugLabel'] as String?, enabled: args['enabled'] as bool, acts: args['acts'] as List<Act>?, child: args['child'] as Widget));
   rt.registerWidget('Theme', (args) => Theme(key: args['key'] as Key?, data: args['data'] as ThemeData, child: args['child'] as Widget));
+  rt.registerValueBuilder('SetterDemoController', (args) => SetterDemoController());
   rt.registerValueBuilder('EdgeInsetsGeometry.all', (args) => EdgeInsetsGeometry.all(args['arg0'] as double));
   rt.registerValueBuilder('EdgeInsetsGeometry.only', (args) => EdgeInsetsGeometry.only(left: args['left'] as double, right: args['right'] as double, top: args['top'] as double, bottom: args['bottom'] as double));
   rt.registerValueBuilder('EdgeInsetsGeometry.directional', (args) => EdgeInsetsGeometry.directional(start: args['start'] as double, end: args['end'] as double, top: args['top'] as double, bottom: args['bottom'] as double));
@@ -365,6 +371,11 @@ void registerSduiCatalog(Runtime rt) {
   rt.registerConstant('EdgeInsetsGeometry.infinity', EdgeInsetsGeometry.infinity);
   rt.registerConstant('CueMotion.none', CueMotion.none);
   rt.registerConstant('CueMotion.defaultTime', CueMotion.defaultTime);
+  // Methods for SetterDemoController
+  {
+  rt.registerSetter('SetterDemoController.count', (target, value) => (target as SetterDemoController).count = value as int);
+  rt.registerSetter('SetterDemoController.message', (target, value) => (target as SetterDemoController).message = value as String);
+  }
   // Methods for EdgeInsetsGeometry
   {
   rt.registerMethod('EdgeInsetsGeometry.along', (recv, args) => (recv as EdgeInsetsGeometry).along(args['arg0'] as Axis));
@@ -374,23 +385,33 @@ void registerSduiCatalog(Runtime rt) {
   rt.registerMethod('EdgeInsetsGeometry.add', (recv, args) => (recv as EdgeInsetsGeometry).add(args['arg0'] as EdgeInsetsGeometry));
   rt.registerMethod('EdgeInsetsGeometry.clamp', (recv, args) => (recv as EdgeInsetsGeometry).clamp(args['arg0'] as EdgeInsetsGeometry, args['arg1'] as EdgeInsetsGeometry));
   rt.registerMethod('EdgeInsetsGeometry.resolve', (recv, args) => (recv as EdgeInsetsGeometry).resolve(args['arg0'] as TextDirection?));
+  rt.registerSetter('EdgeInsetsGeometry.isNonNegative', (target, value) => (target as EdgeInsetsGeometry).isNonNegative = value as bool);
+  rt.registerSetter('EdgeInsetsGeometry.horizontal', (target, value) => (target as EdgeInsetsGeometry).horizontal = value as double);
+  rt.registerSetter('EdgeInsetsGeometry.vertical', (target, value) => (target as EdgeInsetsGeometry).vertical = value as double);
+  rt.registerSetter('EdgeInsetsGeometry.collapsedSize', (target, value) => (target as EdgeInsetsGeometry).collapsedSize = value as Size);
+  rt.registerSetter('EdgeInsetsGeometry.flipped', (target, value) => (target as EdgeInsetsGeometry).flipped = value as EdgeInsetsGeometry);
+  rt.registerSetter('EdgeInsetsGeometry.hashCode', (target, value) => (target as EdgeInsetsGeometry).hashCode = value as int);
   }
   // Methods for Act
   {
   rt.registerMethod('Act.resolve', (recv, args) => (recv as Act).resolve(args['arg0'] as ActContext));
   rt.registerMethod('Act.buildAnimation', (recv, args) => (recv as Act).buildAnimation(args['arg0'] as CueTimeline, args['arg1'] as ActContext));
   rt.registerMethod('Act.applyInternal', (recv, args) => (recv as Act).applyInternal(args['arg0'] as BuildContext, args['arg1'] as CueAnimation<Object?>, args['arg2'] as Widget));
+  rt.registerSetter('Act.key', (target, value) => (target as Act).key = value as ActKey);
   }
   // Methods for CueMotion
   {
   rt.registerMethod('CueMotion.build', (recv, args) => (recv as CueMotion).build(args['arg0'] as SimulationBuildData));
   rt.registerMethod('CueMotion.buildBase', (recv, args) => (recv as CueMotion).buildBase(forward: args['forward'] as bool? ?? true, phase: args['phase'] as int?));
   rt.registerMethod('CueMotion.delayed', (recv, args) => (recv as CueMotion).delayed(args['arg0'] as Duration));
+  rt.registerSetter('CueMotion.totalPhases', (target, value) => (target as CueMotion).totalPhases = value as int);
+  rt.registerSetter('CueMotion.baseDuration', (target, value) => (target as CueMotion).baseDuration = value as Duration);
   }
   // Methods for CounterController
   {
   rt.registerMethod('CounterController.increment', (recv, args) => (recv as CounterController).increment());
   rt.registerMethod('CounterController.decrement', (recv, args) => (recv as CounterController).decrement());
+  rt.registerSetter('CounterController.value', (target, value) => (target as CounterController).value = value as int);
   }
 }
 void registerAllScreens(Runtime rt) {
@@ -427,6 +448,10 @@ void registerAllScreens(Runtime rt) {
   registerLoop_demoDependencies(rt);
   rt.registerScreen(pattern_demoBinding);
   registerPattern_demoDependencies(rt);
+  rt.registerScreen(payload_fn_demoBinding);
+  registerPayload_fn_demoDependencies(rt);
+  rt.registerScreen(setter_demoBinding);
+  registerSetter_demoDependencies(rt);
   rt.registerScreen(stateful_counter_demoBinding);
   registerStateful_counter_demoDependencies(rt);
   rt.registerScreen(themed_counterBinding);

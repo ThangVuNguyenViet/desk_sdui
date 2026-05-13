@@ -159,6 +159,14 @@ IrNode reactiveHoist(IrNode node) {
       final (receiver, paths) = _hoist(node.receiver);
       return (GetterNode(receiver: receiver, name: node.name), paths);
 
+    case SetterCallNode():
+      final (target, targetPaths) = _hoist(node.target);
+      final (value, valuePaths) = _hoist(node.value);
+      return (
+        SetterCallNode(target: target, setterKey: node.setterKey, value: value),
+        {...targetPaths, ...valuePaths},
+      );
+
     case LetNode():
       final (value, valuePaths) = _hoist(node.value);
       final (body, bodyPaths) = _hoist(node.body);

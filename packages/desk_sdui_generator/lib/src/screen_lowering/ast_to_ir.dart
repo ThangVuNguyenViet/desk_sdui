@@ -366,6 +366,11 @@ void _walkAllowlist(
     case GetterNode():
       _walkAllowlist(node.receiver,
           payloadFnName: payloadFnName, decl: decl);
+    case SetterCallNode():
+      _walkAllowlist(node.target,
+          payloadFnName: payloadFnName, decl: decl);
+      _walkAllowlist(node.value,
+          payloadFnName: payloadFnName, decl: decl);
     case LetNode():
       _walkAllowlist(node.value, payloadFnName: payloadFnName, decl: decl);
       _walkAllowlist(node.body, payloadFnName: payloadFnName, decl: decl);
@@ -982,6 +987,9 @@ void _collectRefs(
       _collectRefs(node.right, widgetRefs, methodRefs, fnRefs);
     case GetterNode():
       _collectRefs(node.receiver, widgetRefs, methodRefs, fnRefs);
+    case SetterCallNode():
+      _collectRefs(node.target, widgetRefs, methodRefs, fnRefs);
+      _collectRefs(node.value, widgetRefs, methodRefs, fnRefs);
     case LetNode():
       _collectRefs(node.value, widgetRefs, methodRefs, fnRefs);
       _collectRefs(node.body, widgetRefs, methodRefs, fnRefs);

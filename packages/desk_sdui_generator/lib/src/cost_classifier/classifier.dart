@@ -171,6 +171,10 @@ void _walk(IrNode node, _Findings f, {required String? selfName}) {
     case GetterNode():
       _walk(node.receiver, f, selfName: selfName);
 
+    case SetterCallNode():
+      _walk(node.target, f, selfName: selfName);
+      _walk(node.value, f, selfName: selfName);
+
     case LetNode():
       _walk(node.value, f, selfName: selfName);
       _walk(node.body, f, selfName: selfName);

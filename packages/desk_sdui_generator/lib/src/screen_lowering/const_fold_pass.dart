@@ -102,6 +102,12 @@ IrNode _foldChildren(IrNode node) {
         receiver: constFold(node.receiver),
         name: node.name,
       );
+    case SetterCallNode():
+      return SetterCallNode(
+        target: constFold(node.target),
+        setterKey: node.setterKey,
+        value: constFold(node.value),
+      );
     case LetNode():
       return LetNode(
         name: node.name,
@@ -290,6 +296,7 @@ bool _isPureLiteral(IrNode node) {
     case NotOpNode():
     case CoalesceOpNode():
     case GetterNode():
+    case SetterCallNode():
     case LetNode():
     case AssignNode():
     case MemberAccessNode():

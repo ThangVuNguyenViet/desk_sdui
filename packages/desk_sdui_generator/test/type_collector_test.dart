@@ -273,11 +273,11 @@ Widget build(({String title, int count}) data) =>
       final screen = await resolveScreen('''
 import 'package:flutter/material.dart';
 import 'package:desk_sdui_annotation/desk_sdui_annotation.dart';
-extension type ChefView(Map<String, Object?> raw) {
+extension type ProfileView(Map<String, Object?> raw) {
   String get headline => raw['headline'] as String;
 }
-@Screen('chef_view')
-Widget chefView(ChefView data) => Text(data.headline);
+@Screen('profile_view')
+Widget profileView(ProfileView data) => Text(data.headline);
 ''');
       final types = collectTypes(screen);
       expect(types.widgets.map((e) => e.name), contains('Text'));

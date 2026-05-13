@@ -19,19 +19,19 @@ void main() {
       final output = builder.emitRegistryForTest(
         screens: [
           ScreenInfoForTest(
-            name: 'chef',
-            bindingSymbol: 'chefBinding',
-            registrationFn: 'registerChefDependencies',
+            name: 'profile',
+            bindingSymbol: 'profileBinding',
+            registrationFn: 'registerProfileDependencies',
             sourceUri: Uri.parse(
-                'package:desk_sdui_demo/screens/chef.dart'),
+                'package:desk_sdui_demo/screens/profile.dart'),
           ),
         ],
         packageName: 'desk_sdui_demo',
       );
 
-      expect(output, contains('rt.registerScreen(chefBinding)'),
+      expect(output, contains('rt.registerScreen(profileBinding)'),
           reason: 'Must register screen binding');
-      expect(output, contains('registerChefDependencies(rt)'),
+      expect(output, contains('registerProfileDependencies(rt)'),
           reason: 'Must call per-screen dependency registration');
     });
 
@@ -40,21 +40,21 @@ void main() {
       final output = builder.emitRegistryForTest(
         screens: [
           ScreenInfoForTest(
-            name: 'chef',
-            bindingSymbol: 'chefBinding',
-            registrationFn: 'registerChefDependencies',
+            name: 'profile',
+            bindingSymbol: 'profileBinding',
+            registrationFn: 'registerProfileDependencies',
             sourceUri: Uri.parse(
-                'package:desk_sdui_demo/screens/chef.dart'),
+                'package:desk_sdui_demo/screens/profile.dart'),
           ),
         ],
         packageName: 'desk_sdui_demo',
       );
 
-      expect(output, contains("show chefBinding"),
+      expect(output, contains("show profileBinding"),
           reason: 'binding symbol must be in source import');
-      expect(output, contains("show registerChefDependencies"),
+      expect(output, contains("show registerProfileDependencies"),
           reason: 'registration fn must be in reg file import');
-      expect(output, contains('chef.sdui_reg.g.dart'),
+      expect(output, contains('profile.sdui_reg.g.dart'),
           reason: 'reg file URI must reference .sdui_reg.g.dart');
     });
 
@@ -62,11 +62,11 @@ void main() {
       final output = builder.emitRegistryForTest(
         screens: [
           ScreenInfoForTest(
-            name: 'chef',
-            bindingSymbol: 'chefBinding',
-            registrationFn: 'registerChefDependencies',
+            name: 'profile',
+            bindingSymbol: 'profileBinding',
+            registrationFn: 'registerProfileDependencies',
             sourceUri:
-                Uri.parse('package:desk_sdui_demo/screens/chef.dart'),
+                Uri.parse('package:desk_sdui_demo/screens/profile.dart'),
           ),
           ScreenInfoForTest(
             name: 'menu',
@@ -79,8 +79,8 @@ void main() {
         packageName: 'desk_sdui_demo',
       );
 
-      expect(output, contains('rt.registerScreen(chefBinding)'));
-      expect(output, contains('registerChefDependencies(rt)'));
+      expect(output, contains('rt.registerScreen(profileBinding)'));
+      expect(output, contains('registerProfileDependencies(rt)'));
       expect(output, contains('rt.registerScreen(menuBinding)'));
       expect(output, contains('registerMenuDependencies(rt)'));
     });

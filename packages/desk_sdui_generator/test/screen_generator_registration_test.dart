@@ -130,9 +130,9 @@ import 'package:flutter/material.dart';
 Widget build() => Text('hi');
 ''');
 
-      final output = _runPipeline(fnDecl, 'chefProfile');
+      final output = _runPipeline(fnDecl, 'userProfile');
 
-      expect(output, contains('void registerChefProfileDependencies(Runtime rt)'));
+      expect(output, contains('void registerUserProfileDependencies(Runtime rt)'));
     });
 
     test('emits registerConstant for Icons.person', () async {

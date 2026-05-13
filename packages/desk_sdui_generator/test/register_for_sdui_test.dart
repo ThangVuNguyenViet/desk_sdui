@@ -308,19 +308,19 @@ class _Cov {}
         final output = builder.emitRegistryForTest(
           screens: [
             ScreenInfoForTest(
-              name: 'chef',
-              bindingSymbol: 'chefBinding',
-              registrationFn: 'registerChefDependencies',
+              name: 'profile',
+              bindingSymbol: 'profileBinding',
+              registrationFn: 'registerProfileDependencies',
               sourceUri: Uri.parse(
-                  'package:desk_sdui_demo/screens/chef.sdui.g.dart'),
+                  'package:desk_sdui_demo/screens/profile.sdui.g.dart'),
             ),
           ],
           packageName: 'desk_sdui_demo',
           catalogTypes: catalogTypes,
         );
 
-        expect(output, contains('rt.registerScreen(chefBinding)'));
-        expect(output, contains('registerChefDependencies(rt)'));
+        expect(output, contains('rt.registerScreen(profileBinding)'));
+        expect(output, contains('registerProfileDependencies(rt)'));
         expect(output, contains("rt.registerWidget('SizedBox'"));
         expect(output, contains('registerSduiCatalog(rt)'));
       },

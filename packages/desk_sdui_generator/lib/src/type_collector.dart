@@ -437,7 +437,7 @@ class _TypeVisitor extends RecursiveAstVisitor<void> {
   /// Recursively records library URIs for [type] and its type arguments.
   void _recordDartTypeLibraries(DartType type) {
     // Unwrap extension types to their representation type so the backing
-    // type's library is recorded (e.g. ChefView → Map<String, Object?>).
+    // type's library is recorded (e.g. ProfileView → Map<String, Object?>).
     final unwrapped = _unwrapExtensionType(type);
     if (unwrapped != type) {
       _recordDartTypeLibraries(unwrapped);

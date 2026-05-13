@@ -7,7 +7,41 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:vector_math/vector_math_64.dart' hide Colors;
 
-void registerChef_viewDependencies(Runtime rt) {
+void registerTry_step_demoDependencies(Runtime rt) {
+  rt.registerWidget(
+    'ElevatedButton',
+    (args) => ElevatedButton(
+      key: args['key'] as Key?,
+      onPressed: args['onPressed'] as void Function()?,
+      onLongPress: args['onLongPress'] as void Function()?,
+      onHover: args['onHover'] as void Function(bool)?,
+      onFocusChange: args['onFocusChange'] as void Function(bool)?,
+      style: args['style'] as ButtonStyle?,
+      focusNode: args['focusNode'] as FocusNode?,
+      autofocus: args['autofocus'] as bool? ?? false,
+      clipBehavior: args['clipBehavior'] as Clip?,
+      statesController: args['statesController'] as WidgetStatesController?,
+      child: args['child'] as Widget?,
+    ),
+  );
+  rt.registerWidget(
+    'ElevatedButton.icon',
+    (args) => ElevatedButton.icon(
+      key: args['key'] as Key?,
+      onPressed: args['onPressed'] as void Function()?,
+      onLongPress: args['onLongPress'] as void Function()?,
+      onHover: args['onHover'] as void Function(bool)?,
+      onFocusChange: args['onFocusChange'] as void Function(bool)?,
+      style: args['style'] as ButtonStyle?,
+      focusNode: args['focusNode'] as FocusNode?,
+      autofocus: args['autofocus'] as bool? ?? false,
+      clipBehavior: args['clipBehavior'] as Clip? ?? Clip.none,
+      statesController: args['statesController'] as WidgetStatesController?,
+      icon: args['icon'] as Widget?,
+      label: args['label'] as Widget,
+      iconAlignment: args['iconAlignment'] as IconAlignment?,
+    ),
+  );
   rt.registerWidget(
     'Text',
     (args) => Text(
@@ -51,5 +85,13 @@ void registerChef_viewDependencies(Runtime rt) {
       textHeightBehavior: args['textHeightBehavior'] as TextHeightBehavior?,
       selectionColor: args['selectionColor'] as Color?,
     ),
+  );
+  rt.registerMethod(
+    'SaveController.save',
+    (recv, args) => (recv as SaveController).save(),
+  );
+  rt.registerMethod(
+    'SaveController.showError',
+    (recv, args) => (recv as SaveController).showError(args['arg0'] as Object),
   );
 }

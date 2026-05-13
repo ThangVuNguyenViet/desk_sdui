@@ -7,7 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:vector_math/vector_math_64.dart' hide Colors;
 
-void registerChef_viewDependencies(Runtime rt) {
+void registerLoop_demoDependencies(Runtime rt) {
   rt.registerWidget(
     'Text',
     (args) => Text(
@@ -51,5 +51,9 @@ void registerChef_viewDependencies(Runtime rt) {
       textHeightBehavior: args['textHeightBehavior'] as TextHeightBehavior?,
       selectionColor: args['selectionColor'] as Color?,
     ),
+  );
+  rt.registerSubscript(
+    'List.[]',
+    (recv, key) => (recv as List<int>)[key as int],
   );
 }

@@ -7,48 +7,44 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:vector_math/vector_math_64.dart' hide Colors;
 
-void registerAsync_action_demoDependencies(Runtime rt) {
+void registerPattern_demoDependencies(Runtime rt) {
   rt.registerWidget(
-    'Center',
-    (args) => Center(
+    'CircularProgressIndicator',
+    (args) => CircularProgressIndicator(
       key: args['key'] as Key?,
-      widthFactor: args['widthFactor'] as double?,
-      heightFactor: args['heightFactor'] as double?,
-      child: args['child'] as Widget?,
+      value: args['value'] as double?,
+      backgroundColor: args['backgroundColor'] as Color?,
+      color: args['color'] as Color?,
+      valueColor: args['valueColor'] as Animation<Color?>?,
+      strokeWidth: args['strokeWidth'] as double?,
+      strokeAlign: args['strokeAlign'] as double?,
+      semanticsLabel: args['semanticsLabel'] as String?,
+      semanticsValue: args['semanticsValue'] as String?,
+      strokeCap: args['strokeCap'] as StrokeCap?,
+      constraints: args['constraints'] as BoxConstraints?,
+      trackGap: args['trackGap'] as double?,
+      year2023: args['year2023'] as bool?,
+      padding: args['padding'] as EdgeInsetsGeometry?,
+      controller: args['controller'] as AnimationController?,
     ),
   );
   rt.registerWidget(
-    'ElevatedButton',
-    (args) => ElevatedButton(
+    'CircularProgressIndicator.adaptive',
+    (args) => CircularProgressIndicator.adaptive(
       key: args['key'] as Key?,
-      onPressed: args['onPressed'] as void Function()?,
-      onLongPress: args['onLongPress'] as void Function()?,
-      onHover: args['onHover'] as void Function(bool)?,
-      onFocusChange: args['onFocusChange'] as void Function(bool)?,
-      style: args['style'] as ButtonStyle?,
-      focusNode: args['focusNode'] as FocusNode?,
-      autofocus: args['autofocus'] as bool? ?? false,
-      clipBehavior: args['clipBehavior'] as Clip?,
-      statesController: args['statesController'] as WidgetStatesController?,
-      child: args['child'] as Widget?,
-    ),
-  );
-  rt.registerWidget(
-    'ElevatedButton.icon',
-    (args) => ElevatedButton.icon(
-      key: args['key'] as Key?,
-      onPressed: args['onPressed'] as void Function()?,
-      onLongPress: args['onLongPress'] as void Function()?,
-      onHover: args['onHover'] as void Function(bool)?,
-      onFocusChange: args['onFocusChange'] as void Function(bool)?,
-      style: args['style'] as ButtonStyle?,
-      focusNode: args['focusNode'] as FocusNode?,
-      autofocus: args['autofocus'] as bool? ?? false,
-      clipBehavior: args['clipBehavior'] as Clip? ?? Clip.none,
-      statesController: args['statesController'] as WidgetStatesController?,
-      icon: args['icon'] as Widget?,
-      label: args['label'] as Widget,
-      iconAlignment: args['iconAlignment'] as IconAlignment?,
+      value: args['value'] as double?,
+      backgroundColor: args['backgroundColor'] as Color?,
+      valueColor: args['valueColor'] as Animation<Color?>?,
+      strokeWidth: args['strokeWidth'] as double?,
+      semanticsLabel: args['semanticsLabel'] as String?,
+      semanticsValue: args['semanticsValue'] as String?,
+      strokeCap: args['strokeCap'] as StrokeCap?,
+      strokeAlign: args['strokeAlign'] as double?,
+      constraints: args['constraints'] as BoxConstraints?,
+      trackGap: args['trackGap'] as double?,
+      year2023: args['year2023'] as bool?,
+      padding: args['padding'] as EdgeInsetsGeometry?,
+      controller: args['controller'] as AnimationController?,
     ),
   );
   rt.registerWidget(
@@ -95,12 +91,43 @@ void registerAsync_action_demoDependencies(Runtime rt) {
       selectionColor: args['selectionColor'] as Color?,
     ),
   );
-  rt.registerMethod(
-    'AsyncActionController.simulateLogin',
-    (recv, args) => (recv as AsyncActionController).simulateLogin(),
+  rt.registerWidget(
+    'SizedBox',
+    (args) => SizedBox(
+      key: args['key'] as Key?,
+      width: args['width'] as double?,
+      height: args['height'] as double?,
+      child: args['child'] as Widget?,
+    ),
   );
-  rt.registerMethod(
-    'AsyncActionController.log',
-    (recv, args) => (recv as AsyncActionController).log(args['arg0'] as String),
+  rt.registerWidget(
+    'SizedBox.expand',
+    (args) => SizedBox.expand(
+      key: args['key'] as Key?,
+      child: args['child'] as Widget?,
+    ),
+  );
+  rt.registerWidget(
+    'SizedBox.shrink',
+    (args) => SizedBox.shrink(
+      key: args['key'] as Key?,
+      child: args['child'] as Widget?,
+    ),
+  );
+  rt.registerWidget(
+    'SizedBox.fromSize',
+    (args) => SizedBox.fromSize(
+      key: args['key'] as Key?,
+      child: args['child'] as Widget?,
+      size: args['size'] as Size?,
+    ),
+  );
+  rt.registerWidget(
+    'SizedBox.square',
+    (args) => SizedBox.square(
+      key: args['key'] as Key?,
+      child: args['child'] as Widget?,
+      dimension: args['dimension'] as double?,
+    ),
   );
 }

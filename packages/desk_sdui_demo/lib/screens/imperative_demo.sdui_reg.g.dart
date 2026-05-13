@@ -7,7 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:vector_math/vector_math_64.dart' hide Colors;
 
-void registerChef_viewDependencies(Runtime rt) {
+void registerImperative_demoDependencies(Runtime rt) {
   rt.registerWidget(
     'Text',
     (args) => Text(

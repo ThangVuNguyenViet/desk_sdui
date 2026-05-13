@@ -201,6 +201,22 @@ class RegistrationEmitter {
         "(recv, args) => (recv as $className).$fieldName = args['arg0'] as $paramType);";
   }
 
+  /// Emit a `rt.registerSetter(...)` call for a non-final public instance field.
+  ///
+  /// The registration name is `'ClassName.fieldName'`. The closure mutates the
+  /// field on the cast receiver. Used for payload-driven field assignment
+  /// (e.g. `vm.count = 0` in a screen body).
+  String emitFieldSetter(FieldElement field) {
+    final enclosing = field.enclosingElement;
+    final className =
+        (enclosing is InterfaceElement ? enclosing.name : null) ?? '';
+    final fieldName = field.name;
+    final registrationName = '$className.$fieldName';
+    final fieldType = _typeDisplayName(field.type);
+    return "rt.registerSetter('$registrationName', (target, value) => "
+        "(target as $className).$fieldName = value as $fieldType);";
+  }
+
   /// Emit all public instance methods for a registered non-Widget class.
   ///
   /// Discovery rules:
@@ -210,6 +226,9 @@ class RegistrationEmitter {
   /// - Skip dispose if present (lifecycle, not callable).
   /// - Skip getters/setters (only methods).
   /// - Skip static methods (those are emitted as functions, not methods).
+  ///
+  /// Also emits `registerSetter` calls for non-final, public, non-late,
+  /// non-static instance fields of the class.
   String emitMethodsForClass(ClassElement cls) {
     final lines = <String>[]
         ..add('// Methods for ${cls.name}')
@@ -250,8 +269,29 @@ class RegistrationEmitter {
       );
     }
 
+    // Emit setters for eligible fields.
+    for (final field in cls.fields) {
+      if (_isSetterEligible(field)) {
+        lines.add(emitFieldSetter(field));
+      }
+    }
+
     lines.add('}');
     return lines.join('\n');
+  }
+
+  /// Check if a field is eligible for setter registration.
+  ///
+  /// A field is eligible if:
+  /// - It is public (not starting with '_')
+  /// - It is not final
+  /// - It is not late
+  /// - It is not static
+  bool _isSetterEligible(FieldElement field) {
+    return field.isPublic &&
+        !field.isFinal &&
+        !field.isLate &&
+        !field.isStatic;
   }
 
   /// Emit all registrations from a [CollectedTypes] set.

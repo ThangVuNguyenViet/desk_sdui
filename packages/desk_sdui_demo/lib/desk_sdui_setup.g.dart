@@ -10,6 +10,7 @@ import 'dart:ui';
 import 'package:cue/cue.dart';
 import 'package:desk_sdui_demo/screens/counter_actions.dart';
 import 'package:desk_sdui_demo/screens/async_action_demo.dart' show async_action_demoBinding;
+import 'package:desk_sdui_demo/screens/cascade_demo.dart' show cascade_demoBinding;
 import 'package:desk_sdui_demo/screens/chef_view.dart' show chef_viewBinding;
 import 'package:desk_sdui_demo/screens/counter_actions.dart' show counter_actionsBinding;
 import 'package:desk_sdui_demo/screens/counter_bouncy.dart' show counter_bouncyBinding;
@@ -19,10 +20,16 @@ import 'package:desk_sdui_demo/screens/counter_minimal.dart' show counter_minima
 import 'package:desk_sdui_demo/screens/counter_record.dart' show counter_recordBinding;
 import 'package:desk_sdui_demo/screens/counter_shorthand.dart' show counter_shorthandBinding;
 import 'package:desk_sdui_demo/screens/counter_stress.dart' show counter_stressBinding;
+import 'package:desk_sdui_demo/screens/imperative_demo.dart' show imperative_demoBinding;
 import 'package:desk_sdui_demo/screens/lambda_demo.dart' show lambda_demoBinding;
 import 'package:desk_sdui_demo/screens/let_demo.dart' show let_demoBinding;
+import 'package:desk_sdui_demo/screens/loop_demo.dart' show loop_demoBinding;
+import 'package:desk_sdui_demo/screens/pattern_demo.dart' show pattern_demoBinding;
+import 'package:desk_sdui_demo/screens/stateful_counter_demo.dart' show stateful_counter_demoBinding;
 import 'package:desk_sdui_demo/screens/themed_counter.dart' show themed_counterBinding;
+import 'package:desk_sdui_demo/screens/try_step_demo.dart' show try_step_demoBinding;
 import 'package:desk_sdui_demo/screens/async_action_demo.sdui_reg.g.dart' show registerAsync_action_demoDependencies;
+import 'package:desk_sdui_demo/screens/cascade_demo.sdui_reg.g.dart' show registerCascade_demoDependencies;
 import 'package:desk_sdui_demo/screens/chef_view.sdui_reg.g.dart' show registerChef_viewDependencies;
 import 'package:desk_sdui_demo/screens/counter_actions.sdui_reg.g.dart' show registerCounter_actionsDependencies;
 import 'package:desk_sdui_demo/screens/counter_bouncy.sdui_reg.g.dart' show registerCounter_bouncyDependencies;
@@ -32,9 +39,14 @@ import 'package:desk_sdui_demo/screens/counter_minimal.sdui_reg.g.dart' show reg
 import 'package:desk_sdui_demo/screens/counter_record.sdui_reg.g.dart' show registerCounter_recordDependencies;
 import 'package:desk_sdui_demo/screens/counter_shorthand.sdui_reg.g.dart' show registerCounter_shorthandDependencies;
 import 'package:desk_sdui_demo/screens/counter_stress.sdui_reg.g.dart' show registerCounter_stressDependencies;
+import 'package:desk_sdui_demo/screens/imperative_demo.sdui_reg.g.dart' show registerImperative_demoDependencies;
 import 'package:desk_sdui_demo/screens/lambda_demo.sdui_reg.g.dart' show registerLambda_demoDependencies;
 import 'package:desk_sdui_demo/screens/let_demo.sdui_reg.g.dart' show registerLet_demoDependencies;
+import 'package:desk_sdui_demo/screens/loop_demo.sdui_reg.g.dart' show registerLoop_demoDependencies;
+import 'package:desk_sdui_demo/screens/pattern_demo.sdui_reg.g.dart' show registerPattern_demoDependencies;
+import 'package:desk_sdui_demo/screens/stateful_counter_demo.sdui_reg.g.dart' show registerStateful_counter_demoDependencies;
 import 'package:desk_sdui_demo/screens/themed_counter.sdui_reg.g.dart' show registerThemed_counterDependencies;
+import 'package:desk_sdui_demo/screens/try_step_demo.sdui_reg.g.dart' show registerTry_step_demoDependencies;
 
 void registerSduiCatalog(Runtime rt) {
   rt.registerWidget('Align', (args) => Align(key: args['key'] as Key?, alignment: args['alignment'] as AlignmentGeometry? ?? Alignment.center, widthFactor: args['widthFactor'] as double?, heightFactor: args['heightFactor'] as double?, child: args['child'] as Widget?));
@@ -385,6 +397,8 @@ void registerAllScreens(Runtime rt) {
   registerCoreAccessors(rt);
   rt.registerScreen(async_action_demoBinding);
   registerAsync_action_demoDependencies(rt);
+  rt.registerScreen(cascade_demoBinding);
+  registerCascade_demoDependencies(rt);
   rt.registerScreen(chef_viewBinding);
   registerChef_viewDependencies(rt);
   rt.registerScreen(counter_actionsBinding);
@@ -403,11 +417,21 @@ void registerAllScreens(Runtime rt) {
   registerCounter_shorthandDependencies(rt);
   rt.registerScreen(counter_stressBinding);
   registerCounter_stressDependencies(rt);
+  rt.registerScreen(imperative_demoBinding);
+  registerImperative_demoDependencies(rt);
   rt.registerScreen(lambda_demoBinding);
   registerLambda_demoDependencies(rt);
   rt.registerScreen(let_demoBinding);
   registerLet_demoDependencies(rt);
+  rt.registerScreen(loop_demoBinding);
+  registerLoop_demoDependencies(rt);
+  rt.registerScreen(pattern_demoBinding);
+  registerPattern_demoDependencies(rt);
+  rt.registerScreen(stateful_counter_demoBinding);
+  registerStateful_counter_demoDependencies(rt);
   rt.registerScreen(themed_counterBinding);
   registerThemed_counterDependencies(rt);
+  rt.registerScreen(try_step_demoBinding);
+  registerTry_step_demoDependencies(rt);
   registerSduiCatalog(rt);
 }

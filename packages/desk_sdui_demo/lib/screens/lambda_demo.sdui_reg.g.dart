@@ -72,4 +72,15 @@ void registerLambda_demoDependencies(Runtime rt) {
       selectionColor: args['selectionColor'] as Color?,
     ),
   );
+  rt.registerMethod(
+    'Iterable.toList',
+    (recv, args) => (recv as Iterable<E>).toList(
+      growable: args['growable'] as bool? ?? true,
+    ),
+  );
+  rt.registerMethod(
+    'Iterable.where',
+    (recv, args) =>
+        (recv as Iterable<E>).where(args['arg0'] as bool Function(String)),
+  );
 }

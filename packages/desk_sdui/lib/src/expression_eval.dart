@@ -32,8 +32,16 @@ Object? evalExpression(
   return evalExpressionWithEnv(node, toEnv(input), runtime, ctx: ctx);
 }
 
-/// Screen-level entry point that handles [ScreenWithFunctionsNode] by building
+/// Eval-only entry point that handles [ScreenWithFunctionsNode] by building
 /// the payload function table before resolving the screen body.
+///
+/// **Not used by widget rendering.** Widget-position screen resolution flows
+/// through `resolveNode` in `resolve.dart`, which has its own
+/// `ScreenWithFunctionsNode` case and threads [RuntimeContext] through the
+/// resolver helpers. This function exists for value-only entry points
+/// (currently: payload-function eval tests) that need to drive
+/// [evalExpressionWithEnv] against a screen IR whose root is a
+/// [ScreenWithFunctionsNode].
 Object? resolveScreen(
   IrNode node,
   Map<String, Object?> input,

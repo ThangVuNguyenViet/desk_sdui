@@ -396,6 +396,28 @@ void main() {
       expect(decoded, node);
     });
 
+    test('PayloadFunctionNode with zero params round-trips', () {
+      // Locks down empty-list serialization for `params` — caught a regression
+      // where empty `params` was silently dropped by the decoder.
+      const node = PayloadFunctionNode(
+        name: 'noop',
+        params: [],
+        body: LiteralNode('hello'),
+      );
+      final encoded = codec.encode(node);
+      final decoded = codec.decode(encoded);
+      expect(decoded, node);
+      expect((decoded as PayloadFunctionNode).params, isEmpty);
+    });
+
+    test('PayloadFunctionCallNode with zero args round-trips', () {
+      const node = PayloadFunctionCallNode(name: 'noop', args: []);
+      final encoded = codec.encode(node);
+      final decoded = codec.decode(encoded);
+      expect(decoded, node);
+      expect((decoded as PayloadFunctionCallNode).args, isEmpty);
+    });
+
     test('ScreenWithFunctionsNode round-trips', () {
       const node = ScreenWithFunctionsNode(
         functions: [

@@ -513,40 +513,103 @@ IrNode _lowerCascadeSection(Expression section, RefNode receiver, AstNode origin
 
 IrNode _lowerAssignment(AssignmentExpression expr) {
   final lhs = expr.leftHandSide;
-
-  // Only simple-identifier LHS is supported for variable assignment.
-  if (lhs is! SimpleIdentifier) {
-    // Cascade-style or property assignment — handled by Cascades feature
-    // (the cascade lowerer handles ..foo = x via _lowerCascadeSection).
-    throw LoweringError(
-      'Only simple-identifier assignments (`x = expr`) are supported in screen bodies. '
-      'Field/property assignment requires Cascades (Feature 7).',
-      expr,
-    );
-  }
-
-  final name = lhs.name;
   final op = expr.operator.lexeme;
 
-  // --- compound assignments: x += e  →  AssignNode(x, ArithOpNode(+, x, e)) ---
+  // --- simple-identifier assignment: local variable assignment ---
+  if (lhs is SimpleIdentifier) {
+    final name = lhs.name;
+
+    // --- compound assignments: x += e  →  AssignNode(x, ArithOpNode(+, x, e)) ---
+    if (op != '=') {
+      final ref = RefNode([name]);
+      final rhs = lowerExpression(expr.rightHandSide);
+
+      IrNode compoundValue;
+      switch (op) {
+        case '+=':
+          compoundValue = ArithOpNode(op: ArithOp.add, left: ref, right: rhs);
+        case '-=':
+          compoundValue = ArithOpNode(op: ArithOp.sub, left: ref, right: rhs);
+        case '*=':
+          compoundValue = ArithOpNode(op: ArithOp.mul, left: ref, right: rhs);
+        case '/=':
+          compoundValue = ArithOpNode(op: ArithOp.div, left: ref, right: rhs);
+        case '~/=':
+          compoundValue = ArithOpNode(op: ArithOp.intDiv, left: ref, right: rhs);
+        case '%=':
+          compoundValue = ArithOpNode(op: ArithOp.mod, left: ref, right: rhs);
+        default:
+          throw LoweringError(
+            'Unsupported compound assignment operator "$op". '
+            'Supported: =, +=, -=, *=, /=, ~/=, %=.',
+            expr,
+          );
+      }
+      return _buildAssignNode(name, compoundValue, expr);
+    }
+
+    // --- simple assignment: x = e ---
+    return _buildAssignNode(name, lowerExpression(expr.rightHandSide), expr);
+  }
+
+  // --- property-access assignment: vm.count = 0, vm.name = 'a' ---
   if (op != '=') {
-    final ref = RefNode([name]);
+    // Compound assignments on fields: vm.count += 5
+    final receiverType = lhs is PrefixedIdentifier
+        ? lhs.prefix.staticType
+        : lhs is PropertyAccess
+            ? lhs.target?.staticType
+            : null;
+    final typeBucket = coreTypeBucket(receiverType);
+    if (typeBucket != null) {
+      throw LoweringError(
+        'Compound assignment on core types (${receiverType?.getDisplayString()}) '
+        'is not supported.',
+        expr,
+      );
+    }
+    final className = _classNameForType(receiverType);
+    if (className == null) {
+      throw LoweringError(
+        'Compound assignment to ${lhs.toSource()}: receiver type '
+        '${receiverType?.getDisplayString(withNullability: false)} is '
+        'not a registered class. Register the owner type with @Register or '
+        'use a registered setter method.',
+        expr,
+      );
+    }
+
+    final fieldName = lhs is PrefixedIdentifier
+        ? lhs.identifier.name
+        : lhs is PropertyAccess
+            ? lhs.propertyName.name
+            : '';
+    final receiverExpr =
+        lhs is PrefixedIdentifier ? lhs.prefix : (lhs as PropertyAccess).target!;
     final rhs = lowerExpression(expr.rightHandSide);
+    final currentValue = GetterNode(
+      receiver: lowerExpression(receiverExpr),
+      name: '$className.$fieldName',
+    );
 
     IrNode compoundValue;
     switch (op) {
       case '+=':
-        compoundValue = ArithOpNode(op: ArithOp.add, left: ref, right: rhs);
+        compoundValue = ArithOpNode(op: ArithOp.add, left: currentValue, right: rhs);
       case '-=':
-        compoundValue = ArithOpNode(op: ArithOp.sub, left: ref, right: rhs);
+        compoundValue = ArithOpNode(op: ArithOp.sub, left: currentValue, right: rhs);
       case '*=':
-        compoundValue = ArithOpNode(op: ArithOp.mul, left: ref, right: rhs);
+        compoundValue =
+            ArithOpNode(op: ArithOp.mul, left: currentValue, right: rhs);
       case '/=':
-        compoundValue = ArithOpNode(op: ArithOp.div, left: ref, right: rhs);
+        compoundValue =
+            ArithOpNode(op: ArithOp.div, left: currentValue, right: rhs);
       case '~/=':
-        compoundValue = ArithOpNode(op: ArithOp.intDiv, left: ref, right: rhs);
+        compoundValue =
+            ArithOpNode(op: ArithOp.intDiv, left: currentValue, right: rhs);
       case '%=':
-        compoundValue = ArithOpNode(op: ArithOp.mod, left: ref, right: rhs);
+        compoundValue =
+            ArithOpNode(op: ArithOp.mod, left: currentValue, right: rhs);
       default:
         throw LoweringError(
           'Unsupported compound assignment operator "$op". '
@@ -554,11 +617,87 @@ IrNode _lowerAssignment(AssignmentExpression expr) {
           expr,
         );
     }
-    return _buildAssignNode(name, compoundValue, expr);
+
+    return SetterCallNode(
+      target: lowerExpression(receiverExpr),
+      setterKey: '$className.$fieldName',
+      value: compoundValue,
+    );
   }
 
-  // --- simple assignment: x = e ---
-  return _buildAssignNode(name, lowerExpression(expr.rightHandSide), expr);
+  // Simple assignment on property: vm.count = 0
+  if (lhs is PrefixedIdentifier) {
+    return _lowerSetterAssignment(
+      receiverExpr: lhs.prefix,
+      fieldName: lhs.identifier.name,
+      value: expr.rightHandSide,
+    );
+  }
+  if (lhs is PropertyAccess && lhs.target != null) {
+    return _lowerSetterAssignment(
+      receiverExpr: lhs.target!,
+      fieldName: lhs.propertyName.name,
+      value: expr.rightHandSide,
+    );
+  }
+
+  // Cascade-style setters (..text = 'x') route through Cascades (Feature 7).
+  throw LoweringError(
+    'Unsupported assignment target: ${lhs.runtimeType}',
+    expr,
+  );
+}
+
+/// Lower a property-access setter assignment (vm.count = 0).
+///
+/// Returns a [SetterCallNode] that will be dispatched through the runtime's
+/// setter registry at evaluation time.
+SetterCallNode _lowerSetterAssignment({
+  required Expression receiverExpr,
+  required String fieldName,
+  required Expression value,
+}) {
+  final receiverType = receiverExpr.staticType;
+  final typeBucket = coreTypeBucket(receiverType);
+  if (typeBucket != null) {
+    throw LoweringError(
+      'Assignment to ${receiverExpr.toSource()}.$fieldName: receiver type '
+      '${receiverType?.getDisplayString(withNullability: false)} is a core '
+      'type. Core types do not support field assignment.',
+      receiverExpr,
+    );
+  }
+  final typeBucket2 = _classNameForType(receiverType);
+  if (typeBucket2 == null) {
+    throw LoweringError(
+      'Assignment to ${receiverExpr.toSource()}.$fieldName: receiver type '
+      '${receiverType?.getDisplayString(withNullability: false)} is not a '
+      'registered class. Register the owner type with @Register or use a '
+      'registered setter method.',
+      receiverExpr,
+    );
+  }
+  return SetterCallNode(
+    target: lowerExpression(receiverExpr),
+    setterKey: '$typeBucket2.$fieldName',
+    value: lowerExpression(value),
+  );
+}
+
+/// Map a DartType to its registered class name, or null if not registered.
+///
+/// Returns the simple class name (e.g. 'Vm') if the type is a registered class,
+/// or null if it's not registered, is a core type, or is null/dynamic/invalid.
+String? _classNameForType(DartType? type) {
+  if (type == null || type is DynamicType || type is InvalidType) return null;
+  final el = type.element;
+  if (el == null) return null;
+  // If it's a core type, return null (core types aren't registered as setters).
+  if (coreTypeBucket(type) != null) return null;
+  // For user-defined types, return the simple class name.
+  final name = el.name;
+  if (name == null) return null;
+  return name;
 }
 
 /// Validates the binding kind and constructs an [AssignNode].

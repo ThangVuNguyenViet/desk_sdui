@@ -74,6 +74,12 @@ typedef SduiMethodHandler = Object? Function(
 /// qualified handler name, e.g. `'String.isNotEmpty'`.
 typedef SduiGetterHandler = Object? Function(Object? receiver);
 
+/// Mutates a field on `receiver` by writing `value`. Registered against the
+/// qualified handler name, e.g. `'Vm.count'`. Codegen emits one per
+/// non-final, non-late, non-static, public instance field of each
+/// `@Register`-ed type.
+typedef SduiSetterHandler = void Function(Object? receiver, Object? value);
+
 /// Handles a subscript access: `receiver[key]`.
 typedef SduiSubscriptHandler = Object? Function(Object? receiver, Object? key);
 
@@ -126,6 +132,7 @@ class Runtime {
   final Map<String, Object?> _constants = {};
   final Map<String, SduiMethodHandler> _methods = {};
   final Map<String, SduiGetterHandler> _getters = {};
+  final Map<String, SduiSetterHandler> _setters = {};
   final Map<String, SduiSubscriptHandler> _subscripts = {};
   final Map<String, SduiValueBuilder> _valueBuilders = {};
   final Map<String, SduiFunctionHandler> _functions = {};
@@ -162,6 +169,9 @@ class Runtime {
 
   void registerGetter(String name, SduiGetterHandler handler) =>
       _getters[name] = handler;
+
+  void registerSetter(String name, SduiSetterHandler handler) =>
+      _setters[name] = handler;
 
   void registerSubscript(String name, SduiSubscriptHandler handler) =>
       _subscripts[name] = handler;
@@ -228,6 +238,10 @@ class Runtime {
   /// registered. Used by resolve.dart to dispatch [GetterNode].
   SduiGetterHandler? resolveGetter(String name) => _getters[name];
 
+  /// Returns the registered [SduiSetterHandler] for [name], or null if not
+  /// registered. Used by resolve.dart to dispatch [SetterCallNode].
+  SduiSetterHandler? resolveSetter(String name) => _setters[name];
+
   /// Returns the registered [SduiValueBuilder] for [name], or null if not
   /// registered. Used by resolve.dart to dispatch [ValueCtorNode].
   SduiValueBuilder? resolveValueBuilder(String name) => _valueBuilders[name];
@@ -238,6 +252,17 @@ class Runtime {
 
   Object? invokeGetter(String name, Object? receiver) =>
       _getters[name]?.call(receiver);
+
+  void invokeSetter(String name, Object? receiver, Object? value) {
+    final h = _setters[name];
+    if (h == null) {
+      throw StateError(
+        'No setter registered for "$name" (receiver: ${receiver?.runtimeType}). '
+        'If this is a registered type, verify the field is non-final and public.',
+      );
+    }
+    h(receiver, value);
+  }
 
   Object? invokeSubscript(String name, Object? receiver, Object? key) =>
       _subscripts[name]?.call(receiver, key);

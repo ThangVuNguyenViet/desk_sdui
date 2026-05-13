@@ -566,6 +566,32 @@ final class GetterNode extends ExpressionNode {
   String toString() => 'GetterNode($receiver.$name)';
 }
 
+/// `target.field = value` where `field` resolves through Runtime.invokeSetter.
+/// `setterKey` is the qualified handler key, e.g. `'Vm.count'`. Emitted by
+/// the lowerer when the LHS of an AssignmentExpression is a PropertyAccess
+/// whose receiver's static type is a registered class.
+final class SetterCallNode extends ExpressionNode {
+  const SetterCallNode({
+    required this.target,
+    required this.setterKey,
+    required this.value,
+  });
+  final IrNode target;     // the receiver expression
+  final String setterKey;  // e.g. 'Vm.count'
+  final IrNode value;
+
+  @override
+  bool operator ==(Object other) =>
+      other is SetterCallNode &&
+      other.target == target &&
+      other.setterKey == setterKey &&
+      other.value == value;
+  @override
+  int get hashCode => Object.hash(target, setterKey, value);
+  @override
+  String toString() => 'SetterCallNode($target.$setterKey = $value)';
+}
+
 /// Binds `name = value` and evaluates `body` in the extended env.
 /// Lowered from `final name = value; <body>` in @Screen bodies. Single-
 /// assignment — no re-binding within the same scope.

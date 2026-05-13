@@ -122,6 +122,12 @@ class JsonIrEncoder {
           'receiver': _encodeNode(node.receiver),
           'name': node.name,
         },
+      SetterCallNode() => {
+          r'$type': 'setterCall',
+          'target': _encodeNode(node.target),
+          'setterKey': node.setterKey,
+          'value': _encodeNode(node.value),
+        },
       LetNode() => {
           r'$type': 'let',
           'name': node.name,

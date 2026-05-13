@@ -101,6 +101,11 @@ class JsonIrDecoder {
           receiver: _decodeNode(map['receiver']! as Map<String, Object?>),
           name: map['name']! as String,
         ),
+      'setterCall' => SetterCallNode(
+          target: _decodeNode(map['target']! as Map<String, Object?>),
+          setterKey: map['setterKey']! as String,
+          value: _decodeNode(map['value']! as Map<String, Object?>),
+        ),
       'let' => LetNode(
           name: map['name']! as String,
           value: _decodeNode(map['value']! as Map<String, Object?>),

@@ -7,13 +7,35 @@ import 'ref_resolver.dart';
 import 'runtime.dart';
 
 /// Resolves an IR node to a Widget. May recurse.
+///
+/// The optional [ctx] carries the file-local [RuntimeContext] (currently:
+/// payload function table). It is threaded through every recursive call that
+/// may evaluate a [PayloadFunctionCallNode] expression. We use parameter
+/// threading rather than stuffing the context into [input] under a magic key
+/// (approach (a) in the review) because:
+///
+/// - The data flow is explicit at every call site.
+/// - It avoids the conceptual hazard of treating `Map<String, Object?>` as
+///   a polymorphic carrier for both user-visible inputs and resolver-internal
+///   state (cell map, setState hook, reactive map already crowd that namespace).
+/// - The signature churn is localized to a handful of resolver helpers.
 Widget resolveNode(
   BuildContext context,
   IrNode node,
   Map<String, Object?> input,
-  Runtime runtime,
-) {
+  Runtime runtime, {
+  RuntimeContext ctx = RuntimeContext.empty,
+}) {
   switch (node) {
+    case ScreenWithFunctionsNode(:final functions, :final screenBody):
+      // Build the payload-function table once per screen resolution and
+      // propagate it downward. Nested screens are not produced by the
+      // lowerer; a single wrapper at the root is the only shape.
+      final screenCtx = RuntimeContext(
+        payloadFunctions: {for (final fn in functions) fn.name: fn},
+      );
+      return resolveNode(context, screenBody, input, runtime, ctx: screenCtx);
+
     case IrStatefulNode():
       // Stable key so Flutter element-reuse assigns the State<> by IR
       // identity (the lowerer-emitted `id`, typically the screen name)
@@ -29,6 +51,7 @@ Widget resolveNode(
         node: node,
         input: input,
         runtime: runtime,
+        ctx: ctx,
       );
 
     case ConstNode(:final value):
@@ -52,33 +75,35 @@ Widget resolveNode(
           input,
           runtime,
           typeArgs: typeArgs,
+          ctx: ctx,
         );
       }
-      return _buildWidget(context, name, args, key, input, runtime, typeArgs: typeArgs);
+      return _buildWidget(context, name, args, key, input, runtime,
+          typeArgs: typeArgs, ctx: ctx);
 
     case BuiltinWidgetNode(:final name, :final args, :final key):
-      return _buildWidget(context, name, args, key, input, runtime);
+      return _buildWidget(context, name, args, key, input, runtime, ctx: ctx);
 
     case ConditionalNode(
         :final condition,
         :final thenBranch,
         :final elseBranch,
       ):
-      final cond = evalExpression(condition, input, runtime);
+      final cond = evalExpression(condition, input, runtime, ctx: ctx);
       if (cond == true) {
-        return _resolveBranch(context, thenBranch, input, runtime);
+        return _resolveBranch(context, thenBranch, input, runtime, ctx: ctx);
       }
       if (elseBranch != null) {
-        return _resolveBranch(context, elseBranch, input, runtime);
+        return _resolveBranch(context, elseBranch, input, runtime, ctx: ctx);
       }
       return const SizedBox.shrink();
 
     case SpreadNode(:final source):
-      return _resolveBranch(context, source, input, runtime);
+      return _resolveBranch(context, source, input, runtime, ctx: ctx);
 
     case LetNode(:final name, :final value, :final body):
-      final v = evalExpression(value, input, runtime);
-      return resolveNode(context, body, {...input, name: v}, runtime);
+      final v = evalExpression(value, input, runtime, ctx: ctx);
+      return resolveNode(context, body, {...input, name: v}, runtime, ctx: ctx);
 
     case LiteralNode(:final value):
       if (value is Widget) return value;
@@ -92,7 +117,8 @@ Widget resolveNode(
       // resolveNode on that IR. The runtime uses `executeStatement` for
       // side-effecting statements (LetStatementNode, AssignNode-as-stmt,
       // IfStatementNode, etc.) and intercepts the terminating `FlowReturn`.
-      return _resolveBlockAtWidgetPosition(context, node, input, runtime);
+      return _resolveBlockAtWidgetPosition(context, node, input, runtime,
+          ctx: ctx);
 
     default:
       throw StateError('resolveNode: $node not valid at widget position');
@@ -120,8 +146,9 @@ Widget _resolveBlockAtWidgetPosition(
   BuildContext context,
   BlockNode node,
   Map<String, Object?> input,
-  Runtime runtime,
-) {
+  Runtime runtime, {
+  RuntimeContext ctx = RuntimeContext.empty,
+}) {
   // Cell-backed shallow-copy of input, scoped to this block.
   final env = toEnv(input);
   for (final stmt in node.statements) {
@@ -134,7 +161,7 @@ Widget _resolveBlockAtWidgetPosition(
         );
       }
       // Render the returned widget IR using the current env's value map.
-      return resolveNode(context, value, _envToInput(env), runtime);
+      return resolveNode(context, value, _envToInput(env), runtime, ctx: ctx);
     }
     if (stmt is BreakNode) {
       throw StateError(
@@ -149,14 +176,15 @@ Widget _resolveBlockAtWidgetPosition(
     if (stmt is IfStatementNode) {
       // If-statement at widget position: an early-return branch must yield a
       // widget; the falling-through branch continues the block.
-      final maybe = _resolveIfAtWidgetPosition(context, stmt, env, runtime);
+      final maybe =
+          _resolveIfAtWidgetPosition(context, stmt, env, runtime, ctx: ctx);
       if (maybe != null) return maybe;
       continue;
     }
     // Side-effecting statement (LetStatementNode, AssignNode-as-statement,
     // nested BlockNode, etc.): delegate to executeStatement and observe its
     // control-flow signal.
-    final flow = executeStatement(stmt, env, runtime);
+    final flow = executeStatement(stmt, env, runtime, ctx: ctx);
     switch (flow) {
       case FlowNormal():
         continue;
@@ -167,7 +195,7 @@ Widget _resolveBlockAtWidgetPosition(
             'IrNode (got ${value.runtimeType}).',
           );
         }
-        return resolveNode(context, value, _envToInput(env), runtime);
+        return resolveNode(context, value, _envToInput(env), runtime, ctx: ctx);
       case FlowBreak():
         throw StateError(
           'BlockNode at widget position: `break` at screen root is illegal.',
@@ -192,12 +220,15 @@ Widget? _resolveIfAtWidgetPosition(
   BuildContext context,
   IfStatementNode node,
   Map<String, Cell> env,
-  Runtime runtime,
-) {
-  final c = evalExpressionWithEnv(node.cond, env, runtime);
+  Runtime runtime, {
+  RuntimeContext ctx = RuntimeContext.empty,
+}) {
+  final c = evalExpressionWithEnv(node.cond, env, runtime, ctx: ctx);
   final branch = (c == true) ? node.then : node.else_;
   if (branch == null) return null;
-  return _resolveStatementBranchAtWidgetPosition(context, branch, env, runtime);
+  return _resolveStatementBranchAtWidgetPosition(
+      context, branch, env, runtime,
+      ctx: ctx);
 }
 
 /// Resolves a statement-branch (a `then`/`else_` body of an [IfStatementNode])
@@ -207,8 +238,9 @@ Widget? _resolveStatementBranchAtWidgetPosition(
   BuildContext context,
   IrNode branch,
   Map<String, Cell> env,
-  Runtime runtime,
-) {
+  Runtime runtime, {
+  RuntimeContext ctx = RuntimeContext.empty,
+}) {
   if (branch is ReturnNode) {
     final value = branch.value;
     if (value == null) {
@@ -217,7 +249,7 @@ Widget? _resolveStatementBranchAtWidgetPosition(
         'every screen path must `return <widget>;`',
       );
     }
-    return resolveNode(context, value, _envToInput(env), runtime);
+    return resolveNode(context, value, _envToInput(env), runtime, ctx: ctx);
   }
   if (branch is BlockNode) {
     // Walk the nested block with a fresh scoped env clone.
@@ -230,10 +262,12 @@ Widget? _resolveStatementBranchAtWidgetPosition(
             'BlockNode at widget position: bare `return;` not allowed.',
           );
         }
-        return resolveNode(context, value, _envToInput(scoped), runtime);
+        return resolveNode(context, value, _envToInput(scoped), runtime,
+            ctx: ctx);
       }
       if (s is IfStatementNode) {
-        final maybe = _resolveIfAtWidgetPosition(context, s, scoped, runtime);
+        final maybe =
+            _resolveIfAtWidgetPosition(context, s, scoped, runtime, ctx: ctx);
         if (maybe != null) return maybe;
         continue;
       }
@@ -242,7 +276,7 @@ Widget? _resolveStatementBranchAtWidgetPosition(
           'BlockNode at widget position: `break`/`continue` at screen root is illegal.',
         );
       }
-      final flow = executeStatement(s, scoped, runtime);
+      final flow = executeStatement(s, scoped, runtime, ctx: ctx);
       switch (flow) {
         case FlowNormal():
           continue;
@@ -253,7 +287,8 @@ Widget? _resolveStatementBranchAtWidgetPosition(
               'IrNode (got ${value.runtimeType}).',
             );
           }
-          return resolveNode(context, value, _envToInput(scoped), runtime);
+          return resolveNode(context, value, _envToInput(scoped), runtime,
+              ctx: ctx);
         case FlowBreak():
         case FlowContinue():
           throw StateError(
@@ -265,7 +300,7 @@ Widget? _resolveStatementBranchAtWidgetPosition(
   }
   // Single-statement branch (e.g. `if (cond) someCall();`): delegate to
   // executeStatement; only FlowReturn produces a widget here.
-  final flow = executeStatement(branch, env, runtime);
+  final flow = executeStatement(branch, env, runtime, ctx: ctx);
   switch (flow) {
     case FlowNormal():
       return null;
@@ -276,7 +311,7 @@ Widget? _resolveStatementBranchAtWidgetPosition(
           'IrNode (got ${value.runtimeType}).',
         );
       }
-      return resolveNode(context, value, _envToInput(env), runtime);
+      return resolveNode(context, value, _envToInput(env), runtime, ctx: ctx);
     case FlowBreak():
     case FlowContinue():
       throw StateError(
@@ -296,15 +331,16 @@ Object? _resolveArg(
   BuildContext context,
   IrNode node,
   Map<String, Object?> input,
-  Runtime runtime,
-) {
+  Runtime runtime, {
+  RuntimeContext ctx = RuntimeContext.empty,
+}) {
   switch (node) {
     case IrStatefulNode():
       // A nested stateful subscreen used as a widget-position child. Route
       // through resolveNode so the [_StatefulIrHost] keying applies even
       // here (sibling subscreens via composed `Pair(top: stateful, bottom:
       // stateful)` etc.).
-      return resolveNode(context, node, input, runtime);
+      return resolveNode(context, node, input, runtime, ctx: ctx);
     case LiteralNode(:final value):
       return value;
     case ConstNode(:final value):
@@ -316,7 +352,8 @@ Object? _resolveArg(
       final out = <Object?>[];
       for (final child in children) {
         if (child is SpreadNode) {
-          final spread = _resolveArg(context, child.source, input, runtime);
+          final spread =
+              _resolveArg(context, child.source, input, runtime, ctx: ctx);
           if (spread is List) {
             out.addAll(spread);
           } else {
@@ -325,22 +362,22 @@ Object? _resolveArg(
         } else if (child is WidgetNode ||
             child is BuiltinWidgetNode ||
             child is ConstNode) {
-          out.add(resolveNode(context, child, input, runtime));
+          out.add(resolveNode(context, child, input, runtime, ctx: ctx));
         } else if (child is ForNode) {
-          out.addAll(_expandFor(context, child, input, runtime));
+          out.addAll(_expandFor(context, child, input, runtime, ctx: ctx));
         } else if (child is ConditionalNode) {
-          final cond = evalExpression(child.condition, input, runtime);
+          final cond = evalExpression(child.condition, input, runtime, ctx: ctx);
           if (cond == true) {
             out.add(
-              resolveNode(context, child.thenBranch, input, runtime),
+              resolveNode(context, child.thenBranch, input, runtime, ctx: ctx),
             );
           } else if (child.elseBranch != null) {
             out.add(
-              resolveNode(context, child.elseBranch!, input, runtime),
+              resolveNode(context, child.elseBranch!, input, runtime, ctx: ctx),
             );
           }
         } else {
-          out.add(_resolveArg(context, child, input, runtime));
+          out.add(_resolveArg(context, child, input, runtime, ctx: ctx));
         }
       }
       return out;
@@ -348,20 +385,20 @@ Object? _resolveArg(
     case MapNode(:final entries):
       return entries.map(
         (k, v) => MapEntry(
-          _resolveArg(context, k, input, runtime),
-          _resolveArg(context, v, input, runtime),
+          _resolveArg(context, k, input, runtime, ctx: ctx),
+          _resolveArg(context, v, input, runtime, ctx: ctx),
         ),
       );
 
     case ForNode():
-      return _expandFor(context, node, input, runtime);
+      return _expandFor(context, node, input, runtime, ctx: ctx);
 
     case WidgetNode(:final name, :final args, :final typeArgs):
       final fn = runtime.fnFor(name);
       if (fn != null) {
         final fnArgs = <String, Object?>{};
         args.forEach((k, v) {
-          fnArgs[k] = _resolveArg(context, v, input, runtime);
+          fnArgs[k] = _resolveArg(context, v, input, runtime, ctx: ctx);
         });
         if (typeArgs != null) fnArgs['__typeArgs__'] = typeArgs;
         return Function.apply(fn, [fnArgs]);
@@ -373,18 +410,18 @@ Object? _resolveArg(
       if (valueBuilder != null) {
         final resolvedArgs = <String, Object?>{};
         args.forEach((k, v) {
-          resolvedArgs[k] = _resolveArg(context, v, input, runtime);
+          resolvedArgs[k] = _resolveArg(context, v, input, runtime, ctx: ctx);
         });
         if (typeArgs != null) resolvedArgs['__typeArgs__'] = typeArgs;
         return valueBuilder(resolvedArgs);
       }
-      return resolveNode(context, node, input, runtime);
+      return resolveNode(context, node, input, runtime, ctx: ctx);
     case BuiltinWidgetNode(:final name, :final args):
       final fn = runtime.fnFor(name);
       if (fn != null) {
         final fnArgs = <String, Object?>{};
         args.forEach((k, v) {
-          fnArgs[k] = _resolveArg(context, v, input, runtime);
+          fnArgs[k] = _resolveArg(context, v, input, runtime, ctx: ctx);
         });
         return Function.apply(fn, [fnArgs]);
       }
@@ -392,25 +429,28 @@ Object? _resolveArg(
       if (valueBuilder != null) {
         final resolvedArgs = <String, Object?>{};
         args.forEach((k, v) {
-          resolvedArgs[k] = _resolveArg(context, v, input, runtime);
+          resolvedArgs[k] = _resolveArg(context, v, input, runtime, ctx: ctx);
         });
         return valueBuilder(resolvedArgs);
       }
-      return resolveNode(context, node, input, runtime);
+      return resolveNode(context, node, input, runtime, ctx: ctx);
 
     case MethodCallNode(:final receiver, :final name, :final args, :final typeArgs):
       if (receiver == null) {
         final resolvedArgs = <String, Object?>{};
         for (var i = 0; i < args.length; i++) {
-          resolvedArgs['arg$i'] = _resolveArg(context, args[i], input, runtime);
+          resolvedArgs['arg$i'] =
+              _resolveArg(context, args[i], input, runtime, ctx: ctx);
         }
         if (typeArgs != null) resolvedArgs['__typeArgs__'] = typeArgs;
         return runtime.invokeFunction(name, resolvedArgs);
       }
-      final resolvedReceiver = _resolveArg(context, receiver, input, runtime);
+      final resolvedReceiver =
+          _resolveArg(context, receiver, input, runtime, ctx: ctx);
       final resolvedArgs = <String, Object?>{};
       for (var i = 0; i < args.length; i++) {
-        resolvedArgs['arg$i'] = _resolveArg(context, args[i], input, runtime);
+        resolvedArgs['arg$i'] =
+            _resolveArg(context, args[i], input, runtime, ctx: ctx);
       }
       if (typeArgs != null) resolvedArgs['__typeArgs__'] = typeArgs;
       final handler = runtime.resolveMethodHandler(name);
@@ -425,7 +465,8 @@ Object? _resolveArg(
     case ValueCtorNode(:final name, :final args, :final typeArgs):
       final resolvedArgs = <String, Object?>{};
       for (var i = 0; i < args.length; i++) {
-        resolvedArgs['arg$i'] = _resolveArg(context, args[i], input, runtime);
+        resolvedArgs['arg$i'] =
+            _resolveArg(context, args[i], input, runtime, ctx: ctx);
       }
       if (typeArgs != null) resolvedArgs['__typeArgs__'] = typeArgs;
       final builder = runtime.resolveValueBuilder(name);
@@ -438,20 +479,20 @@ Object? _resolveArg(
       return builder(resolvedArgs);
 
     case EventNode():
-      return _bindEvent(node, input, runtime);
+      return _bindEvent(node, input, runtime, ctx: ctx);
 
     case ActionSequenceNode(:final steps):
       final setStateHook = input[kStatefulSetStateKey];
       return () async {
         var localEnv = toEnv(input);
         for (final step in steps) {
-          localEnv = await _runActionStep(step, localEnv, runtime);
+          localEnv = await _runActionStep(step, localEnv, runtime, ctx: ctx);
         }
         if (setStateHook is void Function()) setStateHook();
       };
 
     default:
-      return evalExpression(node, input, runtime);
+      return evalExpression(node, input, runtime, ctx: ctx);
   }
 }
 
@@ -462,10 +503,11 @@ Object? _resolveArg(
 Future<Map<String, Cell>> _runActionStep(
   IrNode step,
   Map<String, Cell> env,
-  Runtime runtime,
-) async {
+  Runtime runtime, {
+  RuntimeContext ctx = RuntimeContext.empty,
+}) async {
   if (step is ActionStepNode) {
-    final result = evalExpressionWithEnv(step.call, env, runtime);
+    final result = evalExpressionWithEnv(step.call, env, runtime, ctx: ctx);
     final value = step.awaitResult && result is Future ? await result : result;
     if (step.bindResult != null) {
       return {...env, step.bindResult!: Cell(value)};
@@ -476,7 +518,7 @@ Future<Map<String, Cell>> _runActionStep(
     try {
       var e = env;
       for (final s in step.trySteps) {
-        e = await _runActionStep(s, e, runtime);
+        e = await _runActionStep(s, e, runtime, ctx: ctx);
       }
       // Try succeeded: return the try-branch env to the outer sequence.
       return e;
@@ -485,7 +527,7 @@ Future<Map<String, Cell>> _runActionStep(
           ? {...env, step.exceptionBind!: Cell(err)}
           : env;
       for (final s in step.catchSteps) {
-        e = await _runActionStep(s, e, runtime);
+        e = await _runActionStep(s, e, runtime, ctx: ctx);
       }
       // Catch's local bindings don't leak to the outer scope.
       return env;
@@ -499,30 +541,32 @@ Widget _resolveBranch(
   BuildContext context,
   IrNode node,
   Map<String, Object?> input,
-  Runtime runtime,
-) {
+  Runtime runtime, {
+  RuntimeContext ctx = RuntimeContext.empty,
+}) {
   if (node is ListNode) {
     if (node.children.isEmpty) return const SizedBox.shrink();
     if (node.children.length == 1) {
-      return resolveNode(context, node.children.first, input, runtime);
+      return resolveNode(context, node.children.first, input, runtime, ctx: ctx);
     }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: node.children
-          .map((c) => resolveNode(context, c, input, runtime))
+          .map((c) => resolveNode(context, c, input, runtime, ctx: ctx))
           .toList(),
     );
   }
-  return resolveNode(context, node, input, runtime);
+  return resolveNode(context, node, input, runtime, ctx: ctx);
 }
 
 List<Object?> _expandFor(
   BuildContext context,
   ForNode node,
   Map<String, Object?> input,
-  Runtime runtime,
-) {
-  final source = evalExpression(node.source, input, runtime);
+  Runtime runtime, {
+  RuntimeContext ctx = RuntimeContext.empty,
+}) {
+  final source = evalExpression(node.source, input, runtime, ctx: ctx);
   if (source is! Iterable) {
     throw StateError('ForNode source did not resolve to Iterable');
   }
@@ -541,7 +585,7 @@ List<Object?> _expandFor(
     } else {
       scoped[node.variable!] = raw;
     }
-    out.add(_resolveArg(context, node.body, scoped, runtime));
+    out.add(_resolveArg(context, node.body, scoped, runtime, ctx: ctx));
   }
   return out;
 }
@@ -549,15 +593,16 @@ List<Object?> _expandFor(
 Object? _bindEvent(
   EventNode node,
   Map<String, Object?> input,
-  Runtime runtime,
-) {
+  Runtime runtime, {
+  RuntimeContext ctx = RuntimeContext.empty,
+}) {
   // Check if it's a registered function first (e.g., BorderRadius.circular)
   final fnName = node.target.last;
   final fn = runtime.fnFor(fnName);
   if (fn != null) {
     final fnArgs = <String, Object?>{};
     node.args.forEach((k, v) {
-      fnArgs[k] = evalExpression(v, input, runtime);
+      fnArgs[k] = evalExpression(v, input, runtime, ctx: ctx);
     });
     return Function.apply(fn, [fnArgs]);
   }
@@ -572,7 +617,7 @@ Object? _bindEvent(
       for (var i = 0;; i++) {
         final argKey = 'arg$i';
         if (!node.args.containsKey(argKey)) break;
-        positional.add(evalExpression(node.args[argKey]!, input, runtime));
+        positional.add(evalExpression(node.args[argKey]!, input, runtime, ctx: ctx));
       }
       return () => Function.apply(methodFn, positional);
     }
@@ -590,6 +635,7 @@ Widget _buildWidget(
   Map<String, Object?> input,
   Runtime runtime, {
   List<String>? typeArgs,
+  RuntimeContext ctx = RuntimeContext.empty,
 }) {
   final builder = runtime.widgetFor(name);
   if (builder == null) {
@@ -597,10 +643,10 @@ Widget _buildWidget(
   }
   final resolvedArgs = <String, Object?>{};
   args.forEach((k, v) {
-    resolvedArgs[k] = _resolveArg(context, v, input, runtime);
+    resolvedArgs[k] = _resolveArg(context, v, input, runtime, ctx: ctx);
   });
   if (key != null) {
-    resolvedArgs['key'] = _resolveArg(context, key, input, runtime);
+    resolvedArgs['key'] = _resolveArg(context, key, input, runtime, ctx: ctx);
   }
   if (typeArgs != null) resolvedArgs['__typeArgs__'] = typeArgs;
   return builder(context, resolvedArgs);
@@ -615,6 +661,7 @@ Widget _resolveReactiveWidget(
   Map<String, Object?> input,
   Runtime runtime, {
   List<String>? typeArgs,
+  RuntimeContext ctx = RuntimeContext.empty,
 }) {
   final reactiveMap = input['__reactive__'] as Map<String, Object?>?;
   if (reactiveMap == null) {
@@ -630,7 +677,7 @@ Widget _resolveReactiveWidget(
   }
   return ListenableBuilder(
     listenable: Listenable.merge(listenables),
-    builder: (ctx, _) {
+    builder: (ctx2, _) {
       final scopedInput = Map<String, Object?>.of(input);
       for (final pathStr in listenablePaths) {
         _installReactiveGetter(
@@ -639,7 +686,8 @@ Widget _resolveReactiveWidget(
           reactiveMap,
         );
       }
-      return _buildWidget(ctx, name, args, key, scopedInput, runtime, typeArgs: typeArgs);
+      return _buildWidget(ctx2, name, args, key, scopedInput, runtime,
+          typeArgs: typeArgs, ctx: ctx);
     },
   );
 }
@@ -683,11 +731,13 @@ class _StatefulIrHost extends StatefulWidget {
     required this.node,
     required this.input,
     required this.runtime,
+    this.ctx = RuntimeContext.empty,
   });
 
   final IrStatefulNode node;
   final Map<String, Object?> input;
   final Runtime runtime;
+  final RuntimeContext ctx;
 
   @override
   State<_StatefulIrHost> createState() => _StatefulIrHostState();
@@ -709,6 +759,7 @@ class _StatefulIrHostState extends State<_StatefulIrHost> {
         field.initializer,
         {...initEnv, ..._stateCells},
         widget.runtime,
+        ctx: widget.ctx,
       );
       _stateCells[field.name] = Cell(value);
     }
@@ -727,7 +778,13 @@ class _StatefulIrHostState extends State<_StatefulIrHost> {
       kStateCellsKey: _stateCells,
       kStatefulSetStateKey: _scheduleRebuild,
     };
-    return resolveNode(context, widget.node.body, scopedInput, widget.runtime);
+    return resolveNode(
+      context,
+      widget.node.body,
+      scopedInput,
+      widget.runtime,
+      ctx: widget.ctx,
+    );
   }
 
   /// Called by event handlers (wrapped at resolve time) after they've run.

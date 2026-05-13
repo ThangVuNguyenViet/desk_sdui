@@ -232,7 +232,7 @@ IrNode reactiveHoist(IrNode node) {
         allArgPaths.addAll(paths);
       }
       return (
-        MethodCallNode(receiver: receiver, name: node.name, args: newArgs),
+        MethodCallNode(receiver: receiver, name: node.name, args: newArgs, typeArgs: node.typeArgs),
         {...receiverPaths, ...allArgPaths},
       );
     case ValueCtorNode():
@@ -244,7 +244,7 @@ IrNode reactiveHoist(IrNode node) {
         allArgPaths.addAll(paths);
       }
       return (
-        ValueCtorNode(name: node.name, args: newArgs),
+        ValueCtorNode(name: node.name, args: newArgs, typeArgs: node.typeArgs),
         allArgPaths,
       );
     case LambdaNode():

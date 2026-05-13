@@ -193,9 +193,13 @@ IrNode lowerExpression(Expression expr) {
             .toList(),
       );
     }
-    // Not a payload fn — fall through to the LoweringError at the bottom.
-    // (Registered global functions are lowered as MethodCallNode with
-    // null receiver; those paths are handled in widget_lowerer.dart.)
+    // Not a payload fn. Free-function lowering for unknown lowercase names
+    // is intentionally not handled here — this lowerer is only reached for
+    // expressions in non-arg positions where free function dispatch isn't a
+    // supported shape. The fall-through to the LoweringError at the bottom
+    // is the correct behavior. Free-function call sites that ARE allowed
+    // (widget invocations like `Text(...)`, static methods like `Theme.of`)
+    // are intercepted earlier in `lowerExpressionOrWidget` / `widget_lowerer`.
   }
 
   if (expr is MethodInvocation && expr.target != null) {

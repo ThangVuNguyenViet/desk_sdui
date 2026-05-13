@@ -208,11 +208,7 @@ class JsonIrDecoder {
           initializer: _decodeNode(map['initializer']! as Map<String, Object?>),
           isFinal: map['isFinal']! as bool,
         ),
-      'payloadFn' => PayloadFunctionNode(
-          name: map['name']! as String,
-          params: (map['params']! as List).cast<String>(),
-          body: _decodeNode(map['body']! as Map<String, Object?>),
-        ),
+      'payloadFn' => _decodePayloadFn(map),
       'payloadFnCall' => PayloadFunctionCallNode(
           name: map['name']! as String,
           args: ((map['args']! as List).cast<Map<String, Object?>>())

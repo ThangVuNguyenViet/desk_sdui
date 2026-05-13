@@ -348,15 +348,18 @@ void _walkAllowlist(
       _walkAllowlist(node.body, payloadFnName: payloadFnName, decl: decl);
     case SpreadNode():
       _walkAllowlist(node.source, payloadFnName: payloadFnName, decl: decl);
-    case CompareOpNode():
-    case ArithOpNode():
-    case LogicOpNode():
-    case CoalesceOpNode():
-      final b = node as dynamic;
-      _walkAllowlist(b.left as IrNode,
-          payloadFnName: payloadFnName, decl: decl);
-      _walkAllowlist(b.right as IrNode,
-          payloadFnName: payloadFnName, decl: decl);
+    case CompareOpNode(:final left, :final right):
+      _walkAllowlist(left, payloadFnName: payloadFnName, decl: decl);
+      _walkAllowlist(right, payloadFnName: payloadFnName, decl: decl);
+    case ArithOpNode(:final left, :final right):
+      _walkAllowlist(left, payloadFnName: payloadFnName, decl: decl);
+      _walkAllowlist(right, payloadFnName: payloadFnName, decl: decl);
+    case LogicOpNode(:final left, :final right):
+      _walkAllowlist(left, payloadFnName: payloadFnName, decl: decl);
+      _walkAllowlist(right, payloadFnName: payloadFnName, decl: decl);
+    case CoalesceOpNode(:final left, :final right):
+      _walkAllowlist(left, payloadFnName: payloadFnName, decl: decl);
+      _walkAllowlist(right, payloadFnName: payloadFnName, decl: decl);
     case NotOpNode():
       _walkAllowlist(node.operand,
           payloadFnName: payloadFnName, decl: decl);

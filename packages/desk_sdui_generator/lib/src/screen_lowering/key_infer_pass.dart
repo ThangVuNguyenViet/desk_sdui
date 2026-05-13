@@ -41,11 +41,11 @@ IrNode inferKeys(IrNode node, {TypeLookup? lookupType}) {
         }
       }
 
-      return ForNode(
-        variable: node.variable!,
-        source: newSource,
-        body: newBody,
-      );
+      if (node.variable != null) {
+        return ForNode(variable: node.variable!, source: newSource, body: newBody);
+      } else {
+        return ForNode.destructured(variables: node.variables!, source: newSource, body: newBody);
+      }
 
     case WidgetNode():
       final newArgs = <String, IrNode>{};
@@ -192,11 +192,13 @@ IrNode inferKeys(IrNode node, {TypeLookup? lookupType}) {
         receiver: node.receiver != null ? inferKeys(node.receiver!, lookupType: lookupType) : null,
         name: node.name,
         args: node.args.map((a) => inferKeys(a, lookupType: lookupType)).toList(),
+        typeArgs: node.typeArgs,
       );
     case ValueCtorNode():
       return ValueCtorNode(
         name: node.name,
         args: node.args.map((a) => inferKeys(a, lookupType: lookupType)).toList(),
+        typeArgs: node.typeArgs,
       );
     case SequenceNode():
       return SequenceNode(

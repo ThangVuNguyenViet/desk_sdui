@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 
 import 'loader/asset_bundle_ir_fetcher.dart';
+import 'payload_class.dart';
 
 /// Describes a single parameter of a @Screen function.
 class InputBinding<T> {
@@ -103,6 +104,40 @@ typedef SduiFunctionHandler = Object? Function(Map<String, Object?> args);
 
 abstract class IrFetcher {
   Future<Uint8List> fetch(String name);
+}
+
+// ---------------------------------------------------------------------------
+// PayloadClass registry (Feature 15 — bucket 4 foundation)
+// ---------------------------------------------------------------------------
+
+final Map<String, PayloadClass> _payloadClasses = {};
+
+/// Returns a read-only view of registered payload classes.
+Map<String, PayloadClass> get payloadClasses => _payloadClasses;
+
+/// Registers a payload class and computes its method lookup order.
+///
+/// Throws [StateError] if a class with the same name is already registered.
+void registerPayloadClass(PayloadClass cls) {
+  if (_payloadClasses.containsKey(cls.name)) {
+    throw StateError('PayloadClass "${cls.name}" already registered.');
+  }
+  _payloadClasses[cls.name] = cls;
+  cls.methodLookupOrder = _computeMro(cls);
+}
+
+/// Computes the C3 linearization-inspired method lookup order for a class.
+///
+/// Order: self → reversed mixins → supertype's mro.
+List<PayloadClass> _computeMro(PayloadClass cls) {
+  final order = <PayloadClass>[cls];
+  for (final m in cls.mixins.reversed) {
+    order.add(m);
+  }
+  if (cls.supertype != null) {
+    order.addAll(cls.supertype!.methodLookupOrder);
+  }
+  return order;
 }
 
 class Runtime {

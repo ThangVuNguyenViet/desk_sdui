@@ -12,19 +12,19 @@ If your domain models already produce JSON-shaped maps (via `freezed`,
 `dart_mappable`, `json_serializable`, or hand-rolled `toJson` methods), pass the
 output of those directly:
 
-    SduiScreen(name: 'chef', runtime: rt, inputs: {'data': chefData.toJson()})
+    SduiScreen(name: 'my_screen', runtime: rt, inputs: {'data': modelData.toJson()})
 
 ### Key naming
 
 Map keys must match the Dart field names your `@Screen` references. If your
-serializer renames keys (e.g. `@JsonKey(name: 'chef_name')` → snake_case),
+serializer renames keys (e.g. `@JsonKey(name: 'model_name')` → snake_case),
 adapt at the call site:
 
     SduiScreen(
-      name: 'chef',
+      name: 'my_screen',
       runtime: rt,
       inputs: {
-        'data': chefData.toJson().map(
+        'data': modelData.toJson().map(
           (k, v) => MapEntry(_camelCase(k), v),
         ),
       },
@@ -36,14 +36,14 @@ For expensive fields you don't want to eagerly serialize, use the `__getters__`
 escape hatch:
 
     SduiScreen(
-      name: 'chef',
+      name: 'my_screen',
       runtime: rt,
       inputs: {
         'data': {
-          'headline': chefData.headline,
-          'dishes': chefData.dishes.map((d) => d.toJson()).toList(),
+          'headline': modelData.headline,
+          'items': modelData.items.map((d) => d.toJson()).toList(),
           '__getters__': {
-            'expensiveStats': () => chefData.computeStats(),
+            'expensiveStats': () => modelData.computeStats(),
           },
         },
       },
@@ -103,7 +103,7 @@ E desk_sdui_generator:registry_builder on $package$:
   listed in any @Register annotation.
   Add them to a @Register list or import one of the bundles from
   package:desk_sdui/widget_bundles.dart.
-    Screen "chef" references unregistered widget(s): Stack
+    Screen "my_screen" references unregistered widget(s): Stack
 ```
 
 Add the missing type to your `@Register` list and re-run the build.

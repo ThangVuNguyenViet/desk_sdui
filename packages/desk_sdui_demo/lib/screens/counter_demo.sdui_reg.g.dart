@@ -7,7 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:vector_math/vector_math_64.dart' hide Colors;
 
-void registerCounter_actionsDependencies(Runtime rt) {
+void registerCounter_demoDependencies(Runtime rt) {
   rt.registerWidget(
     'Center',
     (args) => Center(
@@ -15,6 +15,28 @@ void registerCounter_actionsDependencies(Runtime rt) {
       widthFactor: args['widthFactor'] as double?,
       heightFactor: args['heightFactor'] as double?,
       child: args['child'] as Widget?,
+    ),
+  );
+  rt.registerWidget(
+    'SingleChildScrollView',
+    (args) => SingleChildScrollView(
+      key: args['key'] as Key?,
+      scrollDirection: args['scrollDirection'] as Axis? ?? Axis.vertical,
+      reverse: args['reverse'] as bool? ?? false,
+      padding: args['padding'] as EdgeInsetsGeometry?,
+      primary: args['primary'] as bool?,
+      physics: args['physics'] as ScrollPhysics?,
+      controller: args['controller'] as ScrollController?,
+      child: args['child'] as Widget?,
+      dragStartBehavior:
+          args['dragStartBehavior'] as DragStartBehavior? ??
+          DragStartBehavior.start,
+      clipBehavior: args['clipBehavior'] as Clip? ?? Clip.hardEdge,
+      hitTestBehavior:
+          args['hitTestBehavior'] as HitTestBehavior? ?? HitTestBehavior.opaque,
+      restorationId: args['restorationId'] as String?,
+      keyboardDismissBehavior:
+          args['keyboardDismissBehavior'] as ScrollViewKeyboardDismissBehavior?,
     ),
   );
   rt.registerWidget(
@@ -82,6 +104,45 @@ void registerCounter_actionsDependencies(Runtime rt) {
     ),
   );
   rt.registerWidget(
+    'SizedBox',
+    (args) => SizedBox(
+      key: args['key'] as Key?,
+      width: args['width'] as double?,
+      height: args['height'] as double?,
+      child: args['child'] as Widget?,
+    ),
+  );
+  rt.registerWidget(
+    'SizedBox.expand',
+    (args) => SizedBox.expand(
+      key: args['key'] as Key?,
+      child: args['child'] as Widget?,
+    ),
+  );
+  rt.registerWidget(
+    'SizedBox.shrink',
+    (args) => SizedBox.shrink(
+      key: args['key'] as Key?,
+      child: args['child'] as Widget?,
+    ),
+  );
+  rt.registerWidget(
+    'SizedBox.fromSize',
+    (args) => SizedBox.fromSize(
+      key: args['key'] as Key?,
+      child: args['child'] as Widget?,
+      size: args['size'] as Size?,
+    ),
+  );
+  rt.registerWidget(
+    'SizedBox.square',
+    (args) => SizedBox.square(
+      key: args['key'] as Key?,
+      child: args['child'] as Widget?,
+      dimension: args['dimension'] as double?,
+    ),
+  );
+  rt.registerWidget(
     'Row',
     (args) => Row(
       key: args['key'] as Key?,
@@ -135,77 +196,51 @@ void registerCounter_actionsDependencies(Runtime rt) {
       iconAlignment: args['iconAlignment'] as IconAlignment?,
     ),
   );
-  rt.registerWidget(
-    'SizedBox',
-    (args) => SizedBox(
-      key: args['key'] as Key?,
-      width: args['width'] as double?,
-      height: args['height'] as double?,
-      child: args['child'] as Widget?,
-    ),
-  );
-  rt.registerWidget(
-    'SizedBox.expand',
-    (args) => SizedBox.expand(
-      key: args['key'] as Key?,
-      child: args['child'] as Widget?,
-    ),
-  );
-  rt.registerWidget(
-    'SizedBox.shrink',
-    (args) => SizedBox.shrink(
-      key: args['key'] as Key?,
-      child: args['child'] as Widget?,
-    ),
-  );
-  rt.registerWidget(
-    'SizedBox.fromSize',
-    (args) => SizedBox.fromSize(
-      key: args['key'] as Key?,
-      child: args['child'] as Widget?,
-      size: args['size'] as Size?,
-    ),
-  );
-  rt.registerWidget(
-    'SizedBox.square',
-    (args) => SizedBox.square(
-      key: args['key'] as Key?,
-      child: args['child'] as Widget?,
-      dimension: args['dimension'] as double?,
-    ),
-  );
-  rt.registerValueBuilder(
-    'TextStyle',
-    (args) => TextStyle(
-      inherit: args['inherit'] as bool? ?? true,
-      color: args['color'] as Color?,
-      backgroundColor: args['backgroundColor'] as Color?,
-      fontSize: args['fontSize'] as double?,
-      fontWeight: args['fontWeight'] as FontWeight?,
-      fontStyle: args['fontStyle'] as FontStyle?,
-      letterSpacing: args['letterSpacing'] as double?,
-      wordSpacing: args['wordSpacing'] as double?,
-      textBaseline: args['textBaseline'] as TextBaseline?,
-      height: args['height'] as double?,
-      leadingDistribution:
-          args['leadingDistribution'] as TextLeadingDistribution?,
-      locale: args['locale'] as Locale?,
-      foreground: args['foreground'] as Paint?,
-      background: args['background'] as Paint?,
-      shadows: args['shadows'] as List<Shadow>?,
-      fontFeatures: args['fontFeatures'] as List<FontFeature>?,
-      fontVariations: args['fontVariations'] as List<FontVariation>?,
-      decoration: args['decoration'] as TextDecoration?,
-      decorationColor: args['decorationColor'] as Color?,
-      decorationStyle: args['decorationStyle'] as TextDecorationStyle?,
-      decorationThickness: args['decorationThickness'] as double?,
-      debugLabel: args['debugLabel'] as String?,
-      fontFamily: args['fontFamily'] as String?,
-      fontFamilyFallback: args['fontFamilyFallback'] as List<String>?,
-      package: args['package'] as String?,
-      overflow: args['overflow'] as TextOverflow?,
-    ),
-  );
   rt.registerConstant('MainAxisAlignment.center', MainAxisAlignment.center);
-  rt.registerConstant('FontWeight.w800', FontWeight.w800);
+  rt.registerFunction(
+    'Theme.of',
+    (args) => Theme.of(args['arg0'] as BuildContext),
+  );
+  rt.registerMethod(
+    'CounterActions.decrementCount',
+    (recv, args) =>
+        (recv as CounterActions).decrementCount(args['arg0'] as Counter),
+  );
+  rt.registerMethod(
+    'CounterActions.incrementCount',
+    (recv, args) =>
+        (recv as CounterActions).incrementCount(args['arg0'] as Counter),
+  );
+  rt.registerMethod(
+    'CounterActions.setStep',
+    (recv, args) => (recv as CounterActions).setStep(
+      args['arg0'] as Counter,
+      args['arg1'] as int,
+    ),
+  );
+  rt.registerMethod(
+    'CounterActions.setMode',
+    (recv, args) => (recv as CounterActions).setMode(
+      args['arg0'] as Counter,
+      args['arg1'] as String,
+    ),
+  );
+  rt.registerMethod(
+    'CounterActions.save',
+    (recv, args) => (recv as CounterActions).save(args['arg0'] as Counter),
+  );
+  rt.registerMethod(
+    'CounterActions.handleSaveError',
+    (recv, args) =>
+        (recv as CounterActions).handleSaveError(args['arg0'] as Counter),
+  );
+  rt.registerMethod(
+    'CounterActions.reset',
+    (recv, args) => (recv as CounterActions).reset(args['arg0'] as Counter),
+  );
+  rt.registerSubscript(
+    'List.[]',
+    (recv, key) => (recv as List<int>)[key as int],
+  );
+  rt.registerFunction('tripled', (args) => tripled(args['arg0'] as int));
 }

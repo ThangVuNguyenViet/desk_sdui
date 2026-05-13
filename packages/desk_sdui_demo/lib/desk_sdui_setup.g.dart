@@ -8,50 +8,11 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui';
 import 'package:cue/cue.dart';
-import 'package:desk_sdui_demo/screens/counter_actions.dart';
-import 'package:desk_sdui_demo/screens/setter_demo.dart';
-import 'package:desk_sdui_demo/screens/async_action_demo.dart' show async_action_demoBinding;
-import 'package:desk_sdui_demo/screens/cascade_demo.dart' show cascade_demoBinding;
-import 'package:desk_sdui_demo/screens/chef_view.dart' show chef_viewBinding;
-import 'package:desk_sdui_demo/screens/counter_actions.dart' show counter_actionsBinding;
-import 'package:desk_sdui_demo/screens/counter_bouncy.dart' show counter_bouncyBinding;
-import 'package:desk_sdui_demo/screens/counter_burst.dart' show counter_burstBinding;
-import 'package:desk_sdui_demo/screens/counter_math.dart' show counter_mathBinding;
-import 'package:desk_sdui_demo/screens/counter_minimal.dart' show counter_minimalBinding;
-import 'package:desk_sdui_demo/screens/counter_record.dart' show counter_recordBinding;
-import 'package:desk_sdui_demo/screens/counter_shorthand.dart' show counter_shorthandBinding;
+import 'package:desk_sdui_demo/screens/counter_demo.dart';
+import 'package:desk_sdui_demo/screens/counter_demo.dart' show counter_demoBinding;
 import 'package:desk_sdui_demo/screens/counter_stress.dart' show counter_stressBinding;
-import 'package:desk_sdui_demo/screens/imperative_demo.dart' show imperative_demoBinding;
-import 'package:desk_sdui_demo/screens/lambda_demo.dart' show lambda_demoBinding;
-import 'package:desk_sdui_demo/screens/let_demo.dart' show let_demoBinding;
-import 'package:desk_sdui_demo/screens/loop_demo.dart' show loop_demoBinding;
-import 'package:desk_sdui_demo/screens/pattern_demo.dart' show pattern_demoBinding;
-import 'package:desk_sdui_demo/screens/payload_fn_demo.dart' show payload_fn_demoBinding;
-import 'package:desk_sdui_demo/screens/setter_demo.dart' show setter_demoBinding;
-import 'package:desk_sdui_demo/screens/stateful_counter_demo.dart' show stateful_counter_demoBinding;
-import 'package:desk_sdui_demo/screens/themed_counter.dart' show themed_counterBinding;
-import 'package:desk_sdui_demo/screens/try_step_demo.dart' show try_step_demoBinding;
-import 'package:desk_sdui_demo/screens/async_action_demo.sdui_reg.g.dart' show registerAsync_action_demoDependencies;
-import 'package:desk_sdui_demo/screens/cascade_demo.sdui_reg.g.dart' show registerCascade_demoDependencies;
-import 'package:desk_sdui_demo/screens/chef_view.sdui_reg.g.dart' show registerChef_viewDependencies;
-import 'package:desk_sdui_demo/screens/counter_actions.sdui_reg.g.dart' show registerCounter_actionsDependencies;
-import 'package:desk_sdui_demo/screens/counter_bouncy.sdui_reg.g.dart' show registerCounter_bouncyDependencies;
-import 'package:desk_sdui_demo/screens/counter_burst.sdui_reg.g.dart' show registerCounter_burstDependencies;
-import 'package:desk_sdui_demo/screens/counter_math.sdui_reg.g.dart' show registerCounter_mathDependencies;
-import 'package:desk_sdui_demo/screens/counter_minimal.sdui_reg.g.dart' show registerCounter_minimalDependencies;
-import 'package:desk_sdui_demo/screens/counter_record.sdui_reg.g.dart' show registerCounter_recordDependencies;
-import 'package:desk_sdui_demo/screens/counter_shorthand.sdui_reg.g.dart' show registerCounter_shorthandDependencies;
+import 'package:desk_sdui_demo/screens/counter_demo.sdui_reg.g.dart' show registerCounter_demoDependencies;
 import 'package:desk_sdui_demo/screens/counter_stress.sdui_reg.g.dart' show registerCounter_stressDependencies;
-import 'package:desk_sdui_demo/screens/imperative_demo.sdui_reg.g.dart' show registerImperative_demoDependencies;
-import 'package:desk_sdui_demo/screens/lambda_demo.sdui_reg.g.dart' show registerLambda_demoDependencies;
-import 'package:desk_sdui_demo/screens/let_demo.sdui_reg.g.dart' show registerLet_demoDependencies;
-import 'package:desk_sdui_demo/screens/loop_demo.sdui_reg.g.dart' show registerLoop_demoDependencies;
-import 'package:desk_sdui_demo/screens/pattern_demo.sdui_reg.g.dart' show registerPattern_demoDependencies;
-import 'package:desk_sdui_demo/screens/payload_fn_demo.sdui_reg.g.dart' show registerPayload_fn_demoDependencies;
-import 'package:desk_sdui_demo/screens/setter_demo.sdui_reg.g.dart' show registerSetter_demoDependencies;
-import 'package:desk_sdui_demo/screens/stateful_counter_demo.sdui_reg.g.dart' show registerStateful_counter_demoDependencies;
-import 'package:desk_sdui_demo/screens/themed_counter.sdui_reg.g.dart' show registerThemed_counterDependencies;
-import 'package:desk_sdui_demo/screens/try_step_demo.sdui_reg.g.dart' show registerTry_step_demoDependencies;
 
 void registerSduiCatalog(Runtime rt) {
   rt.registerWidget('Align', (args) => Align(key: args['key'] as Key?, alignment: args['alignment'] as AlignmentGeometry? ?? Alignment.center, widthFactor: args['widthFactor'] as double?, heightFactor: args['heightFactor'] as double?, child: args['child'] as Widget?));
@@ -150,7 +111,8 @@ void registerSduiCatalog(Runtime rt) {
   rt.registerWidget('Cue.onScroll', (args) => Cue.onScroll(key: args['key'] as Key?, debugLabel: args['debugLabel'] as String?, acts: args['acts'] as List<Act>?, child: args['child'] as Widget));
   rt.registerWidget('Cue.onScrollVisible', (args) => Cue.onScrollVisible(key: args['key'] as Key?, debugLabel: args['debugLabel'] as String?, enabled: args['enabled'] as bool, acts: args['acts'] as List<Act>?, child: args['child'] as Widget));
   rt.registerWidget('Theme', (args) => Theme(key: args['key'] as Key?, data: args['data'] as ThemeData, child: args['child'] as Widget));
-  rt.registerValueBuilder('SetterDemoController', (args) => SetterDemoController());
+  rt.registerValueBuilder('Counter', (args) => Counter());
+  rt.registerValueBuilder('CounterActions', (args) => CounterActions());
   rt.registerValueBuilder('EdgeInsetsGeometry.all', (args) => EdgeInsetsGeometry.all(args['arg0'] as double));
   rt.registerValueBuilder('EdgeInsetsGeometry.only', (args) => EdgeInsetsGeometry.only(left: args['left'] as double, right: args['right'] as double, top: args['top'] as double, bottom: args['bottom'] as double));
   rt.registerValueBuilder('EdgeInsetsGeometry.directional', (args) => EdgeInsetsGeometry.directional(start: args['start'] as double, end: args['end'] as double, top: args['top'] as double, bottom: args['bottom'] as double));
@@ -224,7 +186,6 @@ void registerSduiCatalog(Runtime rt) {
   rt.registerValueBuilder('CueMotion.effect', (args) => CueMotion.effect(mass: args['mass'] as double, stiffness: args['stiffness'] as double, dampingRatio: args['dampingRatio'] as double, tolerance: args['tolerance'] as Tolerance, snapToEnd: args['snapToEnd'] as bool));
   rt.registerValueBuilder('CueMotion.effectSlow', (args) => CueMotion.effectSlow(mass: args['mass'] as double, stiffness: args['stiffness'] as double, dampingRatio: args['dampingRatio'] as double, tolerance: args['tolerance'] as Tolerance, snapToEnd: args['snapToEnd'] as bool));
   rt.registerValueBuilder('CueMotion.effectFast', (args) => CueMotion.effectFast(mass: args['mass'] as double, stiffness: args['stiffness'] as double, dampingRatio: args['dampingRatio'] as double, tolerance: args['tolerance'] as Tolerance, snapToEnd: args['snapToEnd'] as bool));
-  rt.registerValueBuilder('CounterController', (args) => CounterController());
   rt.registerConstant('MainAxisAlignment.start', MainAxisAlignment.start);
   rt.registerConstant('MainAxisAlignment.end', MainAxisAlignment.end);
   rt.registerConstant('MainAxisAlignment.center', MainAxisAlignment.center);
@@ -371,10 +332,23 @@ void registerSduiCatalog(Runtime rt) {
   rt.registerConstant('EdgeInsetsGeometry.infinity', EdgeInsetsGeometry.infinity);
   rt.registerConstant('CueMotion.none', CueMotion.none);
   rt.registerConstant('CueMotion.defaultTime', CueMotion.defaultTime);
-  // Methods for SetterDemoController
+  // Methods for Counter
   {
-  rt.registerSetter('SetterDemoController.count', (target, value) => (target as SetterDemoController).count = value as int);
-  rt.registerSetter('SetterDemoController.message', (target, value) => (target as SetterDemoController).message = value as String);
+  rt.registerSetter('Counter.count', (target, value) => (target as Counter).count = value as int);
+  rt.registerSetter('Counter.step', (target, value) => (target as Counter).step = value as int);
+  rt.registerSetter('Counter.history', (target, value) => (target as Counter).history = value as List<int>);
+  rt.registerSetter('Counter.busy', (target, value) => (target as Counter).busy = value as bool);
+  rt.registerSetter('Counter.mode', (target, value) => (target as Counter).mode = value as String);
+  }
+  // Methods for CounterActions
+  {
+  rt.registerMethod('CounterActions.save', (recv, args) => (recv as CounterActions).save(args['arg0'] as Counter));
+  rt.registerMethod('CounterActions.reset', (recv, args) => (recv as CounterActions).reset(args['arg0'] as Counter));
+  rt.registerMethod('CounterActions.incrementCount', (recv, args) => (recv as CounterActions).incrementCount(args['arg0'] as Counter));
+  rt.registerMethod('CounterActions.setMode', (recv, args) => (recv as CounterActions).setMode(args['arg0'] as Counter, args['arg1'] as String));
+  rt.registerMethod('CounterActions.setStep', (recv, args) => (recv as CounterActions).setStep(args['arg0'] as Counter, args['arg1'] as int));
+  rt.registerMethod('CounterActions.decrementCount', (recv, args) => (recv as CounterActions).decrementCount(args['arg0'] as Counter));
+  rt.registerMethod('CounterActions.handleSaveError', (recv, args) => (recv as CounterActions).handleSaveError(args['arg0'] as Counter));
   }
   // Methods for EdgeInsetsGeometry
   {
@@ -398,55 +372,12 @@ void registerSduiCatalog(Runtime rt) {
   rt.registerMethod('CueMotion.buildBase', (recv, args) => (recv as CueMotion).buildBase(forward: args['forward'] as bool? ?? true, phase: args['phase'] as int?));
   rt.registerMethod('CueMotion.delayed', (recv, args) => (recv as CueMotion).delayed(args['arg0'] as Duration));
   }
-  // Methods for CounterController
-  {
-  rt.registerMethod('CounterController.increment', (recv, args) => (recv as CounterController).increment());
-  rt.registerMethod('CounterController.decrement', (recv, args) => (recv as CounterController).decrement());
-  }
 }
 void registerAllScreens(Runtime rt) {
   registerCoreAccessors(rt);
-  rt.registerScreen(async_action_demoBinding);
-  registerAsync_action_demoDependencies(rt);
-  rt.registerScreen(cascade_demoBinding);
-  registerCascade_demoDependencies(rt);
-  rt.registerScreen(chef_viewBinding);
-  registerChef_viewDependencies(rt);
-  rt.registerScreen(counter_actionsBinding);
-  registerCounter_actionsDependencies(rt);
-  rt.registerScreen(counter_bouncyBinding);
-  registerCounter_bouncyDependencies(rt);
-  rt.registerScreen(counter_burstBinding);
-  registerCounter_burstDependencies(rt);
-  rt.registerScreen(counter_mathBinding);
-  registerCounter_mathDependencies(rt);
-  rt.registerScreen(counter_minimalBinding);
-  registerCounter_minimalDependencies(rt);
-  rt.registerScreen(counter_recordBinding);
-  registerCounter_recordDependencies(rt);
-  rt.registerScreen(counter_shorthandBinding);
-  registerCounter_shorthandDependencies(rt);
+  rt.registerScreen(counter_demoBinding);
+  registerCounter_demoDependencies(rt);
   rt.registerScreen(counter_stressBinding);
   registerCounter_stressDependencies(rt);
-  rt.registerScreen(imperative_demoBinding);
-  registerImperative_demoDependencies(rt);
-  rt.registerScreen(lambda_demoBinding);
-  registerLambda_demoDependencies(rt);
-  rt.registerScreen(let_demoBinding);
-  registerLet_demoDependencies(rt);
-  rt.registerScreen(loop_demoBinding);
-  registerLoop_demoDependencies(rt);
-  rt.registerScreen(pattern_demoBinding);
-  registerPattern_demoDependencies(rt);
-  rt.registerScreen(payload_fn_demoBinding);
-  registerPayload_fn_demoDependencies(rt);
-  rt.registerScreen(setter_demoBinding);
-  registerSetter_demoDependencies(rt);
-  rt.registerScreen(stateful_counter_demoBinding);
-  registerStateful_counter_demoDependencies(rt);
-  rt.registerScreen(themed_counterBinding);
-  registerThemed_counterDependencies(rt);
-  rt.registerScreen(try_step_demoBinding);
-  registerTry_step_demoDependencies(rt);
   registerSduiCatalog(rt);
 }

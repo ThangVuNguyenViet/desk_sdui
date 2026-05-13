@@ -1,5 +1,5 @@
 name: desk_sdui_demo
-description: Reference + parity tests for desk_sdui — ports of chef_screen + home variants.
+description: Reference + parity tests for desk_sdui.
 version: 0.0.1-dev
 publish_to: none
 

@@ -320,6 +320,28 @@ void main() {
       expect(decoded, node);
     });
 
+    test('IrStatefulNode round-trips id field', () {
+      // Locks down the encoder's `if (node.id != null)` guard and the
+      // decoder's `String?` coercion. The runtime host uses node.id as the
+      // ValueKey for the State<>, so this must survive serialization.
+      const node = IrStatefulNode(
+        id: 'my_screen',
+        fields: [
+          IrStatefulFieldNode(
+            name: 'n',
+            initializer: LiteralNode(0),
+            isFinal: false,
+          ),
+        ],
+        body: ReturnNode(value: RefNode(['n'])),
+      );
+      final encoded = codec.encode(node);
+      expect(encoded['id'], 'my_screen');
+      final decoded = codec.decode(encoded) as IrStatefulNode;
+      expect(decoded.id, 'my_screen');
+      expect(decoded, node);
+    });
+
     test('IrStatefulNode with multiple fields referencing earlier ones', () {
       const node = IrStatefulNode(
         fields: [

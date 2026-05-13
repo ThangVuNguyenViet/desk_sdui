@@ -134,6 +134,12 @@ Object? evalExpressionWithEnv(
         'No getter registered for "$name" (receiver: ${r.runtimeType})',
       );
 
+    case SetterCallNode(:final target, :final setterKey, :final value):
+      final receiver = evalExpressionWithEnv(target, env, runtime, ctx: ctx);
+      final v = evalExpressionWithEnv(value, env, runtime, ctx: ctx);
+      runtime.invokeSetter(setterKey, receiver, v);
+      return v; // Dart's assignment returns the RHS
+
     case LetNode(:final name, :final value, :final body):
       final v = evalExpressionWithEnv(value, env, runtime, ctx: ctx);
       return evalExpressionWithEnv(

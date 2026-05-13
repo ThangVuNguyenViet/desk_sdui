@@ -22,13 +22,13 @@ Last updated: 2026-05-13.
 
 | # | Feature | Status | Plan |
 |---|---|---|---|
-| 8 | `AssignNode` + mutable env (cells) | shipped | `desk-sdui-mutable-env-assign-node.md` |
-| 9 | `BlockNode` + control flow signals | shipped | `desk-sdui-block-node.md` |
-| 10 | Statement loops (`WhileNode`, `DoNode`, imperative `ForNode`) | shipped | `desk-sdui-statement-loops.md` |
-| 11 | `IrStatefulNode` | shipped | `desk-sdui-ir-stateful-node.md` |
-| 12 | Payload function declarations | shipped | `desk-sdui-payload-functions.md` |
+| 8 | `AssignNode` + mutable env (cells) | shipped | — (pruned) |
+| 9 | `BlockNode` + control flow signals | shipped | — (pruned) |
+| 10 | Statement loops (`WhileNode`, `DoNode`, imperative `ForNode`) | shipped | — (pruned) |
+| 11 | `IrStatefulNode` | shipped | — (pruned) |
+| 12 | Payload function declarations | shipped | — (pruned) |
 | 13 | Cost classifier | shipped | — (pruned) |
-| 14 | Setter codegen for `@Register` | shipped | `desk-sdui-register-setter-codegen.md` |
+| 14 | Setter codegen for `@Register` | shipped | — (pruned) |
 
 ## Bucket 4 — payload-defined types (`bucket-4-dart-eval-feature-parity.md`)
 
@@ -83,8 +83,8 @@ other; 20-23 fan out from 17 and can run in parallel.
 
 | Plan | Status | Notes |
 |---|---|---|
-| `desk-sdui-augmentations.md` | pending | Analyzer 13 augmentation support — independent of buckets |
-| `desk-sdui-post-merge-followups.md` | partially shipped | 5 follow-ups from the 2026-05-12 merge; status per-item lives in the file |
+| `desk-sdui-augmentations.md` | blocked on Dart | Augmentation library syntax needs `--enable-experiment=macros`; front_end crashes. Re-test when Dart upgrades macro infra. Spike worktree at `desk_sdui-wt-augmentations` (branch `feat/augmentations` @ `cf056c8`). |
+| push `main` to remote | pending | No remote configured; nothing to push to yet. Set up `origin` first. |
 
 ## Lowerer gaps surfaced but not yet planned
 

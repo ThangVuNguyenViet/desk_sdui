@@ -128,14 +128,30 @@ ScreenLowerResult lowerScreenWithPayloadFunctions(
 
     // Step 3: lower each payload function body.
     final payloadFns = <PayloadFunctionNode>[];
+    final declByName = <String, FunctionDeclaration>{};
     for (final decl in unit.declarations) {
       if (decl is FunctionDeclaration &&
           decl.name.lexeme != screenFn.name.lexeme) {
+        declByName[decl.name.lexeme] = decl;
         payloadFns.add(_lowerPayloadFunctionDecl(decl));
       }
     }
 
-    // Step 4: wrap the screen body.
+    // Step 4 (allowlist invariant): walk each payload function body and
+    // confirm every leaf call is either (a) another payload function in the
+    // same file, OR (b) a registered global. Anything else is a codegen-time
+    // error. Note: the lowerer's free-call interceptors already throw on
+    // unrecognized free calls, so this walk is a defensive structural check
+    // that surfaces the plan-specified diagnostic for any leak path.
+    for (final fn in payloadFns) {
+      _walkAllowlist(
+        fn.body,
+        payloadFnName: fn.name,
+        decl: declByName[fn.name]!,
+      );
+    }
+
+    // Step 5: wrap the screen body.
     final wrapped = ScreenWithFunctionsNode(
       functions: payloadFns,
       screenBody: screenResult.root,
@@ -208,6 +224,249 @@ PayloadFunctionNode _lowerPayloadFunctionDecl(FunctionDeclaration decl) {
     params: params,
     body: lowered,
   );
+}
+
+// ---------------------------------------------------------------------------
+// Allowlist invariant walk for payload function bodies
+// ---------------------------------------------------------------------------
+
+/// Walks [body] recursively and rejects any leaf call that is not allowed
+/// inside a payload function. The plan defines the allowlist as:
+///
+/// - Another payload function declared in the same file (represented in IR
+///   as a [PayloadFunctionCallNode]), OR
+/// - A registered global — a registered method/widget/value-ctor/static
+///   function. In IR these surface as [MethodCallNode] (with a non-null
+///   receiver for instance methods, or null receiver for static methods like
+///   `Theme.of(context)`), [ValueCtorNode], or [WidgetNode]/[BuiltinWidgetNode].
+///
+/// A bare [MethodCallNode] with `receiver == null` whose name is lowercase
+/// is the structural marker of an unregistered free-function call that
+/// somehow leaked past the lowerer's free-call interceptors — emit the
+/// plan's documented diagnostic.
+void _walkAllowlist(
+  IrNode node, {
+  required String payloadFnName,
+  required AstNode decl,
+}) {
+  switch (node) {
+    case MethodCallNode():
+      if (node.receiver == null) {
+        final name = node.name;
+        // Static methods qualify their class (e.g. `Theme.of`, `MediaQuery.sizeOf`)
+        // — name contains a `.` and the class segment is uppercase. Those are
+        // registered globals and allowed.
+        final isQualifiedStatic = name.contains('.') &&
+            name.isNotEmpty &&
+            name[0] == name[0].toUpperCase();
+        final isPlainLowercase = !name.contains('.') &&
+            name.isNotEmpty &&
+            name[0] == name[0].toLowerCase();
+        if (isPlainLowercase && !_payloadFnNames.contains(name)) {
+          throw LoweringError(
+            'Payload function "$payloadFnName" calls "$name" which is '
+            'neither a registered global nor another payload function in '
+            'this file. Payload functions can only compose already-registered '
+            'behavior.',
+            decl,
+          );
+        }
+        // Either a qualified static call (Theme.of) or a registered free
+        // function — both allowed.
+        // Sanity: if neither plain-lowercase nor qualified-static, fall through.
+        if (!isQualifiedStatic && !isPlainLowercase) {
+          // Unrecognized shape — be conservative and reject.
+          throw LoweringError(
+            'Payload function "$payloadFnName" calls "$name" which is '
+            'neither a registered global nor another payload function in '
+            'this file. Payload functions can only compose already-registered '
+            'behavior.',
+            decl,
+          );
+        }
+      }
+      // Recurse into args/receiver.
+      if (node.receiver != null) {
+        _walkAllowlist(node.receiver!,
+            payloadFnName: payloadFnName, decl: decl);
+      }
+      for (final arg in node.args) {
+        _walkAllowlist(arg, payloadFnName: payloadFnName, decl: decl);
+      }
+
+    case PayloadFunctionCallNode():
+      // Always allowed (resolved against _payloadFnNames at lowering time).
+      for (final arg in node.args) {
+        _walkAllowlist(arg, payloadFnName: payloadFnName, decl: decl);
+      }
+
+    case WidgetNode():
+      for (final child in node.args.values) {
+        _walkAllowlist(child, payloadFnName: payloadFnName, decl: decl);
+      }
+      if (node.key != null) {
+        _walkAllowlist(node.key!, payloadFnName: payloadFnName, decl: decl);
+      }
+    case BuiltinWidgetNode():
+      for (final child in node.args.values) {
+        _walkAllowlist(child, payloadFnName: payloadFnName, decl: decl);
+      }
+      if (node.key != null) {
+        _walkAllowlist(node.key!, payloadFnName: payloadFnName, decl: decl);
+      }
+    case ValueCtorNode():
+      for (final arg in node.args) {
+        _walkAllowlist(arg, payloadFnName: payloadFnName, decl: decl);
+      }
+    case ListNode():
+      for (final c in node.children) {
+        _walkAllowlist(c, payloadFnName: payloadFnName, decl: decl);
+      }
+    case MapNode():
+      for (final e in node.entries.entries) {
+        _walkAllowlist(e.key, payloadFnName: payloadFnName, decl: decl);
+        _walkAllowlist(e.value, payloadFnName: payloadFnName, decl: decl);
+      }
+    case RecordNode():
+      for (final c in node.positional) {
+        _walkAllowlist(c, payloadFnName: payloadFnName, decl: decl);
+      }
+      for (final c in node.named.values) {
+        _walkAllowlist(c, payloadFnName: payloadFnName, decl: decl);
+      }
+    case ConditionalNode():
+      _walkAllowlist(node.condition,
+          payloadFnName: payloadFnName, decl: decl);
+      _walkAllowlist(node.thenBranch,
+          payloadFnName: payloadFnName, decl: decl);
+      if (node.elseBranch != null) {
+        _walkAllowlist(node.elseBranch!,
+            payloadFnName: payloadFnName, decl: decl);
+      }
+    case ForNode():
+      _walkAllowlist(node.source, payloadFnName: payloadFnName, decl: decl);
+      _walkAllowlist(node.body, payloadFnName: payloadFnName, decl: decl);
+    case SpreadNode():
+      _walkAllowlist(node.source, payloadFnName: payloadFnName, decl: decl);
+    case CompareOpNode():
+    case ArithOpNode():
+    case LogicOpNode():
+    case CoalesceOpNode():
+      final b = node as dynamic;
+      _walkAllowlist(b.left as IrNode,
+          payloadFnName: payloadFnName, decl: decl);
+      _walkAllowlist(b.right as IrNode,
+          payloadFnName: payloadFnName, decl: decl);
+    case NotOpNode():
+      _walkAllowlist(node.operand,
+          payloadFnName: payloadFnName, decl: decl);
+    case GetterNode():
+      _walkAllowlist(node.receiver,
+          payloadFnName: payloadFnName, decl: decl);
+    case LetNode():
+      _walkAllowlist(node.value, payloadFnName: payloadFnName, decl: decl);
+      _walkAllowlist(node.body, payloadFnName: payloadFnName, decl: decl);
+    case AssignNode():
+      _walkAllowlist(node.value, payloadFnName: payloadFnName, decl: decl);
+    case SequenceNode():
+      for (final s in node.steps) {
+        _walkAllowlist(s, payloadFnName: payloadFnName, decl: decl);
+      }
+      _walkAllowlist(node.returnExpr,
+          payloadFnName: payloadFnName, decl: decl);
+    case LambdaNode():
+      _walkAllowlist(node.body, payloadFnName: payloadFnName, decl: decl);
+    case MemberAccessNode():
+      _walkAllowlist(node.target,
+          payloadFnName: payloadFnName, decl: decl);
+    case IndexAccessNode():
+      _walkAllowlist(node.target,
+          payloadFnName: payloadFnName, decl: decl);
+      _walkAllowlist(node.key, payloadFnName: payloadFnName, decl: decl);
+    case LengthOfNode():
+      _walkAllowlist(node.target,
+          payloadFnName: payloadFnName, decl: decl);
+    case IsNullCheckNode():
+      _walkAllowlist(node.operand,
+          payloadFnName: payloadFnName, decl: decl);
+    case IsTypeNode():
+      _walkAllowlist(node.receiver,
+          payloadFnName: payloadFnName, decl: decl);
+    case StringInterpNode():
+      for (final p in node.parts) {
+        if (p is IrNode) {
+          _walkAllowlist(p, payloadFnName: payloadFnName, decl: decl);
+        }
+      }
+    case BlockNode():
+      for (final s in node.statements) {
+        _walkAllowlist(s, payloadFnName: payloadFnName, decl: decl);
+      }
+    case IfStatementNode():
+      _walkAllowlist(node.cond, payloadFnName: payloadFnName, decl: decl);
+      _walkAllowlist(node.then, payloadFnName: payloadFnName, decl: decl);
+      if (node.else_ != null) {
+        _walkAllowlist(node.else_!,
+            payloadFnName: payloadFnName, decl: decl);
+      }
+    case ReturnNode():
+      if (node.value != null) {
+        _walkAllowlist(node.value!,
+            payloadFnName: payloadFnName, decl: decl);
+      }
+    case LetStatementNode():
+      _walkAllowlist(node.value, payloadFnName: payloadFnName, decl: decl);
+    case WhileNode():
+      _walkAllowlist(node.condition,
+          payloadFnName: payloadFnName, decl: decl);
+      _walkAllowlist(node.body, payloadFnName: payloadFnName, decl: decl);
+    case DoNode():
+      _walkAllowlist(node.body, payloadFnName: payloadFnName, decl: decl);
+      _walkAllowlist(node.condition,
+          payloadFnName: payloadFnName, decl: decl);
+    case ImperativeForNode():
+      if (node.init != null) {
+        _walkAllowlist(node.init!,
+            payloadFnName: payloadFnName, decl: decl);
+      }
+      if (node.condition != null) {
+        _walkAllowlist(node.condition!,
+            payloadFnName: payloadFnName, decl: decl);
+      }
+      if (node.update != null) {
+        _walkAllowlist(node.update!,
+            payloadFnName: payloadFnName, decl: decl);
+      }
+      _walkAllowlist(node.body, payloadFnName: payloadFnName, decl: decl);
+    case IrStatefulNode():
+      for (final f in node.fields) {
+        _walkAllowlist(f.initializer,
+            payloadFnName: payloadFnName, decl: decl);
+      }
+      _walkAllowlist(node.body, payloadFnName: payloadFnName, decl: decl);
+    case IrStatefulFieldNode():
+      _walkAllowlist(node.initializer,
+          payloadFnName: payloadFnName, decl: decl);
+    case PayloadFunctionNode():
+    case ScreenWithFunctionsNode():
+      // Nested payload-function declarations / screens are not produced by
+      // the lowerer inside a function body; nothing to do.
+      break;
+    case EventNode():
+    case ActionSequenceNode():
+    case ActionStepNode():
+    case TryStepNode():
+      // Action-form nodes are not produced inside payload-function bodies
+      // (sync only). Skip without descent.
+      break;
+    case LiteralNode():
+    case ConstNode():
+    case RefNode():
+    case BreakNode():
+    case ContinueNode():
+      // Leaves with no calls.
+      break;
+  }
 }
 
 IrNode _lowerExpression(Expression expr) => lowerExpressionOrWidget(expr);

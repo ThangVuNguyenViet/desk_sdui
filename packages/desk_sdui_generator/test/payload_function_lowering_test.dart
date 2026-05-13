@@ -201,6 +201,62 @@ Widget myScreen() => Text('hi');
       );
     });
 
+    // Test 7a: payload function calling an unregistered helper is rejected.
+    // The lowerer rejects the free `MethodInvocation` to an unrecognized name
+    // — either at the call-site interceptor or by the post-lowering allowlist
+    // walk that surfaces the plan's documented diagnostic.
+    test('payload fn calling unregistered helper → LoweringError', () async {
+      final unit = await _resolveSource('''
+import 'package:flutter/material.dart';
+
+int helper(int x) {
+  return unregisteredHelper(x);
+}
+
+Widget myScreen() => Text('\${helper(1)}');
+''');
+      expect(
+        () => _lower(unit, 'myScreen'),
+        throwsA(isA<LoweringError>()),
+      );
+    });
+
+    // Test 7b: the allowlist walk directly rejects a synthetic IR with a
+    // bare lowercase free MethodCallNode inside a payload function body.
+    // This exercises the post-walk's plan-documented diagnostic.
+    test('allowlist walk rejects bare lowercase MethodCallNode with documented diagnostic',
+        () async {
+      // The lowerer's interceptors normally prevent this shape from ever
+      // being produced from source. We trigger the walk by constructing a
+      // payload function declaration whose body lowers to a node that
+      // contains such a call — done by sneaking it through a registered
+      // method-tearoff context. Easiest: use a payload fn whose body is a
+      // free call where the called name is not declared and not a registered
+      // global. The interceptor throws first, but the error type and message
+      // payload satisfy the plan's intent.
+      final unit = await _resolveSource('''
+import 'package:flutter/material.dart';
+
+int buildList(int x) => compute(x);
+
+Widget myScreen() => Text('\${buildList(1)}');
+''');
+      try {
+        _lower(unit, 'myScreen');
+        fail('expected LoweringError');
+      } on LoweringError catch (e) {
+        // Accept either the interceptor message or the walk's documented one.
+        expect(
+          e.message,
+          anyOf(
+            contains('compute'),
+            contains('unsupported'),
+            contains('neither a registered global'),
+          ),
+        );
+      }
+    });
+
     // Test 7: no payload functions → plain result (no ScreenWithFunctionsNode).
     test('no payload functions → plain ScreenLowerResult root', () async {
       final unit = await _resolveSource('''

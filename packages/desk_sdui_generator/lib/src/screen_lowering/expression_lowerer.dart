@@ -2,7 +2,7 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:desk_sdui_annotation/desk_sdui_annotation.dart';
 import '../diagnostics.dart';
-import 'ast_to_ir.dart' show lowerExpressionOrWidget, lowerStatement;
+import 'ast_to_ir.dart' show lowerExpressionOrWidget, lowerStatement, isPayloadFn;
 
 // ---------------------------------------------------------------------------
 // Binding-kind tracking for block bodies
@@ -179,6 +179,23 @@ IrNode lowerExpression(Expression expr) {
     return ListNode(
       expr.elements.map((e) => lowerExpression(e as Expression)).toList(),
     );
+  }
+
+  // Free function call with no target: check payload functions first, then
+  // registered globals (MethodCallNode).
+  if (expr is MethodInvocation && expr.target == null) {
+    final name = expr.methodName.name;
+    if (isPayloadFn(name)) {
+      return PayloadFunctionCallNode(
+        name: name,
+        args: expr.argumentList.arguments
+            .map((a) => lowerExpression(a.argumentExpression))
+            .toList(),
+      );
+    }
+    // Not a payload fn — fall through to the LoweringError at the bottom.
+    // (Registered global functions are lowered as MethodCallNode with
+    // null receiver; those paths are handled in widget_lowerer.dart.)
   }
 
   if (expr is MethodInvocation && expr.target != null) {

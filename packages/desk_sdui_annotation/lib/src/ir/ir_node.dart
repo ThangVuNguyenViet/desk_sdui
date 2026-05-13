@@ -1058,6 +1058,75 @@ final class ImperativeForNode extends StatementNode {
   String toString() => 'ImperativeForNode($init; $condition; $update)';
 }
 
+// ────────────────────────── payload function nodes ──────────────────────────
+
+/// A payload-private function declaration. Lives in a per-file local function
+/// table (a [ScreenWithFunctionsNode]); never registered globally. Call sites
+/// use [PayloadFunctionCallNode].
+final class PayloadFunctionNode extends IrNode {
+  const PayloadFunctionNode({
+    required this.name,
+    required this.params,
+    required this.body,
+  });
+  final String name;
+  final List<String> params;
+  final IrNode body; // BlockNode or expression
+
+  @override
+  bool operator ==(Object other) =>
+      other is PayloadFunctionNode &&
+      other.name == name &&
+      _listEquals(other.params, params) &&
+      other.body == body;
+  @override
+  int get hashCode => Object.hash(name, Object.hashAll(params), body);
+  @override
+  String toString() =>
+      'PayloadFunctionNode($name(${params.join(", ")}) => $body)';
+}
+
+/// Calls a payload-private function declared in the same file.
+final class PayloadFunctionCallNode extends ExpressionNode {
+  const PayloadFunctionCallNode({required this.name, required this.args});
+  final String name;
+  final List<IrNode> args;
+
+  @override
+  bool operator ==(Object other) =>
+      other is PayloadFunctionCallNode &&
+      other.name == name &&
+      _listEquals(other.args, args);
+  @override
+  int get hashCode => Object.hash(name, Object.hashAll(args));
+  @override
+  String toString() => 'PayloadFunctionCallNode($name(${args.length} args))';
+}
+
+/// Wraps a screen body alongside its payload function declarations. Used as
+/// the top-level root of a screen [IrTree] when the screen file defines one
+/// or more top-level payload functions. The runtime entry builds a function
+/// table from [functions] before resolving [screenBody].
+final class ScreenWithFunctionsNode extends IrNode {
+  const ScreenWithFunctionsNode({
+    required this.functions,
+    required this.screenBody,
+  });
+  final List<PayloadFunctionNode> functions;
+  final IrNode screenBody; // IrStatefulNode, BlockNode, or expression
+
+  @override
+  bool operator ==(Object other) =>
+      other is ScreenWithFunctionsNode &&
+      _listEquals(other.functions, functions) &&
+      other.screenBody == screenBody;
+  @override
+  int get hashCode => Object.hash(Object.hashAll(functions), screenBody);
+  @override
+  String toString() =>
+      'ScreenWithFunctionsNode(${functions.length} fns, $screenBody)';
+}
+
 // ────────────────────────── screen-state nodes ──────────────────────────
 
 /// A screen whose body owns mutable cross-build state. Generated as a

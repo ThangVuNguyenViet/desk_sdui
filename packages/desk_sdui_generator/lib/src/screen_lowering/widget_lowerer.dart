@@ -4,6 +4,7 @@ import 'package:desk_sdui_annotation/desk_sdui_annotation.dart';
 import '../diagnostics.dart';
 import 'expression_lowerer.dart';
 import 'closure_lowerer.dart';
+import 'ast_to_ir.dart' show isPayloadFn;
 
 // Note: FunctionExpression in a callback slot (onPressed, etc.) still goes
 // through lowerClosure → EventNode. FunctionExpression in a non-callback
@@ -169,6 +170,17 @@ IrNode _lowerArg(Expression a, {Object? Function(InstanceCreationExpression)? co
   }
   if (a is MethodInvocation && a.target == null) {
     final name = a.methodName.name;
+    // Payload function calls take priority — emit PayloadFunctionCallNode
+    // instead of falling through to lowerClosure.
+    if (isPayloadFn(name)) {
+      return PayloadFunctionCallNode(
+        name: name,
+        args: a.argumentList.arguments
+            .map((arg) => _lowerArg(arg.argumentExpression,
+                constEvaluator: constEvaluator))
+            .toList(),
+      );
+    }
     if (name.isNotEmpty && name[0] == name[0].toUpperCase()) {
       return lowerWidgetInvocation(a, constEvaluator: constEvaluator);
     }

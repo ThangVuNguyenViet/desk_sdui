@@ -240,5 +240,27 @@ IrNode _demoteAllConst(IrNode node) {
         initializer: _demoteAllConst(node.initializer),
         isFinal: node.isFinal,
       );
+    case PayloadFunctionNode():
+      return PayloadFunctionNode(
+        name: node.name,
+        params: node.params,
+        body: _demoteAllConst(node.body),
+      );
+    case PayloadFunctionCallNode():
+      return PayloadFunctionCallNode(
+        name: node.name,
+        args: node.args.map(_demoteAllConst).toList(),
+      );
+    case ScreenWithFunctionsNode():
+      return ScreenWithFunctionsNode(
+        functions: node.functions
+            .map((f) => PayloadFunctionNode(
+                  name: f.name,
+                  params: f.params,
+                  body: _demoteAllConst(f.body),
+                ))
+            .toList(),
+        screenBody: _demoteAllConst(node.screenBody),
+      );
   }
 }

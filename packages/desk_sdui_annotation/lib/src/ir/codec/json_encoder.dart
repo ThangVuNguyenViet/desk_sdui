@@ -239,6 +239,22 @@ class JsonIrEncoder {
           'initializer': _encodeNode(node.initializer),
           'isFinal': node.isFinal,
         },
+      PayloadFunctionNode() => {
+          r'$type': 'payloadFn',
+          'name': node.name,
+          'params': node.params,
+          'body': _encodeNode(node.body),
+        },
+      PayloadFunctionCallNode() => {
+          r'$type': 'payloadFnCall',
+          'name': node.name,
+          'args': node.args.map(_encodeNode).toList(),
+        },
+      ScreenWithFunctionsNode() => {
+          r'$type': 'screenWithFunctions',
+          'functions': node.functions.map(_encodeNode).toList(),
+          'screenBody': _encodeNode(node.screenBody),
+        },
     };
   }
 

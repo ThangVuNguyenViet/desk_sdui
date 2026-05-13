@@ -366,5 +366,53 @@ void main() {
       final decoded = codec.decode(encoded);
       expect(decoded, node);
     });
+
+    test('PayloadFunctionNode with expression body', () {
+      const node = PayloadFunctionNode(
+        name: 'describe',
+        params: ['count'],
+        body: ConditionalNode(
+          condition: CompareOpNode(
+            op: CompareOp.eq,
+            left: RefNode(['count']),
+            right: LiteralNode(0),
+          ),
+          thenBranch: LiteralNode('No items'),
+          elseBranch: LiteralNode('Some items'),
+        ),
+      );
+      final encoded = codec.encode(node);
+      final decoded = codec.decode(encoded);
+      expect(decoded, node);
+    });
+
+    test('PayloadFunctionCallNode with args', () {
+      const node = PayloadFunctionCallNode(
+        name: 'describe',
+        args: [LiteralNode(3)],
+      );
+      final encoded = codec.encode(node);
+      final decoded = codec.decode(encoded);
+      expect(decoded, node);
+    });
+
+    test('ScreenWithFunctionsNode round-trips', () {
+      const node = ScreenWithFunctionsNode(
+        functions: [
+          PayloadFunctionNode(
+            name: 'greet',
+            params: ['name'],
+            body: LiteralNode('hello'),
+          ),
+        ],
+        screenBody: PayloadFunctionCallNode(
+          name: 'greet',
+          args: [LiteralNode('world')],
+        ),
+      );
+      final encoded = codec.encode(node);
+      final decoded = codec.decode(encoded);
+      expect(decoded, node);
+    });
   });
 }

@@ -284,6 +284,25 @@ void _walk(IrNode node, _Findings f, {required String? selfName}) {
     case RefNode():
     case EventNode():
       break;
+
+    case PayloadFunctionNode():
+      // Payload function declarations are walked from the classifier entry
+      // point with self-name set to the function's own name. Inside _walk,
+      // we treat a PayloadFunctionNode as an opaque subtree (not re-entered
+      // recursively here — the generator calls classify() on each function
+      // body separately with the appropriate selfName).
+      break;
+
+    case PayloadFunctionCallNode():
+      // Call sites to other payload functions: walk args for nested cost.
+      for (final arg in node.args) {
+        _walk(arg, f, selfName: selfName);
+      }
+
+    case ScreenWithFunctionsNode():
+      // Walk the screen body; individual function bodies are classified
+      // separately by the generator with their own selfName.
+      _walk(node.screenBody, f, selfName: selfName);
   }
 }
 

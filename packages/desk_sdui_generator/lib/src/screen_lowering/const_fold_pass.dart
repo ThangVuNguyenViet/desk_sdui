@@ -246,6 +246,28 @@ IrNode _foldChildren(IrNode node) {
         initializer: constFold(node.initializer),
         isFinal: node.isFinal,
       );
+    case PayloadFunctionNode():
+      return PayloadFunctionNode(
+        name: node.name,
+        params: node.params,
+        body: constFold(node.body),
+      );
+    case PayloadFunctionCallNode():
+      return PayloadFunctionCallNode(
+        name: node.name,
+        args: node.args.map(constFold).toList(),
+      );
+    case ScreenWithFunctionsNode():
+      return ScreenWithFunctionsNode(
+        functions: node.functions
+            .map((f) => PayloadFunctionNode(
+                  name: f.name,
+                  params: f.params,
+                  body: constFold(f.body),
+                ))
+            .toList(),
+        screenBody: constFold(node.screenBody),
+      );
   }
 }
 
@@ -294,6 +316,9 @@ bool _isPureLiteral(IrNode node) {
     case ImperativeForNode():
     case IrStatefulNode():
     case IrStatefulFieldNode():
+    case PayloadFunctionNode():
+    case PayloadFunctionCallNode():
+    case ScreenWithFunctionsNode():
       return false;
     case RefNode():
     case EventNode():

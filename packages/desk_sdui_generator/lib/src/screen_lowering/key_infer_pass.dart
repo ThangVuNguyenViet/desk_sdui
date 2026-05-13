@@ -305,6 +305,28 @@ IrNode inferKeys(IrNode node, {TypeLookup? lookupType}) {
         initializer: inferKeys(node.initializer, lookupType: lookupType),
         isFinal: node.isFinal,
       );
+    case PayloadFunctionNode():
+      return PayloadFunctionNode(
+        name: node.name,
+        params: node.params,
+        body: inferKeys(node.body, lookupType: lookupType),
+      );
+    case PayloadFunctionCallNode():
+      return PayloadFunctionCallNode(
+        name: node.name,
+        args: node.args.map((a) => inferKeys(a, lookupType: lookupType)).toList(),
+      );
+    case ScreenWithFunctionsNode():
+      return ScreenWithFunctionsNode(
+        functions: node.functions
+            .map((f) => PayloadFunctionNode(
+                  name: f.name,
+                  params: f.params,
+                  body: inferKeys(f.body, lookupType: lookupType),
+                ))
+            .toList(),
+        screenBody: inferKeys(node.screenBody, lookupType: lookupType),
+      );
   }
 }
 

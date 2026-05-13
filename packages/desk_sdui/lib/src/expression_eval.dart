@@ -4,14 +4,49 @@ import 'cell.dart';
 import 'ref_resolver.dart';
 import 'runtime.dart';
 
+// ---------------------------------------------------------------------------
+// RuntimeContext — per-resolve payload function table
+// ---------------------------------------------------------------------------
+
+/// Per-resolve context passed alongside the env. Carries the payload function
+/// table for the current screen (file-local, never global).
+class RuntimeContext {
+  const RuntimeContext({this.payloadFunctions = const {}});
+  final Map<String, PayloadFunctionNode> payloadFunctions;
+
+  static const empty = RuntimeContext();
+}
+
+// ---------------------------------------------------------------------------
+// Entry points
+// ---------------------------------------------------------------------------
+
 /// Public entry point. Converts [input] to the internal cell-backed env and
 /// delegates to [evalExpressionWithEnv].
 Object? evalExpression(
   IrNode node,
   Map<String, Object?> input,
+  Runtime runtime, {
+  RuntimeContext ctx = RuntimeContext.empty,
+}) {
+  return evalExpressionWithEnv(node, toEnv(input), runtime, ctx: ctx);
+}
+
+/// Screen-level entry point that handles [ScreenWithFunctionsNode] by building
+/// the payload function table before resolving the screen body.
+Object? resolveScreen(
+  IrNode node,
+  Map<String, Object?> input,
   Runtime runtime,
 ) {
-  return evalExpressionWithEnv(node, toEnv(input), runtime);
+  final env = toEnv(input);
+  if (node is ScreenWithFunctionsNode) {
+    final ctx = RuntimeContext(
+      payloadFunctions: {for (final fn in node.functions) fn.name: fn},
+    );
+    return evalExpressionWithEnv(node.screenBody, env, runtime, ctx: ctx);
+  }
+  return evalExpressionWithEnv(node, env, runtime);
 }
 
 /// Internal evaluator. [env] is a mutable cell-backed environment; only
@@ -20,8 +55,9 @@ Object? evalExpression(
 Object? evalExpressionWithEnv(
   IrNode node,
   Map<String, Cell> env,
-  Runtime runtime,
-) {
+  Runtime runtime, {
+  RuntimeContext ctx = RuntimeContext.empty,
+}) {
   switch (node) {
     case LiteralNode(:final value):
       return value;
@@ -41,8 +77,8 @@ Object? evalExpressionWithEnv(
       return resolveFlutterRef(path, _unwrapEnv(env), runtime);
 
     case CompareOpNode(:final op, :final left, :final right):
-      final l = evalExpressionWithEnv(left, env, runtime);
-      final r = evalExpressionWithEnv(right, env, runtime);
+      final l = evalExpressionWithEnv(left, env, runtime, ctx: ctx);
+      final r = evalExpressionWithEnv(right, env, runtime, ctx: ctx);
       return switch (op) {
         CompareOp.eq => l == r,
         CompareOp.neq => l != r,
@@ -53,8 +89,8 @@ Object? evalExpressionWithEnv(
       };
 
     case ArithOpNode(:final op, :final left, :final right):
-      final l = evalExpressionWithEnv(left, env, runtime)! as num;
-      final r = evalExpressionWithEnv(right, env, runtime)! as num;
+      final l = evalExpressionWithEnv(left, env, runtime, ctx: ctx)! as num;
+      final r = evalExpressionWithEnv(right, env, runtime, ctx: ctx)! as num;
       return switch (op) {
         ArithOp.add => l + r,
         ArithOp.sub => l - r,
@@ -65,23 +101,25 @@ Object? evalExpressionWithEnv(
       };
 
     case LogicOpNode(:final op, :final left, :final right):
-      final l = evalExpressionWithEnv(left, env, runtime)! as bool;
+      final l = evalExpressionWithEnv(left, env, runtime, ctx: ctx)! as bool;
       return switch (op) {
         LogicOp.and =>
-          l && (evalExpressionWithEnv(right, env, runtime)! as bool),
+          l &&
+              (evalExpressionWithEnv(right, env, runtime, ctx: ctx)! as bool),
         LogicOp.or =>
-          l || (evalExpressionWithEnv(right, env, runtime)! as bool),
+          l ||
+              (evalExpressionWithEnv(right, env, runtime, ctx: ctx)! as bool),
       };
 
     case NotOpNode(:final operand):
-      return !(evalExpressionWithEnv(operand, env, runtime)! as bool);
+      return !(evalExpressionWithEnv(operand, env, runtime, ctx: ctx)! as bool);
 
     case CoalesceOpNode(:final left, :final right):
-      final l = evalExpressionWithEnv(left, env, runtime);
-      return l ?? evalExpressionWithEnv(right, env, runtime);
+      final l = evalExpressionWithEnv(left, env, runtime, ctx: ctx);
+      return l ?? evalExpressionWithEnv(right, env, runtime, ctx: ctx);
 
     case GetterNode(:final receiver, :final name):
-      final r = evalExpressionWithEnv(receiver, env, runtime);
+      final r = evalExpressionWithEnv(receiver, env, runtime, ctx: ctx);
       final handler = runtime.resolveGetter(name);
       if (handler != null) return handler(r);
       throw StateError(
@@ -89,8 +127,10 @@ Object? evalExpressionWithEnv(
       );
 
     case LetNode(:final name, :final value, :final body):
-      final v = evalExpressionWithEnv(value, env, runtime);
-      return evalExpressionWithEnv(body, {...env, name: Cell(v)}, runtime);
+      final v = evalExpressionWithEnv(value, env, runtime, ctx: ctx);
+      return evalExpressionWithEnv(
+          body, {...env, name: Cell(v)}, runtime,
+          ctx: ctx);
 
     case AssignNode(:final name, :final value):
       final cell = env[name];
@@ -99,16 +139,16 @@ Object? evalExpressionWithEnv(
           'AssignNode: no binding for "$name" (lowerer bug — should have rejected)',
         );
       }
-      final v = evalExpressionWithEnv(value, env, runtime);
+      final v = evalExpressionWithEnv(value, env, runtime, ctx: ctx);
       cell.value = v;
       return v;
 
     case SequenceNode(:final steps, :final returnExpr):
       for (final step in steps) {
-        evalExpressionWithEnv(step, env, runtime);
+        evalExpressionWithEnv(step, env, runtime, ctx: ctx);
         // Side effect: step is a method call on the receiver. Return value ignored.
       }
-      return evalExpressionWithEnv(returnExpr, env, runtime);
+      return evalExpressionWithEnv(returnExpr, env, runtime, ctx: ctx);
 
     case MethodCallNode(:final receiver, :final name, :final args):
       if (receiver == null) {
@@ -117,14 +157,17 @@ Object? evalExpressionWithEnv(
         }
         final resolvedArgs = <String, Object?>{};
         for (var i = 0; i < args.length; i++) {
-          resolvedArgs['arg$i'] = evalExpressionWithEnv(args[i], env, runtime);
+          resolvedArgs['arg$i'] =
+              evalExpressionWithEnv(args[i], env, runtime, ctx: ctx);
         }
         return runtime.invokeFunction(name, resolvedArgs);
       }
-      final resolvedReceiver = evalExpressionWithEnv(receiver, env, runtime);
+      final resolvedReceiver =
+          evalExpressionWithEnv(receiver, env, runtime, ctx: ctx);
       final resolvedArgs = <String, Object?>{};
       for (var i = 0; i < args.length; i++) {
-        resolvedArgs['arg$i'] = evalExpressionWithEnv(args[i], env, runtime);
+        resolvedArgs['arg$i'] =
+            evalExpressionWithEnv(args[i], env, runtime, ctx: ctx);
       }
       final handler = runtime.resolveMethodHandler(name);
       if (handler == null) {
@@ -139,6 +182,7 @@ Object? evalExpressionWithEnv(
       // Lambdas capture the current env (Map<String, Cell>). Because cells are
       // mutable objects, lambdas see live values of mutable bindings at call time.
       final capturedEnv = env;
+      final capturedCtx = ctx;
       // Plan #11: a sync lambda with a BlockNode body (multi-statement event
       // handler that mutates stateful fields) runs through executeStatement
       // and then invokes the setState hook captured in env (if any) so Flutter
@@ -152,11 +196,11 @@ Object? evalExpressionWithEnv(
       if (!isAsync) {
         Object? invokeSync(Map<String, Cell> e) {
           if (isBlockBody) {
-            executeStatement(body, e, runtime);
+            executeStatement(body, e, runtime, ctx: capturedCtx);
             runSetStateHook(e);
             return null;
           }
-          return evalExpressionWithEnv(body, e, runtime);
+          return evalExpressionWithEnv(body, e, runtime, ctx: capturedCtx);
         }
 
         if (params.isEmpty) {
@@ -186,13 +230,15 @@ Object? evalExpressionWithEnv(
       // context; the lowerer already rejected production outside
       // ActionSequenceNode bodies.
       if (params.isEmpty) {
-        return () async => evalExpressionWithEnv(body, capturedEnv, runtime);
+        return () async =>
+            evalExpressionWithEnv(body, capturedEnv, runtime, ctx: capturedCtx);
       }
       if (params.length == 1) {
         return (Object? a0) async => evalExpressionWithEnv(
               body,
               {...capturedEnv, params[0]: Cell(a0)},
               runtime,
+              ctx: capturedCtx,
             );
       }
       if (params.length == 2) {
@@ -200,18 +246,19 @@ Object? evalExpressionWithEnv(
               body,
               {...capturedEnv, params[0]: Cell(a0), params[1]: Cell(a1)},
               runtime,
+              ctx: capturedCtx,
             );
       }
       throw StateError('LambdaNode: only 0-2 params supported for async');
 
     case MemberAccessNode(:final target, :final name):
-      final t = evalExpressionWithEnv(target, env, runtime);
+      final t = evalExpressionWithEnv(target, env, runtime, ctx: ctx);
       if (t is Map) return t[name];
       throw StateError('MemberAccess on non-map ${t.runtimeType}');
 
     case IndexAccessNode(:final target, :final key):
-      final t = evalExpressionWithEnv(target, env, runtime);
-      final k = evalExpressionWithEnv(key, env, runtime);
+      final t = evalExpressionWithEnv(target, env, runtime, ctx: ctx);
+      final k = evalExpressionWithEnv(key, env, runtime, ctx: ctx);
       if (t is List) return t[k! as int];
       if (t is Map) return t[k];
       // Handle MaterialColor indexing (e.g., Colors.grey[300])
@@ -221,17 +268,17 @@ Object? evalExpressionWithEnv(
       throw StateError('IndexAccess on ${t.runtimeType}');
 
     case LengthOfNode(:final target):
-      final t = evalExpressionWithEnv(target, env, runtime);
+      final t = evalExpressionWithEnv(target, env, runtime, ctx: ctx);
       if (t is String) return t.length;
       if (t is List) return t.length;
       if (t is Map) return t.length;
       throw StateError('LengthOf on ${t.runtimeType}');
 
     case IsNullCheckNode(:final operand):
-      return evalExpressionWithEnv(operand, env, runtime) == null;
+      return evalExpressionWithEnv(operand, env, runtime, ctx: ctx) == null;
 
     case IsTypeNode(:final receiver, :final typeName):
-      final r = evalExpressionWithEnv(receiver, env, runtime);
+      final r = evalExpressionWithEnv(receiver, env, runtime, ctx: ctx);
       return runtime.checkType(typeName, r);
 
     case StringInterpNode(:final parts):
@@ -240,10 +287,38 @@ Object? evalExpressionWithEnv(
         if (p is String) {
           buf.write(p);
         } else if (p is IrNode) {
-          buf.write(evalExpressionWithEnv(p, env, runtime) ?? '');
+          buf.write(
+              evalExpressionWithEnv(p, env, runtime, ctx: ctx) ?? '');
         }
       }
       return buf.toString();
+
+    case PayloadFunctionCallNode(:final name, :final args):
+      final fn = ctx.payloadFunctions[name];
+      if (fn == null) {
+        throw StateError(
+          'PayloadFunctionCallNode: no function "$name" in scope '
+          '(lowerer bug — allowlist walk should have rejected this call).',
+        );
+      }
+      // Evaluate args in caller's env.
+      final argValues = args
+          .map((a) => evalExpressionWithEnv(a, env, runtime, ctx: ctx))
+          .toList();
+      // Build callee env: only params are visible (no closure capture from
+      // caller's locals — payload functions are top-level, not nested closures).
+      final calleeEnv = <String, Cell>{};
+      for (var i = 0; i < fn.params.length; i++) {
+        calleeEnv[fn.params[i]] = Cell(argValues[i]);
+      }
+      // Execute body. Block bodies use executeStatement + unwrap FlowReturn.
+      // Expression bodies evaluate directly.
+      if (fn.body is BlockNode) {
+        final flow = executeStatement(fn.body, calleeEnv, runtime, ctx: ctx);
+        if (flow is FlowReturn) return flow.value;
+        return null; // body completed without explicit return
+      }
+      return evalExpressionWithEnv(fn.body, calleeEnv, runtime, ctx: ctx);
 
     default:
       throw StateError('evalExpression: unsupported node $node');
@@ -301,23 +376,24 @@ final class FlowReturn extends ControlFlow {
 ControlFlow executeStatement(
   IrNode node,
   Map<String, Cell> env,
-  Runtime runtime,
-) {
+  Runtime runtime, {
+  RuntimeContext ctx = RuntimeContext.empty,
+}) {
   switch (node) {
     case BlockNode(:final statements):
       // Shallow-copy of env: new binding names are scoped to this block; cell
       // values of outer bindings are shared by reference (mutations visible).
       final scoped = Map<String, Cell>.of(env);
       for (final s in statements) {
-        final flow = executeStatement(s, scoped, runtime);
+        final flow = executeStatement(s, scoped, runtime, ctx: ctx);
         if (flow is! FlowNormal) return flow;
       }
       return FlowNormal.instance;
 
     case IfStatementNode(:final cond, :final then, :final else_):
-      final c = evalExpressionWithEnv(cond, env, runtime);
-      if (c == true) return executeStatement(then, env, runtime);
-      if (else_ != null) return executeStatement(else_, env, runtime);
+      final c = evalExpressionWithEnv(cond, env, runtime, ctx: ctx);
+      if (c == true) return executeStatement(then, env, runtime, ctx: ctx);
+      if (else_ != null) return executeStatement(else_, env, runtime, ctx: ctx);
       return FlowNormal.instance;
 
     case BreakNode():
@@ -328,17 +404,19 @@ ControlFlow executeStatement(
 
     case ReturnNode(:final value):
       return FlowReturn(
-        value == null ? null : evalExpressionWithEnv(value, env, runtime),
+        value == null
+            ? null
+            : evalExpressionWithEnv(value, env, runtime, ctx: ctx),
       );
 
     case LetStatementNode(:final name, :final value):
-      final v = evalExpressionWithEnv(value, env, runtime);
+      final v = evalExpressionWithEnv(value, env, runtime, ctx: ctx);
       env[name] = Cell(v);
       return FlowNormal.instance;
 
     case WhileNode(:final condition, :final body):
-      while (evalExpressionWithEnv(condition, env, runtime) == true) {
-        final flow = executeStatement(body, env, runtime);
+      while (evalExpressionWithEnv(condition, env, runtime, ctx: ctx) == true) {
+        final flow = executeStatement(body, env, runtime, ctx: ctx);
         if (flow is FlowBreak) break;
         if (flow is FlowContinue) continue;
         if (flow is FlowReturn) return flow; // propagate
@@ -347,14 +425,20 @@ ControlFlow executeStatement(
 
     case DoNode(:final body, :final condition):
       do {
-        final flow = executeStatement(body, env, runtime);
+        final flow = executeStatement(body, env, runtime, ctx: ctx);
         if (flow is FlowBreak) break;
         if (flow is FlowContinue) continue;
         if (flow is FlowReturn) return flow;
-      } while (evalExpressionWithEnv(condition, env, runtime) == true);
+      } while (
+          evalExpressionWithEnv(condition, env, runtime, ctx: ctx) == true);
       return FlowNormal.instance;
 
-    case ImperativeForNode(:final init, :final condition, :final update, :final body):
+    case ImperativeForNode(
+        :final init,
+        :final condition,
+        :final update,
+        :final body
+      ):
       // Fresh scope for the loop variable, per Dart semantics.
       final scoped = Map<String, Cell>.of(env);
       if (init != null) {
@@ -363,18 +447,18 @@ ControlFlow executeStatement(
         // clone scope). Execute each inner statement directly in `scoped`.
         if (init is BlockNode) {
           for (final s in init.statements) {
-            final flow = executeStatement(s, scoped, runtime);
+            final flow = executeStatement(s, scoped, runtime, ctx: ctx);
             if (flow is! FlowNormal) return flow;
           }
         } else {
-          final flow = executeStatement(init, scoped, runtime);
+          final flow = executeStatement(init, scoped, runtime, ctx: ctx);
           if (flow is! FlowNormal) return flow;
         }
       }
       loop:
       while (condition == null ||
-          evalExpressionWithEnv(condition, scoped, runtime) == true) {
-        final flow = executeStatement(body, scoped, runtime);
+          evalExpressionWithEnv(condition, scoped, runtime, ctx: ctx) == true) {
+        final flow = executeStatement(body, scoped, runtime, ctx: ctx);
         if (flow is FlowBreak) break loop;
         if (flow is FlowReturn) return flow;
         // FlowContinue and FlowNormal both fall through to update.
@@ -383,14 +467,14 @@ ControlFlow executeStatement(
         // update falls through executeStatement's default arm to
         // evalExpressionWithEnv.
         if (update != null) {
-          executeStatement(update, scoped, runtime);
+          executeStatement(update, scoped, runtime, ctx: ctx);
         }
       }
       return FlowNormal.instance;
 
     default:
       // Expression-as-statement: evaluate and discard the value.
-      evalExpressionWithEnv(node, env, runtime);
+      evalExpressionWithEnv(node, env, runtime, ctx: ctx);
       return FlowNormal.instance;
   }
 }

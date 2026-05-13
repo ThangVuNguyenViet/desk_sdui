@@ -363,5 +363,29 @@ IrNode reactiveHoist(IrNode node) {
         ),
         paths,
       );
+    case PayloadFunctionNode():
+      // Payload function bodies run at call time, not per-frame. No reactive
+      // hoisting inside payload functions.
+      return (node, <String>{});
+    case PayloadFunctionCallNode():
+      final allPaths = <String>{};
+      final newArgs = <IrNode>[];
+      for (final arg in node.args) {
+        final (hoisted, paths) = _hoist(arg);
+        newArgs.add(hoisted);
+        allPaths.addAll(paths);
+      }
+      return (
+        PayloadFunctionCallNode(name: node.name, args: newArgs),
+        allPaths,
+      );
+    case ScreenWithFunctionsNode():
+      // Function bodies: no reactive hoisting (they run at call time).
+      // Screen body: hoist normally.
+      final (body, bodyPaths) = _hoist(node.screenBody);
+      return (
+        ScreenWithFunctionsNode(functions: node.functions, screenBody: body),
+        bodyPaths,
+      );
   }
 }

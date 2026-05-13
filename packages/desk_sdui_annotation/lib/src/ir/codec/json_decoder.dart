@@ -208,6 +208,24 @@ class JsonIrDecoder {
           initializer: _decodeNode(map['initializer']! as Map<String, Object?>),
           isFinal: map['isFinal']! as bool,
         ),
+      'payloadFn' => PayloadFunctionNode(
+          name: map['name']! as String,
+          params: (map['params']! as List).cast<String>(),
+          body: _decodeNode(map['body']! as Map<String, Object?>),
+        ),
+      'payloadFnCall' => PayloadFunctionCallNode(
+          name: map['name']! as String,
+          args: ((map['args']! as List).cast<Map<String, Object?>>())
+              .map(_decodeNode)
+              .toList(),
+        ),
+      'screenWithFunctions' => ScreenWithFunctionsNode(
+          functions: ((map['functions']! as List).cast<Map<String, Object?>>())
+              .map<PayloadFunctionNode>(_decodePayloadFn)
+              .toList(),
+          screenBody:
+              _decodeNode(map['screenBody']! as Map<String, Object?>),
+        ),
       _ => throw FormatException('Unknown IR node type: $type'),
     };
   }
@@ -262,6 +280,14 @@ class JsonIrDecoder {
       name: map['name']! as String,
       initializer: _decodeNode(map['initializer']! as Map<String, Object?>),
       isFinal: map['isFinal']! as bool,
+    );
+  }
+
+  PayloadFunctionNode _decodePayloadFn(Map<String, Object?> map) {
+    return PayloadFunctionNode(
+      name: map['name']! as String,
+      params: (map['params']! as List).cast<String>(),
+      body: _decodeNode(map['body']! as Map<String, Object?>),
     );
   }
 

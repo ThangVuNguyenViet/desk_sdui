@@ -171,6 +171,15 @@ String _emitNode(IrNode node) {
       return 'IrStatefulNode(${id}fields: [$fields], body: ${_emitNode(node.body)})';
     case IrStatefulFieldNode():
       return 'IrStatefulFieldNode(name: ${_dartString(node.name)}, initializer: ${_emitNode(node.initializer)}, isFinal: ${node.isFinal})';
+    case PayloadFunctionNode():
+      final params = _dartList(node.params.map(_dartString));
+      return 'PayloadFunctionNode(name: ${_dartString(node.name)}, params: $params, body: ${_emitNode(node.body)})';
+    case PayloadFunctionCallNode():
+      final args = node.args.map(_emitNode).join(', ');
+      return 'PayloadFunctionCallNode(name: ${_dartString(node.name)}, args: [$args])';
+    case ScreenWithFunctionsNode():
+      final fns = node.functions.map(_emitNode).join(', ');
+      return 'ScreenWithFunctionsNode(functions: [$fns], screenBody: ${_emitNode(node.screenBody)})';
   }
 }
 

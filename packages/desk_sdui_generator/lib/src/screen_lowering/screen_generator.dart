@@ -84,7 +84,9 @@ ScreenLoweringOutputs lowerScreenElement({
   }
 
   final lowerFnDecl = resolvedFnDecl ?? fnDecl;
-  var result = lowerScreen(lowerFnDecl, ann);
+  // Use the payload-function-aware lowerer when we have the compilation unit
+  // (always true here — unit is a required parameter).
+  var result = lowerScreenWithPayloadFunctions(unit, lowerFnDecl, ann);
   var ir = constFold(result.root);
   ir = reactiveHoist(ir);
   ir = inferKeys(ir);

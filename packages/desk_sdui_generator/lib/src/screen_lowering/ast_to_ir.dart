@@ -4,6 +4,20 @@ import '../diagnostics.dart';
 import 'widget_lowerer.dart';
 import 'expression_lowerer.dart';
 
+// ---------------------------------------------------------------------------
+// Payload function name registry (module-level, reset per screen lowering)
+// ---------------------------------------------------------------------------
+
+/// Set of payload function names visible in the current screen file.
+/// Populated by [lowerScreenWithPayloadFunctions] before lowering the screen
+/// body; reset to empty after. Consulted by [lowerExpressionOrWidget] and the
+/// expression lowerer's free-call interception to emit [PayloadFunctionCallNode]
+/// instead of a registered-method dispatch.
+final Set<String> _payloadFnNames = {};
+
+/// Returns true if [name] is a payload function declared in the current file.
+bool isPayloadFn(String name) => _payloadFnNames.contains(name);
+
 class ScreenLowerResult {
   ScreenLowerResult({
     required this.name,
@@ -84,6 +98,118 @@ ScreenLowerResult lowerScreen(FunctionDeclaration fn, ScreenAnnotationData ann) 
   );
 }
 
+/// Lowers a @Screen alongside any payload-private top-level functions declared
+/// in [unit]. Non-@Screen top-level function declarations are collected as
+/// [PayloadFunctionNode]s; call sites in the screen body (and in other payload
+/// functions) are lowered to [PayloadFunctionCallNode]s. If no payload
+/// functions are present the result is identical to calling [lowerScreen].
+ScreenLowerResult lowerScreenWithPayloadFunctions(
+  CompilationUnit unit,
+  FunctionDeclaration screenFn,
+  ScreenAnnotationData ann,
+) {
+  // Step 1: collect payload function names (pre-pass so call sites can be
+  // resolved before we lower the function bodies).
+  _payloadFnNames.clear();
+  for (final decl in unit.declarations) {
+    if (decl is FunctionDeclaration && decl.name.lexeme != screenFn.name.lexeme) {
+      _payloadFnNames.add(decl.name.lexeme);
+    }
+  }
+
+  try {
+    // Step 2: lower the screen body (payload fn call sites are intercepted by
+    // isPayloadFn checks in lowerExpressionOrWidget / lowerExpression).
+    final screenResult = lowerScreen(screenFn, ann);
+
+    if (_payloadFnNames.isEmpty) {
+      return screenResult;
+    }
+
+    // Step 3: lower each payload function body.
+    final payloadFns = <PayloadFunctionNode>[];
+    for (final decl in unit.declarations) {
+      if (decl is FunctionDeclaration &&
+          decl.name.lexeme != screenFn.name.lexeme) {
+        payloadFns.add(_lowerPayloadFunctionDecl(decl));
+      }
+    }
+
+    // Step 4: wrap the screen body.
+    final wrapped = ScreenWithFunctionsNode(
+      functions: payloadFns,
+      screenBody: screenResult.root,
+    );
+    return screenResult.copyWith(root: wrapped);
+  } finally {
+    _payloadFnNames.clear();
+  }
+}
+
+/// Lowers a top-level function declaration to a [PayloadFunctionNode].
+/// Rejects async functions and unsupported body shapes.
+PayloadFunctionNode _lowerPayloadFunctionDecl(FunctionDeclaration decl) {
+  final fn = decl.functionExpression;
+
+  // Reject async.
+  if (fn.body.isAsynchronous) {
+    throw LoweringError(
+      'Payload functions must be synchronous. '
+      'Declare "${decl.name.lexeme}" without `async`; '
+      'use an action handler for async work.',
+      decl,
+    );
+  }
+
+  // Collect params.
+  final params = fn.parameters?.parameters
+          .map((p) => p.name!.lexeme)
+          .toList() ??
+      const <String>[];
+
+  // Lower body.
+  final body = fn.body;
+  final IrNode lowered;
+  if (body is ExpressionFunctionBody) {
+    lowered = lowerExpressionOrWidget(body.expression);
+  } else if (body is BlockFunctionBody) {
+    // Collect var bindings in the function block for scope tracking.
+    final bindings = <String, BindingKind>{};
+    for (final p in params) {
+      bindings[p] = BindingKind.finalBinding; // params are read-only
+    }
+    for (final stmt in body.block.statements) {
+      if (stmt is VariableDeclarationStatement) {
+        for (final v in stmt.variables.variables) {
+          bindings[v.name.lexeme] = stmt.variables.isFinal
+              ? BindingKind.finalBinding
+              : BindingKind.varBinding;
+        }
+      }
+    }
+    pushScope(bindings);
+    try {
+      lowered = BlockNode(
+        statements: body.block.statements.map(lowerStatement).toList(),
+      );
+    } finally {
+      popScope();
+    }
+  } else {
+    throw LoweringError(
+      'Payload functions must have an expression or block body. '
+      'Got: ${body.runtimeType}',
+      decl,
+    );
+  }
+
+  return PayloadFunctionNode(
+    name: decl.name.lexeme,
+    params: params,
+    body: lowered,
+  );
+}
+
 IrNode _lowerExpression(Expression expr) => lowerExpressionOrWidget(expr);
 
 /// Dispatches an [Expression] to either the widget lowerer (for widget
@@ -96,6 +222,15 @@ IrNode lowerExpressionOrWidget(Expression expr) {
     return lowerWidgetInstance(expr);
   } else if (expr is MethodInvocation && expr.target == null) {
     final name = expr.methodName.name;
+    // Payload function call takes priority over widget/registered dispatch.
+    if (_payloadFnNames.contains(name)) {
+      return PayloadFunctionCallNode(
+        name: name,
+        args: expr.argumentList.arguments
+            .map((a) => lowerExpressionOrWidget(a.argumentExpression))
+            .toList(),
+      );
+    }
     if (name.isNotEmpty && name[0] == name[0].toUpperCase()) {
       return lowerWidgetInvocation(expr);
     } else {
@@ -685,5 +820,16 @@ void _collectRefs(
       _collectRefs(node.body, widgetRefs, methodRefs, fnRefs);
     case IrStatefulFieldNode():
       _collectRefs(node.initializer, widgetRefs, methodRefs, fnRefs);
+    case PayloadFunctionNode():
+      _collectRefs(node.body, widgetRefs, methodRefs, fnRefs);
+    case PayloadFunctionCallNode():
+      for (final arg in node.args) {
+        _collectRefs(arg, widgetRefs, methodRefs, fnRefs);
+      }
+    case ScreenWithFunctionsNode():
+      for (final fn in node.functions) {
+        _collectRefs(fn.body, widgetRefs, methodRefs, fnRefs);
+      }
+      _collectRefs(node.screenBody, widgetRefs, methodRefs, fnRefs);
   }
 }

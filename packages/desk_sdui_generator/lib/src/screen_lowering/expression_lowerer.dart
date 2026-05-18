@@ -2,7 +2,7 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:desk_sdui_annotation/desk_sdui_annotation.dart';
 import '../diagnostics.dart';
-import 'ast_to_ir.dart' show lowerExpressionOrWidget, lowerStatement, isPayloadFn;
+import 'ast_to_ir.dart' show lowerExpressionOrWidget, lowerStatement, isPayloadFn, isPayloadClass, isPayloadClassField, isPayloadClassMethod;
 
 // ---------------------------------------------------------------------------
 // Binding-kind tracking for block bodies
@@ -65,7 +65,14 @@ IrNode lowerExpression(Expression expr) {
   }
 
   if (expr is SimpleIdentifier) {
-    return RefNode([expr.name]);
+    final name = expr.name;
+    if (name == "this") {
+      return const ThisRefNode();
+    }
+    if (isPayloadClassField(name)) {
+      return ThisFieldRefNode(fieldName: name);
+    }
+    return RefNode([name]);
   }
 
   if (expr is PrefixedIdentifier) {
@@ -87,34 +94,82 @@ IrNode lowerExpression(Expression expr) {
   }
 
   if (expr is PropertyAccess) {
-    if (expr.propertyName.name == 'length') {
+    final propertyName = expr.propertyName.name;
+    if (propertyName == 'length') {
       return LengthOfNode(lowerExpression(expr.target!));
     }
+    if (propertyName == 'runtimeType') {
+      return RuntimeTypeRefNode(operand: lowerExpression(expr.target!));
+    }
     final target = lowerExpression(expr.target!);
+    final targetTypeName = _typeName(expr.target!.staticType);
+    if (targetTypeName != null && isPayloadClass(targetTypeName)) {
+      return PayloadMethodCallNode(
+        receiver: target,
+        methodName: propertyName,
+        args: {},
+      );
+    }
     final bucket = coreTypeBucket(expr.target!.staticType);
     if (target is RefNode && bucket == null) {
-      return RefNode([...target.path, expr.propertyName.name]);
+      return RefNode([...target.path, propertyName]);
     }
     if (bucket != null) {
       return GetterNode(
         receiver: target,
-        name: '$bucket.${expr.propertyName.name}',
+        name: '$bucket.$propertyName',
       );
     }
-    return MemberAccessNode(target: target, name: expr.propertyName.name);
+    return MemberAccessNode(target: target, name: propertyName);
   }
 
   if (expr is IndexExpression) {
-    return IndexAccessNode(
-      target: lowerExpression(expr.target!),
-      key: lowerExpression(expr.index),
-    );
+    final target = lowerExpression(expr.target!);
+    final key = lowerExpression(expr.index);
+    final targetTypeName = _typeName(expr.target!.staticType);
+    if (targetTypeName != null && isPayloadClass(targetTypeName)) {
+      return PayloadMethodCallNode(
+        receiver: target,
+        methodName: '[]',
+        args: {'arg0': key},
+      );
+    }
+    return IndexAccessNode(target: target, key: key);
   }
 
   if (expr is BinaryExpression) {
     final left = lowerExpression(expr.leftOperand);
     final right = lowerExpression(expr.rightOperand);
-    switch (expr.operator.lexeme) {
+    final leftTypeName = _typeName(expr.leftOperand.staticType);
+    final opLexeme = expr.operator.lexeme;
+
+    // Operator overloading: if LHS is a payload class, route to method call.
+    if (leftTypeName != null && isPayloadClass(leftTypeName)) {
+      final methodName = switch (opLexeme) {
+        '+' => '+',
+        '-' => '-',
+        '*' => '*',
+        '/' => '/',
+        '~/' => '~/',
+        '%' => '%',
+        '<<' => '<<',
+        '>>' => '>>',
+        '&' => '&',
+        '|' => '|',
+        '^' => '^',
+        '==' => '==',
+        _ => null,
+      };
+      if (methodName != null) {
+        return PayloadMethodCallNode(
+          receiver: left,
+          methodName: methodName,
+          args: {'arg0': right},
+        );
+      }
+    }
+
+    switch (opLexeme) {
       case '+':
         return ArithOpNode(op: ArithOp.add, left: left, right: right);
       case '-':
@@ -160,10 +215,19 @@ IrNode lowerExpression(Expression expr) {
   }
 
   if (expr is PrefixExpression && expr.operator.lexeme == '-') {
+    final operand = lowerExpression(expr.operand);
+    final operandTypeName = _typeName(expr.operand.staticType);
+    if (operandTypeName != null && isPayloadClass(operandTypeName)) {
+      return PayloadMethodCallNode(
+        receiver: operand,
+        methodName: 'unary-',
+        args: {},
+      );
+    }
     return ArithOpNode(
       op: ArithOp.sub,
       left: LiteralNode(0),
-      right: lowerExpression(expr.operand),
+      right: operand,
     );
   }
 
@@ -182,7 +246,7 @@ IrNode lowerExpression(Expression expr) {
   }
 
   // Free function call with no target: check payload functions first, then
-  // registered globals (MethodCallNode).
+  // payload class methods, then registered globals (MethodCallNode).
   if (expr is MethodInvocation && expr.target == null) {
     final name = expr.methodName.name;
     if (isPayloadFn(name)) {
@@ -191,6 +255,21 @@ IrNode lowerExpression(Expression expr) {
         args: expr.argumentList.arguments
             .map((a) => lowerExpression(a.argumentExpression))
             .toList(),
+      );
+    }
+    if (isPayloadClassMethod(name)) {
+      final args = <String, IrNode>{};
+      for (var i = 0; i < expr.argumentList.arguments.length; i++) {
+        final arg = expr.argumentList.arguments[i];
+        final argName = arg is NamedArgument
+            ? arg.name.lexeme
+            : 'arg\$i';
+        args[argName] = lowerExpression(arg.argumentExpression);
+      }
+      return PayloadMethodCallNode(
+        receiver: const ThisRefNode(),
+        methodName: name,
+        args: args,
       );
     }
     // Not a payload fn. Free-function lowering for unknown lowercase names
@@ -203,9 +282,25 @@ IrNode lowerExpression(Expression expr) {
   }
 
   if (expr is MethodInvocation && expr.target != null) {
+    final targetTypeName = _typeName(expr.target!.staticType);
+    final methodName = expr.methodName.name;
+    if (targetTypeName != null && isPayloadClass(targetTypeName)) {
+      final args = <String, IrNode>{};
+      for (var i = 0; i < expr.argumentList.arguments.length; i++) {
+        final arg = expr.argumentList.arguments[i];
+        final argName = arg is NamedArgument
+            ? arg.name.lexeme
+            : 'arg$i';
+        args[argName] = lowerExpression(arg.argumentExpression);
+      }
+      return PayloadMethodCallNode(
+        receiver: lowerExpression(expr.target!),
+        methodName: methodName,
+        args: args,
+      );
+    }
     final receiver = lowerExpression(expr.target!);
     final bucket = coreTypeBucket(expr.target!.staticType);
-    final methodName = expr.methodName.name;
     final qualifiedName = bucket != null ? '$bucket.$methodName' : methodName;
     final args = expr.argumentList.arguments
         .map((a) => lowerExpression(a.argumentExpression))
@@ -236,6 +331,46 @@ IrNode lowerExpression(Expression expr) {
   if (expr is PrefixExpression &&
       (expr.operator.lexeme == '++' || expr.operator.lexeme == '--')) {
     return _lowerPrefix(expr);
+  }
+
+  if (expr is IsExpression) {
+    return IsTypeNode(
+      receiver: lowerExpression(expr.expression),
+      typeName: expr.type.type?.alias?.element.name ??
+          expr.type.type?.getDisplayString(withNullability: false) ??
+          'dynamic',
+    );
+  }
+
+  if (expr is AsExpression) {
+    final typeStr = expr.type.toSource();
+    final nullable = typeStr.endsWith('?');
+    final cleanType = nullable ? typeStr.substring(0, typeStr.length - 1) : typeStr;
+    return AsTypeNode(
+      operand: lowerExpression(expr.expression),
+      typeName: cleanType,
+      nullable: nullable,
+    );
+  }
+
+  if (expr is InstanceCreationExpression) {
+    final ctorName = expr.constructorName.name?.token.lexeme ?? '';
+    final typeName = expr.constructorName.type.name.lexeme;
+    if (isPayloadClass(typeName)) {
+      final args = <String, IrNode>{};
+      for (var i = 0; i < expr.argumentList.arguments.length; i++) {
+        final arg = expr.argumentList.arguments[i];
+        final name = arg is NamedArgument
+            ? arg.name.lexeme
+            : 'arg$i';
+        args[name] = lowerExpression(arg.argumentExpression);
+      }
+      return PayloadInstanceCreationNode(
+        className: typeName,
+        ctorName: ctorName,
+        args: args,
+      );
+    }
   }
 
   throw LoweringError('unsupported expression: ${expr.runtimeType}', expr);
@@ -568,6 +703,56 @@ IrNode _lowerAssignment(AssignmentExpression expr) {
         expr,
       );
     }
+
+    final fieldName = lhs is PrefixedIdentifier
+        ? lhs.identifier.name
+        : lhs is PropertyAccess
+            ? lhs.propertyName.name
+            : '';
+    final receiverExpr =
+        lhs is PrefixedIdentifier ? lhs.prefix : (lhs as PropertyAccess).target!;
+    final loweredReceiver = lowerExpression(receiverExpr);
+    final rhs = lowerExpression(expr.rightHandSide);
+
+    // Payload class field compound assignment.
+    final typeName = _typeName(receiverType);
+    if (typeName != null && isPayloadClass(typeName)) {
+      final currentValue = PayloadFieldRefNode(
+        receiver: RefNode(['__recv__']),
+        fieldName: fieldName,
+      );
+      IrNode compoundValue;
+      switch (op) {
+        case '+=':
+          compoundValue = ArithOpNode(op: ArithOp.add, left: currentValue, right: rhs);
+        case '-=':
+          compoundValue = ArithOpNode(op: ArithOp.sub, left: currentValue, right: rhs);
+        case '*=':
+          compoundValue = ArithOpNode(op: ArithOp.mul, left: currentValue, right: rhs);
+        case '/=':
+          compoundValue = ArithOpNode(op: ArithOp.div, left: currentValue, right: rhs);
+        case '~/=':
+          compoundValue = ArithOpNode(op: ArithOp.intDiv, left: currentValue, right: rhs);
+        case '%=':
+          compoundValue = ArithOpNode(op: ArithOp.mod, left: currentValue, right: rhs);
+        default:
+          throw LoweringError(
+            'Unsupported compound assignment operator "$op". '
+            'Supported: =, +=, -=, *=, /=, ~/=, %=.',
+            expr,
+          );
+      }
+      return LetNode(
+        name: '__recv__',
+        value: loweredReceiver,
+        body: PayloadFieldAssignNode(
+          receiver: RefNode(['__recv__']),
+          fieldName: fieldName,
+          value: compoundValue,
+        ),
+      );
+    }
+
     final className = _classNameForType(receiverType);
     if (className == null) {
       throw LoweringError(
@@ -579,19 +764,10 @@ IrNode _lowerAssignment(AssignmentExpression expr) {
       );
     }
 
-    final fieldName = lhs is PrefixedIdentifier
-        ? lhs.identifier.name
-        : lhs is PropertyAccess
-            ? lhs.propertyName.name
-            : '';
-    final receiverExpr =
-        lhs is PrefixedIdentifier ? lhs.prefix : (lhs as PropertyAccess).target!;
     // Lower the receiver exactly once and share the same IrNode between the
     // GetterNode (read-back of the current value) and the SetterCallNode
     // target. Lowering twice would be structurally wrong: any receiver
     // expression with side effects would be evaluated twice at runtime.
-    final loweredReceiver = lowerExpression(receiverExpr);
-    final rhs = lowerExpression(expr.rightHandSide);
     final currentValue = GetterNode(
       receiver: loweredReceiver,
       name: '$className.$fieldName',
@@ -646,6 +822,21 @@ IrNode _lowerAssignment(AssignmentExpression expr) {
     );
   }
 
+  // Index expression assignment: target[index] = value
+  if (lhs is IndexExpression) {
+    final targetTypeName = _typeName(lhs.target!.staticType);
+    if (targetTypeName != null && isPayloadClass(targetTypeName)) {
+      return PayloadMethodCallNode(
+        receiver: lowerExpression(lhs.target!),
+        methodName: '[]=',
+        args: {
+          'arg0': lowerExpression(lhs.index),
+          'arg1': lowerExpression(expr.rightHandSide),
+        },
+      );
+    }
+  }
+
   // Cascade-style setters (..text = 'x') route through Cascades (Feature 7).
   throw LoweringError(
     'Unsupported assignment target: ${lhs.runtimeType}',
@@ -657,7 +848,7 @@ IrNode _lowerAssignment(AssignmentExpression expr) {
 ///
 /// Returns a [SetterCallNode] that will be dispatched through the runtime's
 /// setter registry at evaluation time.
-SetterCallNode _lowerSetterAssignment({
+IrNode _lowerSetterAssignment({
   required Expression receiverExpr,
   required String fieldName,
   required Expression value,
@@ -670,6 +861,15 @@ SetterCallNode _lowerSetterAssignment({
       '${receiverType?.getDisplayString(withNullability: false)} is a core '
       'type. Core types do not support field assignment.',
       receiverExpr,
+    );
+  }
+  // Check if receiver is a payload class instance.
+  final typeName = _typeName(receiverType);
+  if (typeName != null && isPayloadClass(typeName)) {
+    return PayloadFieldAssignNode(
+      receiver: lowerExpression(receiverExpr),
+      fieldName: fieldName,
+      value: lowerExpression(value),
     );
   }
   final className = _classNameForType(receiverType);
@@ -703,6 +903,15 @@ String? _classNameForType(DartType? type) {
   final name = el.name;
   if (name == null) return null;
   return name;
+}
+
+/// Extracts the simple type name from a [DartType], or null if not an
+/// interface type.
+String? _typeName(DartType? type) {
+  if (type == null || type is DynamicType || type is InvalidType) return null;
+  final el = type.element;
+  if (el == null) return null;
+  return el.name;
 }
 
 /// Validates the binding kind and constructs an [AssignNode].

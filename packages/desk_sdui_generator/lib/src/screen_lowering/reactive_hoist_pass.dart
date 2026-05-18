@@ -202,6 +202,33 @@ IrNode reactiveHoist(IrNode node) {
       final (receiver, paths) = _hoist(node.receiver);
       return (IsTypeNode(receiver: receiver, typeName: node.typeName), paths);
 
+    case AsTypeNode():
+      final (operand, paths) = _hoist(node.operand);
+      return (AsTypeNode(operand: operand, typeName: node.typeName, nullable: node.nullable), paths);
+    case RuntimeTypeRefNode():
+      final (operand, paths) = _hoist(node.operand);
+      return (RuntimeTypeRefNode(operand: operand), paths);
+    case PayloadMethodCallNode():
+      final (receiver, paths1) = _hoist(node.receiver);
+      final newArgs = <String, IrNode>{};
+      final allPaths = <String>{...paths1};
+      for (final entry in node.args.entries) {
+        final (arg, paths2) = _hoist(entry.value);
+        newArgs[entry.key] = arg;
+        allPaths.addAll(paths2);
+      }
+      return (PayloadMethodCallNode(receiver: receiver, methodName: node.methodName, args: newArgs), allPaths);
+    case PayloadFieldRefNode():
+      final (receiver, paths) = _hoist(node.receiver);
+      return (PayloadFieldRefNode(receiver: receiver, fieldName: node.fieldName), paths);
+    case PayloadFieldAssignNode():
+      final (receiver, paths1) = _hoist(node.receiver);
+      final (value, paths2) = _hoist(node.value);
+      return (PayloadFieldAssignNode(receiver: receiver, fieldName: node.fieldName, value: value), {...paths1, ...paths2});
+    case ThisFieldRefNode():
+    case ThisRefNode():
+      return (node, <String>{});
+
     case StringInterpNode():
       final newParts = <Object>[];
       final allPaths = <String>{};
@@ -400,6 +427,15 @@ IrNode reactiveHoist(IrNode node) {
         ),
         bodyPaths,
       );
+    case PayloadFunctionValueNode():
+      // Function values are metadata; no reactive paths to hoist.
+      return (node, <String>{});
+    case PayloadExtensionNode():
+      // Extension declarations are metadata; no reactive paths to hoist.
+      return (node, <String>{});
+    case PayloadMixinNode():
+      // Mixin declarations are metadata; no reactive paths to hoist.
+      return (node, <String>{});
     case PayloadClassNode():
       // Payload class declarations are metadata; no reactive paths to hoist.
       return (node, <String>{});

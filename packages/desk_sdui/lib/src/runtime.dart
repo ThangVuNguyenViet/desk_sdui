@@ -113,9 +113,16 @@ abstract class IrFetcher {
 
 final Map<String, PayloadClass> _payloadClasses = {};
 
+/// Extension registry keyed by target-type name.
+final Map<String, List<PayloadExtensionNode>> _payloadExtensions = {};
+
 /// Returns a read-only view of registered payload classes.
 Map<String, PayloadClass> get payloadClasses =>
     UnmodifiableMapView(_payloadClasses);
+
+/// Returns a read-only view of registered payload extensions.
+Map<String, List<PayloadExtensionNode>> get payloadExtensions =>
+    UnmodifiableMapView(_payloadExtensions);
 
 /// Registers a payload class and computes its method lookup order.
 ///
@@ -127,6 +134,34 @@ void registerPayloadClass(PayloadClass cls) {
   }
   _payloadClasses[cls.name] = cls;
   cls.methodLookupOrder = _computeMro(cls);
+}
+
+/// Registers a payload mixin as a non-instantiable [PayloadClass].
+/// Mixins are registered before classes that use them so that
+/// [methodLookupOrder] resolution succeeds.
+void registerPayloadMixin(String name, PayloadClass mixin) {
+  if (_payloadClasses.containsKey(name)) {
+    throw StateError('PayloadMixin "$name" already registered.');
+  }
+  _payloadClasses[name] = mixin;
+  mixin.methodLookupOrder = [mixin];
+}
+
+/// Registers a payload extension for a target type.
+void registerPayloadExtension(PayloadExtensionNode ext) {
+  _payloadExtensions.putIfAbsent(ext.targetTypeName, () => []).add(ext);
+}
+
+/// Looks up an extension method by target type name and method name.
+PayloadFunctionNode? resolveExtensionMethod(String targetTypeName, String methodName) {
+  final exts = _payloadExtensions[targetTypeName];
+  if (exts == null) return null;
+  for (final ext in exts) {
+    for (final m in ext.methods) {
+      if (m.name == methodName) return m;
+    }
+  }
+  return null;
 }
 
 /// Test-only helper to clear the payload class registry.

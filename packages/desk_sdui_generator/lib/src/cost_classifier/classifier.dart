@@ -36,11 +36,15 @@ enum CostClass {
   unbounded,
 
   /// Recursive call passes a strictly smaller argument (e.g. `fact(n - 1)`).
-  /// Treated as O(depth × body) — like [linearInArg] for diagnostic purposes.
+  /// Treated as O(depth × body) per call — like [linearInArg] for diagnostic purposes.
   recursiveSizeDecreasing,
 
   /// Recursive call without a size-decrease guarantee. Treated as [unbounded].
   recursiveFree,
+
+  /// Constructs at least one PayloadInstance. Per-call heap allocation.
+  /// In tight build-path loops, may dominate frame budget.
+  allocatesPerCall,
 }
 
 // ---------------------------------------------------------------------------
@@ -52,6 +56,7 @@ class _Findings {
   bool hasUnboundedLoop = false; // set by WhileNode / DoNode / ImperativeForNode and the existing ForNode
   bool hasSizeDecreasingRecursion = false;
   bool hasFreeRecursion = false;
+  bool hasAllocation = false;
 }
 
 // ---------------------------------------------------------------------------
@@ -75,6 +80,7 @@ CostClass classify(IrNode body, {required String? selfName}) {
   }
   if (findings.hasUnboundedLoop) return CostClass.unbounded;
   if (findings.hasDataDependentLoop) return CostClass.linearInArg;
+  if (findings.hasAllocation) return CostClass.allocatesPerCall;
   return CostClass.pureBounded;
 }
 
@@ -201,6 +207,25 @@ void _walk(IrNode node, _Findings f, {required String? selfName}) {
     case IsTypeNode():
       _walk(node.receiver, f, selfName: selfName);
 
+    case AsTypeNode():
+      _walk(node.operand, f, selfName: selfName);
+    case RuntimeTypeRefNode():
+      _walk(node.operand, f, selfName: selfName);
+    case PayloadMethodCallNode():
+      _walk(node.receiver, f, selfName: selfName);
+      for (final arg in node.args.values) {
+        _walk(arg, f, selfName: selfName);
+      }
+    case PayloadFieldRefNode():
+      _walk(node.receiver, f, selfName: selfName);
+    case PayloadFieldAssignNode():
+      _walk(node.receiver, f, selfName: selfName);
+      _walk(node.value, f, selfName: selfName);
+    case ThisFieldRefNode():
+    case ThisRefNode():
+      // No children to walk.
+      break;
+
     case StringInterpNode():
       for (final part in node.parts) {
         if (part is IrNode) {
@@ -308,6 +333,15 @@ void _walk(IrNode node, _Findings f, {required String? selfName}) {
       // separately by the generator with their own selfName.
       _walk(node.screenBody, f, selfName: selfName);
 
+    case PayloadFunctionValueNode():
+      // Function values are metadata; treated like extension declarations.
+      break;
+    case PayloadExtensionNode():
+      // Extension declarations are metadata; treated like mixin declarations.
+      break;
+    case PayloadMixinNode():
+      // Mixin declarations are metadata; treated like class declarations.
+      break;
     case PayloadClassNode():
       // Payload class declarations are walked from the classifier entry
       // point. The constructor and method bodies are walked separately
@@ -315,7 +349,7 @@ void _walk(IrNode node, _Findings f, {required String? selfName}) {
       break;
 
     case PayloadInstanceCreationNode():
-      // Constructor call site: walk args for nested cost.
+      f.hasAllocation = true;
       for (final arg in node.args.values) {
         _walk(arg, f, selfName: selfName);
       }

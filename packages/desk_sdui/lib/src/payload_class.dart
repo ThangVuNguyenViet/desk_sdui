@@ -33,6 +33,7 @@ class PayloadClass {
     // Backward compatibility: single unnamed ctor (F15 compatibility)
     this.ctorParams = const [],
     this.ctorBody,
+    this.isMixin = false,
   });
 
   final String name;
@@ -48,6 +49,9 @@ class PayloadClass {
   // Backward compatibility fields (F15 single-ctor support)
   final List<String> ctorParams;
   final IrNode? ctorBody;
+
+  /// True if this descriptor represents a mixin (non-instantiable).
+  final bool isMixin;
 
   /// Resolved at registration time. Drives method dispatch (Feature 17).
   late final List<PayloadClass> methodLookupOrder;
@@ -66,4 +70,21 @@ class PayloadInstance {
   @override
   String toString() =>
       '${type.name}(${fields.entries.map((e) => "${e.key}: ${e.value.value}").join(", ")})';
+}
+
+/// Runtime type value returned by [RuntimeTypeRefNode] for payload instances.
+/// Comparable by identity (same class name = equal).
+class PayloadTypeValue {
+  PayloadTypeValue(this.cls);
+  final PayloadClass cls;
+
+  @override
+  bool operator ==(Object other) =>
+      other is PayloadTypeValue && other.cls.name == cls.name;
+
+  @override
+  int get hashCode => cls.name.hashCode;
+
+  @override
+  String toString() => cls.name;
 }

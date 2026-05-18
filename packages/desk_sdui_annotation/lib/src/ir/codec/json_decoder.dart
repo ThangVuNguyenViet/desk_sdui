@@ -144,6 +144,14 @@ class JsonIrDecoder {
           receiver: _decodeNode(map['receiver']! as Map<String, Object?>),
           typeName: map['typeName']! as String,
         ),
+      'asType' => AsTypeNode(
+          operand: _decodeNode(map['operand']! as Map<String, Object?>),
+          typeName: map['typeName']! as String,
+          nullable: map['nullable'] as bool? ?? false,
+        ),
+      'runtimeTypeRef' => RuntimeTypeRefNode(
+          operand: _decodeNode(map['operand']! as Map<String, Object?>),
+        ),
       'interp' => StringInterpNode(
           (map['parts']! as List).map<Object>((p) {
             if (p is String) return p;
@@ -245,6 +253,36 @@ class JsonIrDecoder {
               .map(_decodeNode)
               .toList(),
         ),
+      'payloadMixin' => PayloadMixinNode(
+          name: map['name']! as String,
+          onTypes: ((map['onTypes'] as List?) ?? const []).cast<String>(),
+          fields: ((map['fields']! as List).cast<Map<String, Object?>>())
+              .map(_decodePayloadField)
+              .toList(),
+          methods: ((map['methods']! as List).cast<Map<String, Object?>>())
+              .map<PayloadFunctionNode>(_decodePayloadFn)
+              .toList(),
+        ),
+      'payloadExtension' => PayloadExtensionNode(
+          name: map['name']! as String,
+          targetTypeName: map['targetTypeName']! as String,
+          methods: ((map['methods']! as List).cast<Map<String, Object?>>())
+              .map<PayloadFunctionNode>(_decodePayloadFn)
+              .toList(),
+        ),
+      'payloadFnValue' => PayloadFunctionValueNode(
+          functionName: map['functionName'] as String?,
+          lambda: map['lambda'] != null
+              ? _decodeNode(map['lambda']! as Map<String, Object?>) as LambdaNode
+              : null,
+          methodTearoffReceiver: map['methodTearoffReceiver'] != null
+              ? _decodeNode(map['methodTearoffReceiver']! as Map<String, Object?>)
+              : null,
+          methodTearoffName: map['methodTearoffName'] as String?,
+          capturedEnvKeys: ((map['capturedEnvKeys'] as List?) ?? const [])
+              .cast<String>()
+              .toList(),
+        ),
       'screenWithFunctions' => ScreenWithFunctionsNode(
           functions: ((map['functions']! as List).cast<Map<String, Object?>>())
               .map<PayloadFunctionNode>(_decodePayloadFn)
@@ -252,6 +290,14 @@ class JsonIrDecoder {
           classes: ((map['classes'] as List?) ?? const [])
               .cast<Map<String, Object?>>()
               .map<PayloadClassNode>((m) => _decodeNode(m) as PayloadClassNode)
+              .toList(),
+          mixins: ((map['mixins'] as List?) ?? const [])
+              .cast<Map<String, Object?>>()
+              .map<PayloadMixinNode>((m) => _decodeNode(m) as PayloadMixinNode)
+              .toList(),
+          extensions: ((map['extensions'] as List?) ?? const [])
+              .cast<Map<String, Object?>>()
+              .map<PayloadExtensionNode>((m) => _decodeNode(m) as PayloadExtensionNode)
               .toList(),
           screenBody:
               _decodeNode(map['screenBody']! as Map<String, Object?>),

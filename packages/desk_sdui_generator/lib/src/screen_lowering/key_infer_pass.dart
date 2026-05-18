@@ -176,6 +176,33 @@ IrNode inferKeys(IrNode node, {TypeLookup? lookupType}) {
         typeName: node.typeName,
       );
 
+    case AsTypeNode():
+      return node;
+    case ThisFieldRefNode():
+    case ThisRefNode():
+      return node;
+    case PayloadFieldAssignNode():
+      return PayloadFieldAssignNode(
+        receiver: inferKeys(node.receiver, lookupType: lookupType),
+        fieldName: node.fieldName,
+        value: inferKeys(node.value, lookupType: lookupType),
+      );
+    case PayloadFieldRefNode():
+      return PayloadFieldRefNode(
+        receiver: inferKeys(node.receiver, lookupType: lookupType),
+        fieldName: node.fieldName,
+      );
+    case PayloadMethodCallNode():
+      return PayloadMethodCallNode(
+        receiver: inferKeys(node.receiver, lookupType: lookupType),
+        methodName: node.methodName,
+        args: node.args.map((k, v) => MapEntry(k, inferKeys(v, lookupType: lookupType))),
+      );
+    case RuntimeTypeRefNode():
+      return RuntimeTypeRefNode(
+        operand: inferKeys(node.operand, lookupType: lookupType),
+      );
+
     case StringInterpNode():
       final newParts = <Object>[];
       for (final part in node.parts) {
@@ -337,6 +364,15 @@ IrNode inferKeys(IrNode node, {TypeLookup? lookupType}) {
         classes: node.classes,
         screenBody: inferKeys(node.screenBody, lookupType: lookupType),
       );
+    case PayloadFunctionValueNode():
+      // Function values are metadata; treated like extension declarations.
+      return node;
+    case PayloadExtensionNode():
+      // Extension declarations are metadata; treated like mixin declarations.
+      return node;
+    case PayloadMixinNode():
+      // Mixin declarations are metadata; treated like class declarations.
+      return node;
     case PayloadClassNode():
       // Payload class declarations are metadata; not transformed.
       return node;

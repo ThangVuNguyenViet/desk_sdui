@@ -63,6 +63,9 @@ Severity? diagnosticFor(CostClass cls, CallSiteContext ctx) {
     (CostClass.recursiveSizeDecreasing, CallSiteContext.signal) => Severity.info,
     (CostClass.recursiveSizeDecreasing, CallSiteContext.action) => null,
     (CostClass.recursiveFree, _) => Severity.warning,
+    (CostClass.allocatesPerCall, CallSiteContext.build) => Severity.info,
+    (CostClass.allocatesPerCall, CallSiteContext.signal) => Severity.info,
+    (CostClass.allocatesPerCall, CallSiteContext.action) => null,
   };
 }
 
@@ -93,6 +96,12 @@ String messageFor(CostClass cls, CallSiteContext ctx, String fnName) {
       'Stack overflow risk; confirm termination.',
     (CostClass.recursiveSizeDecreasing, _) =>
       '"$fnName" recursive with size-decreasing arg. O(depth × body) per call.',
+    (CostClass.allocatesPerCall, CallSiteContext.build) =>
+      '"$fnName" allocates a payload instance per call. '
+      'In a build path; consider memoizing if called > ~100× per frame.',
+    (CostClass.allocatesPerCall, CallSiteContext.signal) =>
+      '"$fnName" allocates a payload instance per call. '
+      'In a signal-tick path; consider memoizing.',
     _ => '',
   };
 }
@@ -119,6 +128,10 @@ String codeFor(CostClass cls, CallSiteContext ctx) {
       'sdui_potential_cost.recursive_size_decreasing',
     (CostClass.recursiveFree, _) =>
       'sdui_potential_cost.recursive_free',
+    (CostClass.allocatesPerCall, CallSiteContext.build) =>
+      'sdui_potential_cost.allocates_in_build',
+    (CostClass.allocatesPerCall, CallSiteContext.signal) =>
+      'sdui_potential_cost.allocates_in_signal',
     _ => 'sdui_potential_cost',
   };
 }

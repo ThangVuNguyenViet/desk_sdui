@@ -103,6 +103,21 @@ String _emitNode(IrNode node) {
       return 'IsNullCheckNode(${_emitNode(node.operand)})';
     case IsTypeNode():
       return 'IsTypeNode(receiver: ${_emitNode(node.receiver)}, typeName: ${_dartString(node.typeName)})';
+    case AsTypeNode():
+      return 'AsTypeNode(operand: ${_emitNode(node.operand)}, typeName: ${_dartString(node.typeName)}, nullable: ${node.nullable})';
+    case RuntimeTypeRefNode():
+      return 'RuntimeTypeRefNode(operand: ${_emitNode(node.operand)})';
+    case PayloadMethodCallNode():
+      final args = node.args.entries.map((e) => '${_dartString(e.key)}: ${_emitNode(e.value)}').join(', ');
+      return 'PayloadMethodCallNode(receiver: ${_emitNode(node.receiver)}, methodName: ${_dartString(node.methodName)}, args: {$args})';
+    case PayloadFieldRefNode():
+      return 'PayloadFieldRefNode(receiver: ${_emitNode(node.receiver)}, fieldName: ${_dartString(node.fieldName)})';
+    case PayloadFieldAssignNode():
+      return 'PayloadFieldAssignNode(receiver: ${_emitNode(node.receiver)}, fieldName: ${_dartString(node.fieldName)}, value: ${_emitNode(node.value)})';
+    case ThisFieldRefNode():
+      return 'ThisFieldRefNode(fieldName: ${_dartString(node.fieldName)})';
+    case ThisRefNode():
+      return 'const ThisRefNode()';
     case StringInterpNode():
       final parts = node.parts.map((p) {
         if (p is IrNode) return _emitNode(p);
@@ -182,8 +197,27 @@ String _emitNode(IrNode node) {
     case ScreenWithFunctionsNode():
       final fns = node.functions.map(_emitNode).join(', ');
       final classes = node.classes.map(_emitNode).join(', ');
+      final mixins = node.mixins.map(_emitNode).join(', ');
+      final extensions = node.extensions.map(_emitNode).join(', ');
       final classesStr = node.classes.isEmpty ? '' : ', classes: [$classes]';
-      return 'ScreenWithFunctionsNode(functions: [$fns]$classesStr, screenBody: ${_emitNode(node.screenBody)})';
+      final mixinsStr = node.mixins.isEmpty ? '' : ', mixins: [$mixins]';
+      final extensionsStr = node.extensions.isEmpty ? '' : ', extensions: [$extensions]';
+      return 'ScreenWithFunctionsNode(functions: [$fns]$classesStr$mixinsStr$extensionsStr, screenBody: ${_emitNode(node.screenBody)})';
+    case PayloadFunctionValueNode():
+      final fnName = node.functionName != null ? 'functionName: ${_dartString(node.functionName!)}' : '';
+      final lambdaStr = node.lambda != null ? ', lambda: ${_emitNode(node.lambda!)}' : '';
+      final tearoffReceiver = node.methodTearoffReceiver != null ? ', methodTearoffReceiver: ${_emitNode(node.methodTearoffReceiver!)}' : '';
+      final tearoffName = node.methodTearoffName != null ? ', methodTearoffName: ${_dartString(node.methodTearoffName!)}' : '';
+      final captured = node.capturedEnvKeys.isNotEmpty ? ', capturedEnvKeys: ${_dartList(node.capturedEnvKeys.map(_dartString))}' : '';
+      return 'PayloadFunctionValueNode($fnName$lambdaStr$tearoffReceiver$tearoffName$captured)';
+    case PayloadExtensionNode():
+      final methods = node.methods.map(_emitNode).join(', ');
+      return 'PayloadExtensionNode(name: ${_dartString(node.name)}, targetTypeName: ${_dartString(node.targetTypeName)}, methods: [$methods])';
+    case PayloadMixinNode():
+      final onTypes = _dartList(node.onTypes.map(_dartString));
+      final fields = node.fields.map(_emitNode).join(', ');
+      final methods = node.methods.map(_emitNode).join(', ');
+      return 'PayloadMixinNode(name: ${_dartString(node.name)}, onTypes: $onTypes, fields: [$fields], methods: [$methods])';
     case PayloadClassNode():
       final supertypeStr = node.supertypeName != null ? ', supertypeName: ${_dartString(node.supertypeName!)}' : '';
       final mixins = _dartList(node.mixinNames.map(_dartString));

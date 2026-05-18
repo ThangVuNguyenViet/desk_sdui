@@ -322,7 +322,36 @@ Object? evalExpressionWithEnv(
 
     case IsTypeNode(:final receiver, :final typeName):
       final r = evalExpressionWithEnv(receiver, env, runtime, ctx: ctx);
+      if (r is PayloadInstance) {
+        for (final cls in r.type.methodLookupOrder) {
+          if (cls.name == typeName) return true;
+        }
+        return false;
+      }
       return runtime.checkType(typeName, r);
+
+    case AsTypeNode(:final operand, :final typeName, :final nullable):
+      final v = evalExpressionWithEnv(operand, env, runtime, ctx: ctx);
+      if (v == null) {
+        if (nullable) return null;
+        throw TypeError();
+      }
+      if (v is PayloadInstance) {
+        for (final cls in v.type.methodLookupOrder) {
+          if (cls.name == typeName) return v;
+        }
+        throw TypeError();
+      }
+      if (runtime.checkType(typeName, v)) return v;
+      throw TypeError();
+
+    case RuntimeTypeRefNode(:final operand):
+      final v = evalExpressionWithEnv(operand, env, runtime, ctx: ctx);
+      if (v is PayloadInstance) {
+        return PayloadTypeValue(v.type);
+      }
+      if (v == null) return 'Null';
+      return v.runtimeType.toString();
 
     case StringInterpNode(:final parts):
       final buf = StringBuffer();
@@ -364,13 +393,12 @@ Object? evalExpressionWithEnv(
       return evalExpressionWithEnv(fn.body, calleeEnv, runtime, ctx: ctx);
 
     case PayloadInstanceCreationNode(:final className, :final ctorName, :final args):
-      // Look up the payload class descriptor.
       final cls = payloadClasses[className];
       if (cls == null) {
-        throw StateError(
-          'PayloadInstanceCreationNode: class "$className" not registered. '
-          'Ensure registerPayloadClass was called for this class.',
-        );
+        throw StateError('Unknown payload class "$className"');
+      }
+      if (cls.isMixin) {
+        throw StateError('Cannot instantiate mixin "$className"');
       }
 
       // Look up the constructor (use ctorName or unnamed).
@@ -382,8 +410,15 @@ Object? evalExpressionWithEnv(
         );
       }
 
-      // Allocate field cells from fieldInitializers.
+      // Allocate field cells from mixin fieldInitializers (left-to-right)
+      // followed by the class's own fieldInitializers.
       final fields = <String, Cell>{};
+      for (final mixin in cls.mixins) {
+        for (final entry in mixin.fieldInitializers.entries) {
+          final value = evalExpressionWithEnv(entry.value, env, runtime, ctx: ctx);
+          fields[entry.key] = Cell(value);
+        }
+      }
       for (final entry in cls.fieldInitializers.entries) {
         final fieldName = entry.key;
         final initializer = entry.value;
@@ -412,7 +447,12 @@ Object? evalExpressionWithEnv(
       // Execute field inits.
       for (final entry in ctor.fieldInits.entries) {
         final value = evalExpressionWithEnv(entry.value, ctorEnv, runtime, ctx: ctx);
-        fields[entry.key]?.value = value;
+        final cell = fields[entry.key];
+        if (cell != null) {
+          cell.value = value;
+        } else {
+          fields[entry.key] = Cell(value);
+        }
       }
 
       // Execute ctor body if present.
@@ -426,6 +466,96 @@ Object? evalExpressionWithEnv(
       }
 
       return instance;
+
+    case PayloadMethodCallNode(:final receiver, :final methodName, :final args):
+      final receiverValue = evalExpressionWithEnv(receiver, env, runtime, ctx: ctx);
+      PayloadFunctionNode? fn;
+      String? receiverTypeName;
+
+      if (receiverValue is PayloadInstance) {
+        final inst = receiverValue;
+        receiverTypeName = inst.type.name;
+        for (final cls in inst.type.methodLookupOrder) {
+          if (cls.methods.containsKey(methodName)) {
+            fn = cls.methods[methodName];
+            break;
+          }
+        }
+      }
+
+      // Try extension methods if no payload-class method found.
+      if (fn == null && receiverTypeName != null) {
+        fn = resolveExtensionMethod(receiverTypeName, methodName);
+      }
+
+      if (fn == null) {
+        throw NoSuchMethodError.withInvocation(
+          receiverValue,
+          Invocation.method(Symbol(methodName), []),
+        );
+      }
+      final inst = receiverValue as PayloadInstance;
+      // Evaluate args in caller env.
+      final argValues = <String, Object?>{};
+      for (final entry in args.entries) {
+        argValues[entry.key] = evalExpressionWithEnv(entry.value, env, runtime, ctx: ctx);
+      }
+      // Build callee env: this + params bound.
+      final calleeEnv = <String, Cell>{
+        "this": Cell(inst),
+      };
+      for (var i = 0; i < fn.params.length; i++) {
+        final paramName = fn.params[i];
+        calleeEnv[paramName] = Cell(argValues[paramName] ?? argValues["arg\$i"]);
+      }
+      // Execute body.
+      final body = fn.body;
+      if (body is BlockNode) {
+        final flow = executeStatement(body, calleeEnv, runtime, ctx: ctx);
+        return flow is FlowReturn ? flow.value : null;
+      }
+      return evalExpressionWithEnv(body, calleeEnv, runtime, ctx: ctx);
+
+    case ThisFieldRefNode(:final fieldName):
+      final inst = env["this"]?.value as PayloadInstance;
+      return inst.fields[fieldName]?.value;
+
+    case ThisRefNode():
+      return env["this"]?.value;
+
+    case PayloadFieldRefNode(:final receiver, :final fieldName):
+      final inst = evalExpressionWithEnv(receiver, env, runtime, ctx: ctx) as PayloadInstance;
+      final cell = inst.fields[fieldName];
+      if (cell == null) {
+        throw StateError("No field \$fieldName on \${inst.type.name}");
+      }
+      return cell.value;
+
+    case PayloadFieldAssignNode(:final receiver, :final fieldName, :final value):
+      final inst = evalExpressionWithEnv(receiver, env, runtime, ctx: ctx) as PayloadInstance;
+      final cell = inst.fields[fieldName];
+      if (cell == null) {
+        throw StateError("No field \$fieldName on \${inst.type.name}");
+      }
+      final v = evalExpressionWithEnv(value, env, runtime, ctx: ctx);
+      cell.value = v;
+      return v;
+
+    case PayloadFunctionValueNode(:final functionName, :final lambda, :final methodTearoffReceiver, :final methodTearoffName, :final capturedEnvKeys):
+      // Capture env (only the keys we know are referenced).
+      final captured = <String, Cell>{for (final k in capturedEnvKeys) k: env[k]!};
+      if (functionName != null) {
+        final fn = ctx.payloadFunctions[functionName]!;
+        return _makeFunction(fn, captured, runtime, ctx);
+      }
+      if (lambda != null) {
+        return _makeLambdaFunction(lambda, captured, runtime, ctx);
+      }
+      if (methodTearoffReceiver != null && methodTearoffName != null) {
+        final inst = evalExpressionWithEnv(methodTearoffReceiver, env, runtime, ctx: ctx) as PayloadInstance;
+        return _makeTearoff(inst, methodTearoffName, runtime, ctx);
+      }
+      throw StateError('empty PayloadFunctionValueNode');
 
     // Widget / layout nodes — not valid at expression position.
     case WidgetNode():
@@ -455,6 +585,8 @@ Object? evalExpressionWithEnv(
     case IrStatefulNode():
     case IrStatefulFieldNode():
     case PayloadClassNode():
+    case PayloadMixinNode():
+    case PayloadExtensionNode():
     case PayloadFieldDeclNode():
     case PayloadCtorNode():
     case PayloadFieldInitNode():
@@ -465,6 +597,78 @@ Object? evalExpressionWithEnv(
         'expression position; use executeStatement or resolveNode instead.',
       );
   }
+}
+
+/// Creates a callable Dart Function from a [PayloadFunctionNode].
+Function _makeFunction(PayloadFunctionNode fn, Map<String, Cell> captured, Runtime rt, RuntimeContext ctx) {
+  Object? invoke(Map<String, Cell> callEnv) {
+    final merged = <String, Cell>{...captured, ...callEnv};
+    final body = fn.body;
+    if (body is BlockNode) {
+      final flow = executeStatement(body, merged, rt, ctx: ctx);
+      return flow is FlowReturn ? flow.value : null;
+    }
+    return evalExpressionWithEnv(body, merged, rt, ctx: ctx);
+  }
+
+  if (fn.params.length == 0) {
+    return () => invoke({});
+  }
+  if (fn.params.length == 1) {
+    return (Object? a0) => invoke({fn.params[0]: Cell(a0)});
+  }
+  if (fn.params.length == 2) {
+    return (Object? a0, Object? a1) => invoke({
+      fn.params[0]: Cell(a0),
+      fn.params[1]: Cell(a1),
+    });
+  }
+  throw StateError('Payload Function values support 0-2 params');
+}
+
+/// Creates a callable Dart Function from a [LambdaNode].
+Function _makeLambdaFunction(LambdaNode lambda, Map<String, Cell> captured, Runtime rt, RuntimeContext ctx) {
+  Object? invoke(Map<String, Cell> callEnv) {
+    final merged = <String, Cell>{...captured, ...callEnv};
+    final body = lambda.body;
+    if (body is BlockNode) {
+      final flow = executeStatement(body, merged, rt, ctx: ctx);
+      return flow is FlowReturn ? flow.value : null;
+    }
+    return evalExpressionWithEnv(body, merged, rt, ctx: ctx);
+  }
+
+  if (lambda.params.length == 0) {
+    return () => invoke({});
+  }
+  if (lambda.params.length == 1) {
+    return (Object? a0) => invoke({lambda.params[0]: Cell(a0)});
+  }
+  if (lambda.params.length == 2) {
+    return (Object? a0, Object? a1) => invoke({
+      lambda.params[0]: Cell(a0),
+      lambda.params[1]: Cell(a1),
+    });
+  }
+  throw StateError('Payload lambda values support 0-2 params');
+}
+
+/// Creates a callable Dart Function from a method tear-off.
+Function _makeTearoff(PayloadInstance inst, String methodName, Runtime rt, RuntimeContext ctx) {
+  PayloadFunctionNode? fn;
+  for (final cls in inst.type.methodLookupOrder) {
+    if (cls.methods.containsKey(methodName)) {
+      fn = cls.methods[methodName];
+      break;
+    }
+  }
+  if (fn == null) {
+    throw NoSuchMethodError.withInvocation(
+      inst,
+      Invocation.method(Symbol(methodName), []),
+    );
+  }
+  return _makeFunction(fn, {'this': Cell(inst)}, rt, ctx);
 }
 
 /// Unwraps a `Map<String, Cell>` env to `Map<String, Object?>` for callers

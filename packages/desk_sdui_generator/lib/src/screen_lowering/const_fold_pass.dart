@@ -132,6 +132,30 @@ IrNode _foldChildren(IrNode node) {
       return IsNullCheckNode(constFold(node.operand));
     case IsTypeNode():
       return IsTypeNode(receiver: constFold(node.receiver), typeName: node.typeName);
+    case AsTypeNode():
+      return node;
+    case ThisFieldRefNode():
+    case ThisRefNode():
+      return node;
+    case PayloadMethodCallNode():
+      return PayloadMethodCallNode(
+        receiver: constFold(node.receiver),
+        methodName: node.methodName,
+        args: node.args.map((k, v) => MapEntry(k, constFold(v))),
+      );
+    case PayloadFieldRefNode():
+      return PayloadFieldRefNode(
+        receiver: constFold(node.receiver),
+        fieldName: node.fieldName,
+      );
+    case PayloadFieldAssignNode():
+      return PayloadFieldAssignNode(
+        receiver: constFold(node.receiver),
+        fieldName: node.fieldName,
+        value: constFold(node.value),
+      );
+    case RuntimeTypeRefNode():
+      return RuntimeTypeRefNode(operand: constFold(node.operand));
     case StringInterpNode():
       final newParts = <Object>[];
       for (final part in node.parts) {
@@ -275,6 +299,15 @@ IrNode _foldChildren(IrNode node) {
         classes: node.classes,
         screenBody: constFold(node.screenBody),
       );
+    case PayloadFunctionValueNode():
+      // Function values are metadata; treated like extension declarations.
+      return node;
+    case PayloadExtensionNode():
+      // Extension declarations are metadata; treated like mixin declarations.
+      return node;
+    case PayloadMixinNode():
+      // Mixin declarations are metadata; treated like class declarations.
+      return node;
     case PayloadClassNode():
       // Payload class declarations are metadata; not const-folded.
       return node;
@@ -335,6 +368,8 @@ bool _isPureLiteral(IrNode node) {
     case LengthOfNode():
     case IsNullCheckNode():
     case IsTypeNode():
+    case AsTypeNode():
+    case RuntimeTypeRefNode():
     case StringInterpNode():
     case LambdaNode():
     case MethodCallNode():
@@ -357,11 +392,20 @@ bool _isPureLiteral(IrNode node) {
     case PayloadFunctionNode():
     case PayloadFunctionCallNode():
     case ScreenWithFunctionsNode():
+    case PayloadFunctionValueNode():
+    case PayloadExtensionNode():
+    case PayloadMixinNode():
     case PayloadClassNode():
     case PayloadInstanceCreationNode():
     case PayloadFieldDeclNode():
     case PayloadCtorNode():
     case PayloadFieldInitNode():
+      return false;
+    case PayloadMethodCallNode():
+    case PayloadFieldRefNode():
+    case PayloadFieldAssignNode():
+    case ThisFieldRefNode():
+    case ThisRefNode():
       return false;
     case RefNode():
     case EventNode():

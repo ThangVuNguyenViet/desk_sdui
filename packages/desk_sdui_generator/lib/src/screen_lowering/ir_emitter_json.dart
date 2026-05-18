@@ -130,6 +130,30 @@ IrNode _demoteAllConst(IrNode node) {
       return IsNullCheckNode(_demoteAllConst(node.operand));
     case IsTypeNode():
       return IsTypeNode(receiver: _demoteAllConst(node.receiver), typeName: node.typeName);
+    case AsTypeNode():
+      return node;
+    case ThisFieldRefNode():
+    case ThisRefNode():
+      return node;
+    case PayloadMethodCallNode():
+      return PayloadMethodCallNode(
+        receiver: _demoteAllConst(node.receiver),
+        methodName: node.methodName,
+        args: node.args.map((k, v) => MapEntry(k, _demoteAllConst(v))),
+      );
+    case PayloadFieldRefNode():
+      return PayloadFieldRefNode(
+        receiver: _demoteAllConst(node.receiver),
+        fieldName: node.fieldName,
+      );
+    case PayloadFieldAssignNode():
+      return PayloadFieldAssignNode(
+        receiver: _demoteAllConst(node.receiver),
+        fieldName: node.fieldName,
+        value: _demoteAllConst(node.value),
+      );
+    case RuntimeTypeRefNode():
+      return RuntimeTypeRefNode(operand: _demoteAllConst(node.operand));
     case StringInterpNode():
       return StringInterpNode(
         node.parts.map((p) => p is IrNode ? _demoteAllConst(p) : p).toList(),
@@ -269,6 +293,15 @@ IrNode _demoteAllConst(IrNode node) {
         classes: node.classes,
         screenBody: _demoteAllConst(node.screenBody),
       );
+    case PayloadFunctionValueNode():
+      // Function values are metadata; treated like extension declarations.
+      return node;
+    case PayloadExtensionNode():
+      // Extension declarations are metadata; treated like mixin declarations.
+      return node;
+    case PayloadMixinNode():
+      // Mixin declarations are metadata; treated like class declarations.
+      return node;
     case PayloadClassNode():
       return PayloadClassNode(
         name: node.name,

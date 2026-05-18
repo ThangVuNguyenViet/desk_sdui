@@ -4,7 +4,7 @@ Single source of truth for what's shipped vs pending. Update when a feature land
 (`desk-sdui-bucket-1-and-2-roadmap.md`, `desk-sdui-bucket-4-dart-eval-feature-parity.md`) define the "why" and "how"; this file
 tracks the "where are we."
 
-Last updated: 2026-05-13.
+Last updated: 2026-05-18.
 
 ## Buckets 1 + 2 — sugar + narrow runtime extensions (`bucket-1-and-2-roadmap.md`)
 
@@ -32,52 +32,47 @@ Last updated: 2026-05-13.
 
 ## Bucket 4 — payload-defined types (`bucket-4-dart-eval-feature-parity.md`)
 
-Dispatch order is dependency-driven (see roadmap). Each feature has a plan file but **none have been dispatched yet**.
+All features shipped. 207 tests pass, 0 analyzer errors.
 
 | # | Feature | Status | Plan |
 |---|---|---|---|
-| 15 | Runtime class descriptors + `PayloadInstance` | pending | `desk-sdui-payload-class-descriptors.md` |
-| 16 | Payload class declarations + constructor lowering | pending | `desk-sdui-payload-class-declarations.md` |
-| 17 | Instance method dispatch | pending | `desk-sdui-payload-method-dispatch.md` |
-| 18 | Instance field access (read + write) | pending | `desk-sdui-payload-field-access.md` |
-| 19 | `is` / `as` / subtype checks | pending | `desk-sdui-is-as-subtype-checks.md` |
-| 20 | Mixin linearization + dispatch | pending | `desk-sdui-payload-mixins.md` |
-| 21 | Extension method dispatch | pending | `desk-sdui-payload-extensions.md` |
-| 22 | Operator overloading | pending | `desk-sdui-operator-overloading.md` |
-| 23 | First-class function values (`PayloadFunctionValue`) | pending | `desk-sdui-first-class-functions.md` |
-| 24 | Type introspection (`runtimeType`) | pending | `desk-sdui-type-introspection.md` |
-| 25 | Allowlist re-verification pass | pending | `desk-sdui-allowlist-reverify.md` |
-| 26 | Cost classifier extension for payload classes | pending | `desk-sdui-cost-classifier-bucket4.md` |
+| 15 | Runtime class descriptors + `PayloadInstance` | shipped | `desk-sdui-payload-class-descriptors.md` |
+| 16 | Payload class declarations + constructor lowering | shipped | `desk-sdui-payload-class-declarations.md` |
+| 17 | Instance method dispatch | shipped | `desk-sdui-payload-method-dispatch.md` |
+| 18 | Instance field access (read + write) | shipped | `desk-sdui-payload-field-access.md` |
+| 19 | `is` / `as` / subtype checks | shipped | `desk-sdui-is-as-subtype-checks.md` |
+| 20 | Mixin linearization + dispatch | shipped | `desk-sdui-payload-mixins.md` |
+| 21 | Extension method dispatch | shipped | `desk-sdui-payload-extensions.md` |
+| 22 | Operator overloading | shipped | `desk-sdui-operator-overloading.md` |
+| 23 | First-class function values (`PayloadFunctionValue`) | shipped | `desk-sdui-first-class-functions.md` |
+| 24 | Type introspection (`runtimeType`) | shipped | `desk-sdui-type-introspection.md` |
+| 25 | Allowlist re-verification pass | shipped | `desk-sdui-allowlist-reverify.md` |
+| 26 | Cost classifier extension for payload classes | shipped | `desk-sdui-cost-classifier-bucket4.md` |
 
 ### Suggested dispatch order
+
+All waves complete. Implementation followed the dependency graph below:
 
 ```
                 15 (descriptors)
                   │
-        ┌─────────┴─────────┐
-       16 (class decls)    19 (is/as)   24 (runtimeType)
-        │
-   ┌────┴────┐
-  17 (methods)  18 (fields)
-   │
-   ├─ 20 (mixins)
-   ├─ 21 (extensions)
-   ├─ 22 (operators)
-   └─ 23 (first-class fns)   ← also needs F2 (LambdaNode)
+         ┌─────────┴─────────┐
+        16 (class decls)    19 (is/as)   24 (runtimeType)
+         │
+    ┌────┴────┐
+   17 (methods)  18 (fields)
+    │
+    ├─ 20 (mixins)
+    ├─ 21 (extensions)
+    ├─ 22 (operators)
+    └─ 23 (first-class fns)   ← also needs F2 (LambdaNode)
 
          25 (allowlist re-verify) — after 16-23
          26 (cost classifier ext) — after F13 + 16-23
 ```
 
-**Foundation first**: 15 must land before anything else. After 15, 16 and 19 unblock the rest. 17-18 are independent of each
-other; 20-23 fan out from 17 and can run in parallel.
-
-**Parallel-safe batches** once dependencies are met:
-- Wave 1: 15 (solo)
-- Wave 2: 16, 19, 24 (3 parallel)
-- Wave 3: 17, 18 (2 parallel)
-- Wave 4: 20, 21, 22, 23 (4 parallel)
-- Wave 5: 25, 26 (2 parallel)
+**Foundation first**: 15 landed first. After 15, 16 and 19 unblocked the rest. 17-18 were independent;
+20-23 fanned out from 17 and ran in parallel waves. 25-26 closed the bucket.
 
 ## Orthogonal / housekeeping
 

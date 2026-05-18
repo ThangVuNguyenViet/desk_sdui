@@ -759,6 +759,52 @@ final class IsTypeNode extends ExpressionNode {
   String toString() => 'IsTypeNode($receiver is $typeName)';
 }
 
+/// `operand as TypeName` — resolved by checking the runtime type and throwing
+/// [TypeError] on mismatch. If [nullable] is true, `null` passes through.
+final class AsTypeNode extends ExpressionNode {
+  const AsTypeNode({
+    required this.operand,
+    required this.typeName,
+    this.nullable = false,
+  });
+
+  final IrNode operand;
+  final String typeName;
+  final bool nullable;
+
+  @override
+  bool operator ==(Object other) =>
+      other is AsTypeNode &&
+      other.operand == operand &&
+      other.typeName == typeName &&
+      other.nullable == nullable;
+
+  @override
+  int get hashCode => Object.hash(operand, typeName, nullable);
+
+  @override
+  String toString() => 'AsTypeNode($operand as $typeName${nullable ? '?' : ''})';
+}
+
+/// `operand.runtimeType` — returns a type value for payload instances, or a
+/// class-name string for bridged values.
+final class RuntimeTypeRefNode extends ExpressionNode {
+  const RuntimeTypeRefNode({required this.operand});
+
+  final IrNode operand;
+
+  @override
+  bool operator ==(Object other) =>
+      other is RuntimeTypeRefNode && other.operand == operand;
+
+  @override
+  int get hashCode => operand.hashCode;
+
+  @override
+  String toString() => 'RuntimeTypeRefNode($operand.runtimeType)';
+}
+
+
 /// `a == null` — separate from CompareOpNode because the runtime fast-paths
 /// null checks without unboxing.
 final class IsNullCheckNode extends ExpressionNode {
@@ -1240,6 +1286,117 @@ final class PayloadInstanceCreationNode extends ExpressionNode {
   }
 }
 
+// ────────────────────────── payload method / field nodes ──────────────────────────
+
+/// A method call on a payload-class instance.
+final class PayloadMethodCallNode extends ExpressionNode {
+  const PayloadMethodCallNode({
+    required this.receiver,
+    required this.methodName,
+    required this.args,
+  });
+
+  final IrNode receiver;
+  final String methodName;
+  final Map<String, IrNode> args;
+
+  @override
+  bool operator ==(Object other) =>
+      other is PayloadMethodCallNode &&
+      other.receiver == receiver &&
+      other.methodName == methodName &&
+      _mapEquals(other.args, args);
+
+  @override
+  int get hashCode =>
+      Object.hash(receiver, methodName, Object.hashAll(args.entries));
+
+  @override
+  String toString() =>
+      'PayloadMethodCallNode($receiver.$methodName(...))';
+}
+
+/// A field read on a payload-class instance.
+final class PayloadFieldRefNode extends ExpressionNode {
+  const PayloadFieldRefNode({
+    required this.receiver,
+    required this.fieldName,
+  });
+
+  final IrNode receiver;
+  final String fieldName;
+
+  @override
+  bool operator ==(Object other) =>
+      other is PayloadFieldRefNode &&
+      other.receiver == receiver &&
+      other.fieldName == fieldName;
+
+  @override
+  int get hashCode => Object.hash(receiver, fieldName);
+
+  @override
+  String toString() => 'PayloadFieldRefNode($receiver.$fieldName)';
+}
+
+/// A field write on a payload-class instance.
+final class PayloadFieldAssignNode extends ExpressionNode {
+  const PayloadFieldAssignNode({
+    required this.receiver,
+    required this.fieldName,
+    required this.value,
+  });
+
+  final IrNode receiver;
+  final String fieldName;
+  final IrNode value;
+
+  @override
+  bool operator ==(Object other) =>
+      other is PayloadFieldAssignNode &&
+      other.receiver == receiver &&
+      other.fieldName == fieldName &&
+      other.value == value;
+
+  @override
+  int get hashCode => Object.hash(receiver, fieldName, value);
+
+  @override
+  String toString() =>
+      'PayloadFieldAssignNode($receiver.$fieldName = $value)';
+}
+
+/// A field read via  inside a payload method body.
+final class ThisFieldRefNode extends ExpressionNode {
+  const ThisFieldRefNode({required this.fieldName});
+
+  final String fieldName;
+
+  @override
+  bool operator ==(Object other) =>
+      other is ThisFieldRefNode && other.fieldName == fieldName;
+
+  @override
+  int get hashCode => fieldName.hashCode;
+
+  @override
+  String toString() => 'ThisFieldRefNode(this.$fieldName)';
+}
+
+/// A bare  reference inside a payload method body.
+final class ThisRefNode extends ExpressionNode {
+  const ThisRefNode();
+
+  @override
+  bool operator ==(Object other) => other is ThisRefNode;
+
+  @override
+  int get hashCode => runtimeType.hashCode;
+
+  @override
+  String toString() => 'ThisRefNode()';
+}
+
 // ────────────────────────── payload function nodes ──────────────────────────
 
 /// A payload-private function declaration. Lives in a per-file local function
@@ -1285,6 +1442,108 @@ final class PayloadFunctionCallNode extends ExpressionNode {
   String toString() => 'PayloadFunctionCallNode($name(${args.length} args))';
 }
 
+/// A payload-defined mixin declaration. Contains field declarations and
+/// methods that can be applied to classes via `with` clauses.
+final class PayloadMixinNode extends IrNode {
+  const PayloadMixinNode({
+    required this.name,
+    this.onTypes = const [],
+    required this.fields,
+    required this.methods,
+  });
+
+  final String name;
+  final List<String> onTypes;
+  final List<PayloadFieldDeclNode> fields;
+  final List<PayloadFunctionNode> methods;
+
+  @override
+  bool operator ==(Object other) =>
+      other is PayloadMixinNode &&
+      other.name == name &&
+      _listEquals(other.onTypes, onTypes) &&
+      _listEquals(other.fields, fields) &&
+      _listEquals(other.methods, methods);
+
+  @override
+  int get hashCode => Object.hash(
+        name,
+        Object.hashAll(onTypes),
+        Object.hashAll(fields),
+        Object.hashAll(methods),
+      );
+
+  @override
+  String toString() =>
+      'PayloadMixinNode($name, ${fields.length} fields, ${methods.length} methods)';
+}
+
+/// A payload-defined extension declaration. Adds methods to existing types.
+final class PayloadExtensionNode extends IrNode {
+  const PayloadExtensionNode({
+    required this.name,
+    required this.targetTypeName,
+    required this.methods,
+  });
+
+  final String name;
+  final String targetTypeName;
+  final List<PayloadFunctionNode> methods;
+
+  @override
+  bool operator ==(Object other) =>
+      other is PayloadExtensionNode &&
+      other.name == name &&
+      other.targetTypeName == targetTypeName &&
+      _listEquals(other.methods, methods);
+
+  @override
+  int get hashCode => Object.hash(name, targetTypeName, Object.hashAll(methods));
+
+  @override
+  String toString() =>
+      'PayloadExtensionNode($name on $targetTypeName, ${methods.length} methods)';
+}
+
+/// A first-class function value: a payload function reference, inline lambda,
+/// or method tear-off. Resolved at runtime to a callable Dart Function.
+final class PayloadFunctionValueNode extends ExpressionNode {
+  const PayloadFunctionValueNode({
+    this.functionName,
+    this.lambda,
+    this.methodTearoffReceiver,
+    this.methodTearoffName,
+    this.capturedEnvKeys = const [],
+  });
+
+  final String? functionName;
+  final LambdaNode? lambda;
+  final IrNode? methodTearoffReceiver;
+  final String? methodTearoffName;
+  final List<String> capturedEnvKeys;
+
+  @override
+  bool operator ==(Object other) =>
+      other is PayloadFunctionValueNode &&
+      other.functionName == functionName &&
+      other.lambda == lambda &&
+      other.methodTearoffReceiver == methodTearoffReceiver &&
+      other.methodTearoffName == methodTearoffName &&
+      _listEquals(other.capturedEnvKeys, capturedEnvKeys);
+
+  @override
+  int get hashCode => Object.hash(
+        functionName,
+        lambda,
+        methodTearoffReceiver,
+        methodTearoffName,
+        Object.hashAll(capturedEnvKeys),
+      );
+
+  @override
+  String toString() => 'PayloadFunctionValueNode(${functionName ?? lambda ?? methodTearoffName})';
+}
+
 /// Wraps a screen body alongside its payload function declarations. Used as
 /// the top-level root of a screen [IrTree] when the screen file defines one
 /// or more top-level payload functions and classes. The runtime entry builds
@@ -1295,9 +1554,13 @@ final class ScreenWithFunctionsNode extends IrNode {
     required this.functions,
     required this.screenBody,
     this.classes = const [],
+    this.mixins = const [],
+    this.extensions = const [],
   });
   final List<PayloadFunctionNode> functions;
   final List<PayloadClassNode> classes;
+  final List<PayloadMixinNode> mixins;
+  final List<PayloadExtensionNode> extensions;
   final IrNode screenBody; // IrStatefulNode, BlockNode, or expression
 
   @override
@@ -1305,13 +1568,20 @@ final class ScreenWithFunctionsNode extends IrNode {
       other is ScreenWithFunctionsNode &&
       _listEquals(other.functions, functions) &&
       _listEquals(other.classes, classes) &&
+      _listEquals(other.mixins, mixins) &&
+      _listEquals(other.extensions, extensions) &&
       other.screenBody == screenBody;
   @override
-  int get hashCode =>
-      Object.hash(Object.hashAll(functions), Object.hashAll(classes), screenBody);
+  int get hashCode => Object.hash(
+        Object.hashAll(functions),
+        Object.hashAll(classes),
+        Object.hashAll(mixins),
+        Object.hashAll(extensions),
+        screenBody,
+      );
   @override
   String toString() =>
-      'ScreenWithFunctionsNode(${functions.length} fns, ${classes.length} classes, $screenBody)';
+      'ScreenWithFunctionsNode(${functions.length} fns, ${classes.length} classes, ${mixins.length} mixins, ${extensions.length} exts, $screenBody)';
 }
 
 // ────────────────────────── screen-state nodes ──────────────────────────

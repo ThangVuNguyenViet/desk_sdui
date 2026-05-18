@@ -173,6 +173,16 @@ class JsonIrEncoder {
           'receiver': _encodeNode(node.receiver),
           'typeName': node.typeName,
         },
+      AsTypeNode() => {
+          r'$type': 'asType',
+          'operand': _encodeNode(node.operand),
+          'typeName': node.typeName,
+          'nullable': node.nullable,
+        },
+      RuntimeTypeRefNode() => {
+          r'$type': 'runtimeTypeRef',
+          'operand': _encodeNode(node.operand),
+        },
       StringInterpNode() => {
           r'$type': 'interp',
           'parts': node.parts
@@ -278,6 +288,30 @@ class JsonIrEncoder {
           if (node.ctorName.isNotEmpty) 'ctorName': node.ctorName,
           'args': node.args.map((k, v) => MapEntry(k, _encodeNode(v))),
         },
+      PayloadMethodCallNode() => {
+          r'$type': 'payloadMethodCall',
+          'receiver': _encodeNode(node.receiver),
+          'methodName': node.methodName,
+          'args': node.args.map((k, v) => MapEntry(k, _encodeNode(v))),
+        },
+      PayloadFieldRefNode() => {
+          r'$type': 'payloadFieldRef',
+          'receiver': _encodeNode(node.receiver),
+          'fieldName': node.fieldName,
+        },
+      PayloadFieldAssignNode() => {
+          r'$type': 'payloadFieldAssign',
+          'receiver': _encodeNode(node.receiver),
+          'fieldName': node.fieldName,
+          'value': _encodeNode(node.value),
+        },
+      ThisFieldRefNode() => {
+          r'$type': 'thisFieldRef',
+          'fieldName': node.fieldName,
+        },
+      ThisRefNode() => {
+          r'$type': 'thisRef',
+        },
       PayloadFunctionNode() => {
           r'$type': 'payloadFn',
           'name': node.name,
@@ -289,11 +323,37 @@ class JsonIrEncoder {
           'name': node.name,
           'args': node.args.map(_encodeNode).toList(),
         },
+      PayloadMixinNode() => {
+          r'$type': 'payloadMixin',
+          'name': node.name,
+          if (node.onTypes.isNotEmpty) 'onTypes': node.onTypes,
+          'fields': node.fields.map(_encodeNode).toList(),
+          'methods': node.methods.map(_encodeNode).toList(),
+        },
+      PayloadExtensionNode() => {
+          r'$type': 'payloadExtension',
+          'name': node.name,
+          'targetTypeName': node.targetTypeName,
+          'methods': node.methods.map(_encodeNode).toList(),
+        },
+      PayloadFunctionValueNode() => {
+          r'$type': 'payloadFnValue',
+          if (node.functionName != null) 'functionName': node.functionName,
+          if (node.lambda != null) 'lambda': _encodeNode(node.lambda!),
+          if (node.methodTearoffReceiver != null)
+            'methodTearoffReceiver': _encodeNode(node.methodTearoffReceiver!),
+          if (node.methodTearoffName != null) 'methodTearoffName': node.methodTearoffName,
+          if (node.capturedEnvKeys.isNotEmpty) 'capturedEnvKeys': node.capturedEnvKeys,
+        },
       ScreenWithFunctionsNode() => {
           r'$type': 'screenWithFunctions',
           'functions': node.functions.map(_encodeNode).toList(),
           if (node.classes.isNotEmpty)
             'classes': node.classes.map(_encodeNode).toList(),
+          if (node.mixins.isNotEmpty)
+            'mixins': node.mixins.map(_encodeNode).toList(),
+          if (node.extensions.isNotEmpty)
+            'extensions': node.extensions.map(_encodeNode).toList(),
           'screenBody': _encodeNode(node.screenBody),
         },
     };

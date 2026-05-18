@@ -28,14 +28,63 @@ Widget resolveNode(
   RuntimeContext ctx = RuntimeContext.empty,
 }) {
   switch (node) {
-    case ScreenWithFunctionsNode(:final functions, :final classes, :final screenBody):
+    case ScreenWithFunctionsNode(:final functions, :final classes, :final mixins, :final extensions, :final screenBody):
       // Build the payload-function table and register payload classes once per
-      // screen resolution. Register classes first (they may be referenced by
-      // constructors), then propagate the function table downward. Nested screens
-      // are not produced by the lowerer; a single wrapper at the root is the only shape.
+      // screen resolution. Register mixins first, then classes (classes may
+      // reference mixins), then propagate the function table downward.
+      for (final mx in mixins) {
+        final methods = <String, PayloadFunctionNode>{};
+        for (final method in mx.methods) {
+          methods[method.name] = method;
+        }
+        final fieldInitializers = <String, IrNode>{};
+        for (final field in mx.fields) {
+          if (field.initializer != null) {
+            fieldInitializers[field.name] = field.initializer!;
+          }
+        }
+        registerPayloadMixin(
+          mx.name,
+          PayloadClass(
+            name: mx.name,
+            methods: methods,
+            fieldInitializers: fieldInitializers,
+            isMixin: true,
+          ),
+        );
+      }
+
+      for (final ext in extensions) {
+        registerPayloadExtension(ext);
+      }
+
       for (final cls in classes) {
-        // Construct PayloadClass descriptor with field initializers and ctors
-        // populated by the lowerer. Methods are empty by default.
+        // Build field initializers map from IR field declarations.
+        final fieldInitializers = <String, IrNode>{};
+        for (final field in cls.fields) {
+          if (field.initializer != null) {
+            fieldInitializers[field.name] = field.initializer!;
+          }
+        }
+        // Build ctors map from IR ctor declarations.
+        final ctors = <String, PayloadCtor>{};
+        for (final ctor in cls.ctors) {
+          final fieldInits = <String, IrNode>{};
+          for (final fi in ctor.fieldInits) {
+            fieldInits[fi.fieldName] = fi.value;
+          }
+          ctors[ctor.name] = PayloadCtor(
+            name: ctor.name,
+            params: ctor.params,
+            fieldInits: fieldInits,
+            body: ctor.body,
+          );
+        }
+        // Build methods map from IR method declarations.
+        final methods = <String, PayloadFunctionNode>{};
+        for (final method in cls.methods) {
+          methods[method.name] = method;
+        }
         final payloadCls = PayloadClass(
           name: cls.name,
           supertype: cls.supertypeName != null
@@ -53,9 +102,9 @@ Widget resolveNode(
                     '"$name"; make sure it is declared before ${cls.name}.'
                   )))
               .toList(),
-          methods: const {},
-          fieldInitializers: const {},
-          ctors: const {},
+          methods: methods,
+          fieldInitializers: fieldInitializers,
+          ctors: ctors,
         );
         registerPayloadClass(payloadCls);
       }

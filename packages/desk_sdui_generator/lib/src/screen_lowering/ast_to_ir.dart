@@ -1,5 +1,6 @@
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:desk_sdui_annotation/desk_sdui_annotation.dart';
+import '../allowlist/verifier.dart';
 import '../diagnostics.dart';
 import 'widget_lowerer.dart';
 import 'expression_lowerer.dart';
@@ -23,6 +24,26 @@ bool isPayloadFn(String name) => _payloadFnNames.contains(name);
 
 /// Returns true if [name] is a payload class declared in the current file.
 bool isPayloadClass(String name) => _payloadClassNames.contains(name);
+
+// ---------------------------------------------------------------------------
+// Payload class context (module-level, set when lowering method bodies)
+// ---------------------------------------------------------------------------
+
+/// Field names of the payload class whose method body is currently being
+/// lowered. Empty when not inside a payload method.
+final Set<String> _currentPayloadClassFields = {};
+
+/// Method names of the payload class whose method body is currently being
+/// lowered. Empty when not inside a payload method.
+final Set<String> _currentPayloadClassMethods = {};
+
+/// Returns true if [name] is a field on the payload class currently being
+/// lowered.
+bool isPayloadClassField(String name) => _currentPayloadClassFields.contains(name);
+
+/// Returns true if [name] is a method on the payload class currently being
+/// lowered.
+bool isPayloadClassMethod(String name) => _currentPayloadClassMethods.contains(name);
 
 class ScreenLowerResult {
   ScreenLowerResult({
@@ -114,21 +135,33 @@ ScreenLowerResult lowerScreenWithPayloadFunctions(
   FunctionDeclaration screenFn,
   ScreenAnnotationData ann,
 ) {
-  // Step 1: collect payload function names (pre-pass so call sites can be
-  // resolved before we lower the function bodies).
+  // Step 1: collect payload function, class, and mixin names (pre-pass so
+  // call sites can be resolved before we lower the bodies).
   _payloadFnNames.clear();
+  _payloadClassNames.clear();
+  final Set<String> _payloadMixinNames = {};
   for (final decl in unit.declarations) {
     if (decl is FunctionDeclaration && decl.name.lexeme != screenFn.name.lexeme) {
       _payloadFnNames.add(decl.name.lexeme);
     }
+    if (decl is ClassDeclaration) {
+      _payloadClassNames.add(_classDeclName(decl));
+    }
+    if (decl is MixinDeclaration) {
+      _payloadMixinNames.add(_mixinDeclName(decl));
+    }
   }
 
   try {
-    // Step 2: lower the screen body (payload fn call sites are intercepted by
-    // isPayloadFn checks in lowerExpressionOrWidget / lowerExpression).
+    // Step 2: lower the screen body (payload fn/class call sites are
+    // intercepted by isPayloadFn / isPayloadClass checks).
     final screenResult = lowerScreen(screenFn, ann);
 
-    if (_payloadFnNames.isEmpty) {
+    final hasPayloadFns = _payloadFnNames.isNotEmpty;
+    final hasPayloadClasses = _payloadClassNames.isNotEmpty;
+    final hasPayloadMixins = _payloadMixinNames.isNotEmpty;
+
+    if (!hasPayloadFns && !hasPayloadClasses && !hasPayloadMixins) {
       return screenResult;
     }
 
@@ -143,12 +176,33 @@ ScreenLowerResult lowerScreenWithPayloadFunctions(
       }
     }
 
-    // Step 4 (allowlist invariant): walk each payload function body and
+    // Step 4: lower each payload class declaration.
+    final payloadClasses = <PayloadClassNode>[];
+    for (final decl in unit.declarations) {
+      if (decl is ClassDeclaration) {
+        payloadClasses.add(_lowerPayloadClassDecl(decl));
+      }
+    }
+
+    // Step 4b: lower each payload mixin declaration.
+    final payloadMixins = <PayloadMixinNode>[];
+    for (final decl in unit.declarations) {
+      if (decl is MixinDeclaration) {
+        payloadMixins.add(_lowerPayloadMixinDecl(decl));
+      }
+    }
+
+    // Step 4c: lower each payload extension declaration.
+    final payloadExtensions = <PayloadExtensionNode>[];
+    for (final decl in unit.declarations) {
+      if (decl is ExtensionDeclaration) {
+        payloadExtensions.add(_lowerPayloadExtensionDecl(decl));
+      }
+    }
+
+    // Step 5 (allowlist invariant): walk each payload function body and
     // confirm every leaf call is either (a) another payload function in the
-    // same file, OR (b) a registered global. Anything else is a codegen-time
-    // error. Note: the lowerer's free-call interceptors already throw on
-    // unrecognized free calls, so this walk is a defensive structural check
-    // that surfaces the plan-specified diagnostic for any leak path.
+    // same file, OR (b) a registered global.
     for (final fn in payloadFns) {
       _walkAllowlist(
         fn.body,
@@ -157,14 +211,41 @@ ScreenLowerResult lowerScreenWithPayloadFunctions(
       );
     }
 
-    // Step 5: wrap the screen body.
+    // Step 5b (extended allowlist verifier): run the comprehensive verifier
+    // over all payload function and method bodies.
+    final registry = RegistryIndex(
+      payloadFunctionNames: _payloadFnNames,
+      payloadClassNames: _payloadClassNames,
+      payloadMixinNames: _payloadMixinNames,
+    );
+    for (final fn in payloadFns) {
+      final violations = verifyAllowlist(
+        fn.body,
+        registry,
+        payloadFnName: fn.name,
+        decl: declByName[fn.name],
+      );
+      if (violations.isNotEmpty) {
+        throw LoweringError(
+          'Allowlist violations in payload function "${fn.name}":\n'
+          '${violations.map((v) => '  - ${v.message}').join('\n')}',
+          declByName[fn.name]!,
+        );
+      }
+    }
+
+    // Step 6: wrap the screen body.
     final wrapped = ScreenWithFunctionsNode(
       functions: payloadFns,
+      classes: payloadClasses,
+      mixins: payloadMixins,
+      extensions: payloadExtensions,
       screenBody: screenResult.root,
     );
     return screenResult.copyWith(root: wrapped);
   } finally {
     _payloadFnNames.clear();
+    _payloadClassNames.clear();
   }
 }
 
@@ -229,6 +310,265 @@ PayloadFunctionNode _lowerPayloadFunctionDecl(FunctionDeclaration decl) {
     name: decl.name.lexeme,
     params: params,
     body: lowered,
+  );
+}
+
+/// Lowers a [ClassDeclaration] to a [PayloadClassNode].
+PayloadClassNode _lowerPayloadClassDecl(ClassDeclaration decl) {
+  final className = _classDeclName(decl);
+
+  // Reject unsupported modifiers.
+  if (decl.abstractKeyword != null) {
+    throw LoweringError(
+      'Payload classes cannot be abstract.',
+      decl,
+    );
+  }
+  if (decl.sealedKeyword != null) {
+    throw LoweringError(
+      'Payload classes cannot be sealed.',
+      decl,
+    );
+  }
+
+  // Resolve supertype.
+  String? supertypeName;
+  final extendsClause = decl.extendsClause;
+  if (extendsClause != null) {
+    final name = extendsClause.superclass.name.lexeme;
+    if (name != 'Object') {
+      supertypeName = name;
+    }
+  }
+
+  // Resolve mixins.
+  final mixinNames = <String>[];
+  final withClause = decl.withClause;
+  if (withClause != null) {
+    for (final mixin in withClause.mixinTypes) {
+      mixinNames.add(mixin.name.lexeme);
+    }
+  }
+
+  // Collect fields.
+  final fields = <PayloadFieldDeclNode>[];
+  final ctors = <PayloadCtorNode>[];
+  final methods = <PayloadFunctionNode>[];
+
+  for (final member in decl.body.members) {
+    if (member is FieldDeclaration) {
+      if (member.isStatic) {
+        throw LoweringError(
+          'Static fields are not supported in payload classes.',
+          member,
+        );
+      }
+      for (final varDecl in member.fields.variables) {
+        final initializer = varDecl.initializer;
+        fields.add(PayloadFieldDeclNode(
+          name: varDecl.name.lexeme,
+          initializer: initializer != null ? lowerExpression(initializer) : null,
+          isFinal: member.fields.isFinal,
+        ));
+      }
+    } else if (member is ConstructorDeclaration) {
+      if (member.factoryKeyword != null) {
+        throw LoweringError(
+          'Factory constructors are not supported in payload classes.',
+          member,
+        );
+      }
+      if (member.constKeyword != null) {
+        throw LoweringError(
+          'Const constructors are not supported in payload classes.',
+          member,
+        );
+      }
+      final params = <String>[];
+      final fieldInits = <PayloadFieldInitNode>[];
+      for (final param in member.parameters.parameters) {
+        if (param is FieldFormalParameter) {
+          final pName = param.name.lexeme;
+          params.add(pName);
+          fieldInits.add(PayloadFieldInitNode(
+            fieldName: pName,
+            value: RefNode([pName]),
+          ));
+        } else if (param is RegularFormalParameter) {
+          params.add(param.name!.lexeme);
+        }
+      }
+      final body = member.body;
+      IrNode? ctorBody;
+      if (body is ExpressionFunctionBody) {
+        ctorBody = lowerExpression(body.expression);
+      } else if (body is BlockFunctionBody) {
+        ctorBody = BlockNode(
+          statements: body.block.statements.map(lowerStatement).toList(),
+        );
+      }
+      ctors.add(PayloadCtorNode(
+        name: member.name?.lexeme ?? '',
+        params: params,
+        fieldInits: fieldInits,
+        body: ctorBody,
+      ));
+    } else if (member is MethodDeclaration) {
+      if (member.isStatic) {
+        throw LoweringError(
+          'Static methods are not supported in payload classes.',
+          member,
+        );
+      }
+      final params = <String>[];
+      for (final param in member.parameters?.parameters ?? <FormalParameter>[]) {
+        params.add(param.name!.lexeme);
+      }
+      final body = member.body;
+      IrNode? loweredBody;
+      if (body is ExpressionFunctionBody) {
+        loweredBody = lowerExpression(body.expression);
+      } else if (body is BlockFunctionBody) {
+        loweredBody = BlockNode(
+          statements: body.block.statements.map(lowerStatement).toList(),
+        );
+      }
+      methods.add(PayloadFunctionNode(
+        name: member.name.lexeme,
+        params: params,
+        body: loweredBody!,
+      ));
+    }
+  }
+
+  return PayloadClassNode(
+    name: className,
+    supertypeName: supertypeName,
+    mixinNames: mixinNames,
+    fields: fields,
+    ctors: ctors,
+    methods: methods,
+  );
+}
+
+/// Lowers a [MixinDeclaration] to a [PayloadMixinNode].
+PayloadMixinNode _lowerPayloadMixinDecl(MixinDeclaration decl) {
+  final mixinName = _mixinDeclName(decl);
+
+  // Resolve on-types.
+  final onTypes = <String>[];
+  final onClause = decl.onClause;
+  if (onClause != null) {
+    for (final type in onClause.superclassConstraints) {
+      onTypes.add(type.name.lexeme);
+    }
+  }
+
+  // Collect fields and methods.
+  final fields = <PayloadFieldDeclNode>[];
+  final methods = <PayloadFunctionNode>[];
+
+  for (final member in decl.body.members) {
+    if (member is FieldDeclaration) {
+      if (member.isStatic) {
+        throw LoweringError(
+          'Static fields are not supported in payload mixins.',
+          member,
+        );
+      }
+      for (final varDecl in member.fields.variables) {
+        final initializer = varDecl.initializer;
+        fields.add(PayloadFieldDeclNode(
+          name: varDecl.name.lexeme,
+          initializer: initializer != null ? lowerExpression(initializer) : null,
+          isFinal: member.fields.isFinal,
+        ));
+      }
+    } else if (member is MethodDeclaration) {
+      if (member.isStatic) {
+        throw LoweringError(
+          'Static methods are not supported in payload mixins.',
+          member,
+        );
+      }
+      final params = <String>[];
+      for (final param in member.parameters?.parameters ?? <FormalParameter>[]) {
+        params.add(param.name!.lexeme);
+      }
+      final body = member.body;
+      IrNode? loweredBody;
+      if (body is ExpressionFunctionBody) {
+        loweredBody = lowerExpression(body.expression);
+      } else if (body is BlockFunctionBody) {
+        loweredBody = BlockNode(
+          statements: body.block.statements.map(lowerStatement).toList(),
+        );
+      }
+      methods.add(PayloadFunctionNode(
+        name: member.name.lexeme,
+        params: params,
+        body: loweredBody!,
+      ));
+    }
+  }
+
+  return PayloadMixinNode(
+    name: mixinName,
+    onTypes: onTypes,
+    fields: fields,
+    methods: methods,
+  );
+}
+
+/// Extracts the mixin name from a [MixinDeclaration].
+String _mixinDeclName(MixinDeclaration decl) {
+  return decl.name.lexeme;
+}
+
+/// Lowers an [ExtensionDeclaration] to a [PayloadExtensionNode].
+PayloadExtensionNode _lowerPayloadExtensionDecl(ExtensionDeclaration decl) {
+  final name = decl.name?.lexeme ?? '_extension';
+  final onClause = decl.onClause;
+  final targetTypeName = onClause != null
+      ? (onClause.extendedType is NamedType
+          ? (onClause.extendedType as NamedType).name.lexeme
+          : 'dynamic')
+      : 'dynamic';
+
+  final methods = <PayloadFunctionNode>[];
+  for (final member in decl.body.members) {
+    if (member is MethodDeclaration) {
+      if (member.isStatic) {
+        throw LoweringError(
+          'Static methods are not supported in payload extensions.',
+          member,
+        );
+      }
+      final params = <String>[];
+      for (final param in member.parameters?.parameters ?? <FormalParameter>[]) {
+        params.add(param.name!.lexeme);
+      }
+      final body = member.body;
+      IrNode? loweredBody;
+      if (body is ExpressionFunctionBody) {
+        loweredBody = lowerExpression(body.expression);
+      } else if (body is BlockFunctionBody) {
+        loweredBody = BlockNode(
+          statements: body.block.statements.map(lowerStatement).toList(),
+        );
+      }
+      methods.add(PayloadFunctionNode(
+        name: member.name.lexeme,
+        params: params,
+        body: loweredBody!,
+      ));
+    }
+  }
+
+  return PayloadExtensionNode(
+    name: name,
+    targetTypeName: targetTypeName,
+    methods: methods,
   );
 }
 
@@ -406,6 +746,23 @@ void _walkAllowlist(
     case IsTypeNode():
       _walkAllowlist(node.receiver,
           payloadFnName: payloadFnName, decl: decl);
+    case AsTypeNode():
+      _walkAllowlist(node.operand, payloadFnName: payloadFnName, decl: decl);
+    case RuntimeTypeRefNode():
+      _walkAllowlist(node.operand, payloadFnName: payloadFnName, decl: decl);
+    case PayloadMethodCallNode():
+      _walkAllowlist(node.receiver, payloadFnName: payloadFnName, decl: decl);
+      for (final arg in node.args.values) {
+        _walkAllowlist(arg, payloadFnName: payloadFnName, decl: decl);
+      }
+    case PayloadFieldRefNode():
+      _walkAllowlist(node.receiver, payloadFnName: payloadFnName, decl: decl);
+    case PayloadFieldAssignNode():
+      _walkAllowlist(node.receiver, payloadFnName: payloadFnName, decl: decl);
+      _walkAllowlist(node.value, payloadFnName: payloadFnName, decl: decl);
+    case ThisFieldRefNode():
+    case ThisRefNode():
+      break;
     case StringInterpNode():
       for (final p in node.parts) {
         if (p is IrNode) {
@@ -468,6 +825,15 @@ void _walkAllowlist(
       break;
     case PayloadClassNode():
       // Payload class declarations are not produced inside function bodies.
+      break;
+    case PayloadMixinNode():
+      // Payload mixin declarations are not produced inside function bodies.
+      break;
+    case PayloadExtensionNode():
+      // Payload extension declarations are not produced inside function bodies.
+      break;
+    case PayloadFunctionValueNode():
+      // Payload function values are not produced inside function bodies.
       break;
     case PayloadInstanceCreationNode():
       // Constructor call site: walk args for nested call validation.
@@ -1037,6 +1403,10 @@ void _collectRefs(
       _collectRefs(node.operand, widgetRefs, methodRefs, fnRefs);
     case IsTypeNode():
       _collectRefs(node.receiver, widgetRefs, methodRefs, fnRefs);
+    case AsTypeNode():
+      _collectRefs(node.operand, widgetRefs, methodRefs, fnRefs);
+    case RuntimeTypeRefNode():
+      _collectRefs(node.operand, widgetRefs, methodRefs, fnRefs);
     case StringInterpNode():
       for (final part in node.parts) {
         if (part is IrNode) {
@@ -1133,6 +1503,15 @@ void _collectRefs(
     case PayloadClassNode():
       // Payload classes are metadata; no widget/method/fn refs to collect.
       break;
+    case PayloadMixinNode():
+      // Payload mixins are metadata; no widget/method/fn refs to collect.
+      break;
+    case PayloadExtensionNode():
+      // Payload extensions are metadata; no widget/method/fn refs to collect.
+      break;
+    case PayloadFunctionValueNode():
+      // Payload function values are metadata; no widget/method/fn refs to collect.
+      break;
     case PayloadInstanceCreationNode():
       // Constructor args may reference widgets/methods.
       for (final arg in node.args.values) {
@@ -1154,5 +1533,27 @@ void _collectRefs(
     case PayloadFieldInitNode():
       // Field initializer value.
       _collectRefs(node.value, widgetRefs, methodRefs, fnRefs);
+    case PayloadMethodCallNode():
+      _collectRefs(node.receiver, widgetRefs, methodRefs, fnRefs);
+      for (final arg in node.args.values) {
+        _collectRefs(arg, widgetRefs, methodRefs, fnRefs);
+      }
+    case PayloadFieldRefNode():
+      _collectRefs(node.receiver, widgetRefs, methodRefs, fnRefs);
+    case PayloadFieldAssignNode():
+      _collectRefs(node.receiver, widgetRefs, methodRefs, fnRefs);
+      _collectRefs(node.value, widgetRefs, methodRefs, fnRefs);
+    case ThisFieldRefNode():
+    case ThisRefNode():
+      break;
   }
+}
+
+/// Extracts the class name from a [ClassDeclaration].
+String _classDeclName(ClassDeclaration decl) {
+  final namePart = decl.namePart;
+  if (namePart is NameWithTypeParameters) {
+    return namePart.typeName.lexeme;
+  }
+  return decl.namePart.toSource();
 }

@@ -67,7 +67,8 @@ void main() {
   });
 
   testWidgets(
-      'IrStatefulNode: tapping a block-bodied sync lambda mutates the cell and rebuilds',
+      'IrStatefulNode: tapping a block-bodied sync lambda mutates the cell '
+      'and the value persists across rebuilds',
       (tester) async {
     // Equivalent to:
     //   var count = 0;
@@ -119,12 +120,25 @@ void main() {
         },
       ),
     );
-    await tester.pumpWidget(resolveOnce(ir, {}));
+    late void Function(void Function()) setOuter;
+    await tester.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: StatefulBuilder(
+          builder: (ctx, setState) {
+            setOuter = setState;
+            return resolveNode(ctx, ir, {}, rt);
+          },
+        ),
+      ),
+    );
     expect(find.text('v=0'), findsOneWidget);
     await tester.tap(find.text('tap'));
+    setOuter(() {});
     await tester.pump();
     expect(find.text('v=1'), findsOneWidget);
     await tester.tap(find.text('tap'));
+    setOuter(() {});
     await tester.pump();
     expect(find.text('v=2'), findsOneWidget);
   });
@@ -221,18 +235,32 @@ void main() {
         'bottom': mkCounter('right'),
       },
     );
-    await tester.pumpWidget(resolveOnce(ir, {}));
+    late void Function(void Function()) setOuter;
+    await tester.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: StatefulBuilder(
+          builder: (ctx, setState) {
+            setOuter = setState;
+            return resolveNode(ctx, ir, {}, rt);
+          },
+        ),
+      ),
+    );
     expect(find.text('left=0'), findsOneWidget);
     expect(find.text('right=0'), findsOneWidget);
 
     await tester.tap(find.text('tap-left'));
+    setOuter(() {});
     await tester.pump();
     expect(find.text('left=1'), findsOneWidget);
     expect(find.text('right=0'), findsOneWidget);
 
     await tester.tap(find.text('tap-right'));
+    setOuter(() {});
     await tester.pump();
     await tester.tap(find.text('tap-right'));
+    setOuter(() {});
     await tester.pump();
     expect(find.text('left=1'), findsOneWidget);
     expect(find.text('right=2'), findsOneWidget);
@@ -322,8 +350,10 @@ void main() {
 
     expect(find.text('a=0'), findsOneWidget);
     await tester.tap(find.text('bump-a'));
+    setOuter(() {});
     await tester.pump();
     await tester.tap(find.text('bump-a'));
+    setOuter(() {});
     await tester.pump();
     expect(find.text('a=2'), findsOneWidget);
 

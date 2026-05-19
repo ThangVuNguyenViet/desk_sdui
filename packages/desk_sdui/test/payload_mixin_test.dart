@@ -1,6 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:desk_sdui_annotation/desk_sdui_annotation.dart';
-import 'package:desk_sdui/src/cell.dart';
 import 'package:desk_sdui/src/expression_eval.dart';
 import 'package:desk_sdui/src/payload_class.dart';
 import 'package:desk_sdui/src/runtime.dart';

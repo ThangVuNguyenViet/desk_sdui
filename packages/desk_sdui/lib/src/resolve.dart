@@ -112,9 +112,7 @@ Widget resolveNode(
       final screenCtx = RuntimeContext(
         payloadFunctions: {for (final fn in functions) fn.name: fn},
       );
-      final result = resolveNode(context, screenBody, input, runtime, ctx: screenCtx);
-      debugPrint('[sdui-debug] resolveNode ScreenWithFunctionsNode result: ${result.runtimeType}');
-      return result;
+      return resolveNode(context, screenBody, input, runtime, ctx: screenCtx);
 
     case IrStatefulNode():
       // Stable key so Flutter element-reuse assigns the State<> by IR
@@ -241,9 +239,7 @@ Widget _resolveBlockAtWidgetPosition(
         );
       }
       // Render the returned widget IR using the current env's value map.
-      final result = resolveNode(context, value, _envToInput(env), runtime, ctx: ctx);
-      debugPrint('[sdui-debug] _resolveBlockAtWidgetPosition ReturnNode result: ${result.runtimeType}');
-      return result;
+      return resolveNode(context, value, _envToInput(env), runtime, ctx: ctx);
     }
     if (stmt is BreakNode) {
       throw StateError(
@@ -700,26 +696,6 @@ Object? _bindEvent(
         positional.add(evalExpression(node.args[argKey]!, input, runtime, ctx: ctx));
       }
       return () => Function.apply(methodFn, positional);
-    }
-  }
-
-  // Two-segment target: resolve receiver from input, look up registered
-  // method via runtimeType (e.g., ['a', 'decrementCount'] resolves to
-  // CounterActions.decrementCount on input['a']).
-  if (node.target.length == 2) {
-    final receiver = input[node.target[0]];
-    if (receiver != null) {
-      final className = receiver.runtimeType.toString();
-      final handler = runtime.resolveMethodHandler('$className.${node.target[1]}');
-      if (handler != null) {
-        final args = <String, Object?>{};
-        for (var i = 0;; i++) {
-          final argKey = 'arg$i';
-          if (!node.args.containsKey(argKey)) break;
-          args[argKey] = evalExpression(node.args[argKey]!, input, runtime, ctx: ctx);
-        }
-        return () => handler(receiver, args);
-      }
     }
   }
 

@@ -212,16 +212,9 @@ Object? evalExpressionWithEnv(
         resolvedArgs['arg$i'] =
             evalExpressionWithEnv(args[i], env, runtime, ctx: ctx);
       }
-      // Try qualified name first (ClassName.methodName), then bare method name.
-      final className = resolvedReceiver?.runtimeType.toString();
-      final qualifiedName = className != null ? '$className.$name' : name;
-      var handler = runtime.resolveMethodHandler(qualifiedName);
-      handler ??= runtime.resolveMethodHandler(name);
+      final handler = runtime.resolveMethodHandler(name);
       if (handler == null) {
-        throw StateError(
-          'Method "$name" (qualified: "$qualifiedName") not registered '
-          'in runtime. Register it via registerMethod() or core_accessors.',
-        );
+        throw StateError('Method "$name" not registered in runtime.');
       }
       return handler(resolvedReceiver, resolvedArgs);
 
@@ -551,16 +544,6 @@ Object? evalExpressionWithEnv(
       }
       throw StateError('empty PayloadFunctionValueNode');
 
-    case ConditionalNode(:final condition, :final thenBranch, :final elseBranch):
-      final c = evalExpressionWithEnv(condition, env, runtime, ctx: ctx);
-      if (c == true) {
-        return evalExpressionWithEnv(thenBranch, env, runtime, ctx: ctx);
-      }
-      if (elseBranch != null) {
-        return evalExpressionWithEnv(elseBranch, env, runtime, ctx: ctx);
-      }
-      return null;
-
     // Widget / layout nodes — not valid at expression position.
     case WidgetNode():
     case BuiltinWidgetNode():
@@ -574,6 +557,7 @@ Object? evalExpressionWithEnv(
     case ActionSequenceNode():
     case ActionStepNode():
     case TryStepNode():
+    case ConditionalNode():
     // Statement nodes — must go through executeStatement.
     case BlockNode():
     case IfStatementNode():

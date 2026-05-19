@@ -17,6 +17,41 @@ ScreenBinding get counter_demoBinding => ScreenBinding(
           ),
         ),
       ],
+      classes: [
+        PayloadClassNode(
+          name: 'Counter',
+          mixinNames: [],
+          fields: [
+            PayloadFieldDeclNode(
+              name: 'count',
+              initializer: LiteralNode(0),
+              isFinal: false,
+            ),
+            PayloadFieldDeclNode(
+              name: 'step',
+              initializer: LiteralNode(1),
+              isFinal: false,
+            ),
+            PayloadFieldDeclNode(
+              name: 'history',
+              initializer: ListNode([]),
+              isFinal: false,
+            ),
+            PayloadFieldDeclNode(
+              name: 'busy',
+              initializer: LiteralNode(false),
+              isFinal: false,
+            ),
+            PayloadFieldDeclNode(
+              name: 'mode',
+              initializer: LiteralNode('add'),
+              isFinal: false,
+            ),
+          ],
+          ctors: [],
+          methods: [],
+        ),
+      ],
       screenBody: BlockNode(
         statements: [
           LetStatementNode(
@@ -27,14 +62,14 @@ ScreenBinding get counter_demoBinding => ScreenBinding(
           AssignNode(
             name: 'label',
             value: StringInterpNode([
-              RefNode(['c', 'count']),
+              GetterNode(receiver: RefNode(['c']), name: 'Counter.count'),
             ]),
           ),
           LetStatementNode(
             name: 'theme',
             value: MethodCallNode(
-              receiver: RefNode(['Theme']),
-              name: 'of',
+              receiver: null,
+              name: 'Theme.of',
               args: [
                 RefNode(['context']),
               ],
@@ -45,7 +80,7 @@ ScreenBinding get counter_demoBinding => ScreenBinding(
             name: 'doubled',
             value: ArithOpNode(
               op: ArithOp.mul,
-              left: RefNode(['c', 'count']),
+              left: GetterNode(receiver: RefNode(['c']), name: 'Counter.count'),
               right: ConstNode(2),
             ),
             isFinal: true,
@@ -55,7 +90,7 @@ ScreenBinding get counter_demoBinding => ScreenBinding(
             value: PayloadFunctionCallNode(
               name: 'tripled',
               args: [
-                RefNode(['c', 'count']),
+                GetterNode(receiver: RefNode(['c']), name: 'Counter.count'),
               ],
             ),
             isFinal: true,
@@ -64,7 +99,7 @@ ScreenBinding get counter_demoBinding => ScreenBinding(
             name: 'status',
             value: LetNode(
               name: '__scrut0__',
-              value: RefNode(['c', 'mode']),
+              value: GetterNode(receiver: RefNode(['c']), name: 'Counter.mode'),
               body: ConditionalNode(
                 condition: CompareOpNode(
                   op: CompareOp.eq,
@@ -99,7 +134,9 @@ ScreenBinding get counter_demoBinding => ScreenBinding(
             condition: CompareOpNode(
               op: CompareOp.lt,
               left: RefNode(['i']),
-              right: LengthOfNode(RefNode(['c', 'history'])),
+              right: LengthOfNode(
+                GetterNode(receiver: RefNode(['c']), name: 'Counter.history'),
+              ),
             ),
             update: AssignNode(
               name: 'i',
@@ -117,7 +154,10 @@ ScreenBinding get counter_demoBinding => ScreenBinding(
                     op: ArithOp.add,
                     left: RefNode(['historySum']),
                     right: IndexAccessNode(
-                      target: RefNode(['c', 'history']),
+                      target: GetterNode(
+                        receiver: RefNode(['c']),
+                        name: 'Counter.history',
+                      ),
                       key: RefNode(['i']),
                     ),
                   ),
@@ -181,11 +221,13 @@ ScreenBinding get counter_demoBinding => ScreenBinding(
                             name: 'Text',
                             args: {
                               'data': RefNode(['label']),
-                              'style': RefNode([
-                                'theme',
-                                'textTheme',
-                                'headlineLarge',
-                              ]),
+                              'style': GetterNode(
+                                receiver: GetterNode(
+                                  receiver: RefNode(['theme']),
+                                  name: 'ThemeData.textTheme',
+                                ),
+                                name: 'TextTheme.headlineLarge',
+                              ),
                             },
                           ),
                           WidgetNode(
@@ -199,11 +241,13 @@ ScreenBinding get counter_demoBinding => ScreenBinding(
                                 'Mode: ',
                                 RefNode(['status']),
                               ]),
-                              'style': RefNode([
-                                'theme',
-                                'textTheme',
-                                'labelLarge',
-                              ]),
+                              'style': GetterNode(
+                                receiver: GetterNode(
+                                  receiver: RefNode(['theme']),
+                                  name: 'ThemeData.textTheme',
+                                ),
+                                name: 'TextTheme.labelLarge',
+                              ),
                             },
                           ),
                           WidgetNode(
@@ -476,7 +520,10 @@ ScreenBinding get counter_demoBinding => ScreenBinding(
                           ),
                           ConditionalNode(
                             condition: GetterNode(
-                              receiver: RefNode(['c', 'history']),
+                              receiver: GetterNode(
+                                receiver: RefNode(['c']),
+                                name: 'Counter.history',
+                              ),
                               name: 'List.isNotEmpty',
                             ),
                             thenBranch: WidgetNode(
@@ -497,7 +544,10 @@ ScreenBinding get counter_demoBinding => ScreenBinding(
                                       'children': ListNode([
                                         ForNode(
                                           variable: 'v',
-                                          source: RefNode(['c', 'history']),
+                                          source: GetterNode(
+                                            receiver: RefNode(['c']),
+                                            name: 'Counter.history',
+                                          ),
                                           body: WidgetNode(
                                             name: 'Text',
                                             args: {

@@ -13,8 +13,8 @@ void registerCounter_demoDependencies(Runtime rt) {
     'Center',
     (args) => Center(
       key: args['key'] as Key?,
-      widthFactor: args['widthFactor'] as double?,
-      heightFactor: args['heightFactor'] as double?,
+      widthFactor: (args['widthFactor'] as num?)?.toDouble(),
+      heightFactor: (args['heightFactor'] as num?)?.toDouble(),
       child: args['child'] as Widget?,
     ),
   );
@@ -56,7 +56,7 @@ void registerCounter_demoDependencies(Runtime rt) {
           args['verticalDirection'] as VerticalDirection? ??
           VerticalDirection.down,
       textBaseline: args['textBaseline'] as TextBaseline?,
-      spacing: args['spacing'] as double? ?? 0.0,
+      spacing: (args['spacing'] as num?)?.toDouble() ?? 0.0,
       children: (args['children'] as List?)?.cast<Widget>() ?? const [],
     ),
   );
@@ -72,7 +72,7 @@ void registerCounter_demoDependencies(Runtime rt) {
       locale: args['locale'] as Locale?,
       softWrap: args['softWrap'] as bool?,
       overflow: args['overflow'] as TextOverflow?,
-      textScaleFactor: args['textScaleFactor'] as double?,
+      textScaleFactor: (args['textScaleFactor'] as num?)?.toDouble(),
       textScaler: args['textScaler'] as TextScaler?,
       maxLines: args['maxLines'] as int?,
       semanticsLabel: args['semanticsLabel'] as String?,
@@ -94,7 +94,7 @@ void registerCounter_demoDependencies(Runtime rt) {
       locale: args['locale'] as Locale?,
       softWrap: args['softWrap'] as bool?,
       overflow: args['overflow'] as TextOverflow?,
-      textScaleFactor: args['textScaleFactor'] as double?,
+      textScaleFactor: (args['textScaleFactor'] as num?)?.toDouble(),
       textScaler: args['textScaler'] as TextScaler?,
       maxLines: args['maxLines'] as int?,
       semanticsLabel: args['semanticsLabel'] as String?,
@@ -108,8 +108,8 @@ void registerCounter_demoDependencies(Runtime rt) {
     'SizedBox',
     (args) => SizedBox(
       key: args['key'] as Key?,
-      width: args['width'] as double?,
-      height: args['height'] as double?,
+      width: (args['width'] as num?)?.toDouble(),
+      height: (args['height'] as num?)?.toDouble(),
       child: args['child'] as Widget?,
     ),
   );
@@ -140,7 +140,7 @@ void registerCounter_demoDependencies(Runtime rt) {
     (args) => SizedBox.square(
       key: args['key'] as Key?,
       child: args['child'] as Widget?,
-      dimension: args['dimension'] as double?,
+      dimension: (args['dimension'] as num?)?.toDouble(),
     ),
   );
   rt.registerWidget(
@@ -159,7 +159,7 @@ void registerCounter_demoDependencies(Runtime rt) {
           args['verticalDirection'] as VerticalDirection? ??
           VerticalDirection.down,
       textBaseline: args['textBaseline'] as TextBaseline?,
-      spacing: args['spacing'] as double? ?? 0.0,
+      spacing: (args['spacing'] as num?)?.toDouble() ?? 0.0,
       children: (args['children'] as List?)?.cast<Widget>() ?? const [],
     ),
   );
@@ -244,4 +244,15 @@ void registerCounter_demoDependencies(Runtime rt) {
     (recv, key) => (recv as List<int>)[key as int],
   );
   rt.registerFunction('tripled', (args) => tripled(args['arg0'] as int));
+  rt.registerGetter('Counter.count', (r) => (r as Counter).count);
+  rt.registerGetter('Counter.mode', (r) => (r as Counter).mode);
+  rt.registerGetter('Counter.history', (r) => (r as Counter).history);
+  rt.registerGetter('List.length', (r) => (r as List).length);
+  rt.registerGetter('List.isNotEmpty', (r) => (r as List).isNotEmpty);
+  rt.registerGetter(
+    'TextTheme.headlineLarge',
+    (r) => (r as TextTheme).headlineLarge,
+  );
+  rt.registerGetter('TextTheme.labelLarge', (r) => (r as TextTheme).labelLarge);
+  rt.registerGetter('ThemeData.textTheme', (r) => (r as ThemeData).textTheme);
 }

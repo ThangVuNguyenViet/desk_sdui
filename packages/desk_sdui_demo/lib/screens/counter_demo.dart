@@ -1,4 +1,5 @@
 import 'package:desk_sdui/desk_sdui.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 part 'counter_demo.sdui.g.dart';
@@ -15,10 +16,20 @@ class Counter {
 
 /// Actions class exercising async patterns and stateful operations.
 class CounterActions {
+  final ValueNotifier<Counter> _notifier;
+
+  CounterActions(this._notifier);
+
+  void _notify() {
+    _notifier.value = _notifier.value;
+  }
+
   Future<void> save(Counter c) async {
     c.busy = true;
+    _notify();
     await Future.delayed(const Duration(milliseconds: 100));
     c.busy = false;
+    _notify();
   }
 
   void reset(Counter c) {
@@ -26,26 +37,32 @@ class CounterActions {
     c.step = 1;
     c.history = [];
     c.mode = 'add';
+    _notify();
   }
 
   void incrementCount(Counter c) {
     c.count = c.count + 1;
+    _notify();
   }
 
   void setMode(Counter c, String m) {
     c.mode = m;
+    _notify();
   }
 
   void setStep(Counter c, int s) {
     c.step = s;
+    _notify();
   }
 
   void decrementCount(Counter c) {
     c.count = c.count - c.step;
+    _notify();
   }
 
   void handleSaveError(Counter c) {
     c.mode = 'error';
+    _notify();
   }
 }
 

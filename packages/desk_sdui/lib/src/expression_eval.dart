@@ -544,6 +544,16 @@ Object? evalExpressionWithEnv(
       }
       throw StateError('empty PayloadFunctionValueNode');
 
+    case ConditionalNode(:final condition, :final thenBranch, :final elseBranch):
+      final cond = evalExpressionWithEnv(condition, env, runtime, ctx: ctx);
+      if (cond == true) {
+        return evalExpressionWithEnv(thenBranch, env, runtime, ctx: ctx);
+      }
+      if (elseBranch != null) {
+        return evalExpressionWithEnv(elseBranch, env, runtime, ctx: ctx);
+      }
+      return null;
+
     // Widget / layout nodes — not valid at expression position.
     case WidgetNode():
     case BuiltinWidgetNode():
@@ -557,7 +567,6 @@ Object? evalExpressionWithEnv(
     case ActionSequenceNode():
     case ActionStepNode():
     case TryStepNode():
-    case ConditionalNode():
     // Statement nodes — must go through executeStatement.
     case BlockNode():
     case IfStatementNode():

@@ -16,14 +16,14 @@ void main() {
       expect(payloadClasses['Order'], same(order));
     });
 
-    test('registerPayloadClass with duplicate name throws StateError', () {
+    test('registerPayloadClass with duplicate name is idempotent', () {
       final order1 = PayloadClass(name: 'Order');
       final order2 = PayloadClass(name: 'Order');
       registerPayloadClass(order1);
-      expect(
-        () => registerPayloadClass(order2),
-        throwsA(isA<StateError>()),
-      );
+      // Should not throw on duplicate registration
+      expect(() => registerPayloadClass(order2), returnsNormally);
+      // The original class should still be registered
+      expect(payloadClasses['Order'], same(order1));
     });
 
     test('methodLookupOrder for simple class is [self]', () {

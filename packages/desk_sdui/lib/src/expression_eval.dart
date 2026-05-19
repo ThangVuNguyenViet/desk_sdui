@@ -212,11 +212,15 @@ Object? evalExpressionWithEnv(
         resolvedArgs['arg$i'] =
             evalExpressionWithEnv(args[i], env, runtime, ctx: ctx);
       }
-      final handler = runtime.resolveMethodHandler(name);
+      // Try qualified name first (ClassName.methodName), then bare method name.
+      final className = resolvedReceiver?.runtimeType.toString();
+      final qualifiedName = className != null ? '$className.$name' : name;
+      var handler = runtime.resolveMethodHandler(qualifiedName);
+      handler ??= runtime.resolveMethodHandler(name);
       if (handler == null) {
         throw StateError(
-          'Method "$name" not registered in runtime. '
-          'Register it via registerMethod() or core_accessors.',
+          'Method "$name" (qualified: "$qualifiedName") not registered '
+          'in runtime. Register it via registerMethod() or core_accessors.',
         );
       }
       return handler(resolvedReceiver, resolvedArgs);
@@ -226,21 +230,11 @@ Object? evalExpressionWithEnv(
       // mutable objects, lambdas see live values of mutable bindings at call time.
       final capturedEnv = env;
       final capturedCtx = ctx;
-      // Plan #11: a sync lambda with a BlockNode body (multi-statement event
-      // handler that mutates stateful fields) runs through executeStatement
-      // and then invokes the setState hook captured in env (if any) so Flutter
-      // schedules a rebuild.
       final isBlockBody = body is BlockNode;
-      void runSetStateHook(Map<String, Cell> e) {
-        final hookCell = e[kStatefulSetStateKey];
-        final hook = hookCell?.value;
-        if (hook is void Function()) hook();
-      }
       if (!isAsync) {
         Object? invokeSync(Map<String, Cell> e) {
           if (isBlockBody) {
             executeStatement(body, e, runtime, ctx: capturedCtx);
-            runSetStateHook(e);
             return null;
           }
           return evalExpressionWithEnv(body, e, runtime, ctx: capturedCtx);
@@ -557,13 +551,22 @@ Object? evalExpressionWithEnv(
       }
       throw StateError('empty PayloadFunctionValueNode');
 
+    case ConditionalNode(:final condition, :final thenBranch, :final elseBranch):
+      final c = evalExpressionWithEnv(condition, env, runtime, ctx: ctx);
+      if (c == true) {
+        return evalExpressionWithEnv(thenBranch, env, runtime, ctx: ctx);
+      }
+      if (elseBranch != null) {
+        return evalExpressionWithEnv(elseBranch, env, runtime, ctx: ctx);
+      }
+      return null;
+
     // Widget / layout nodes — not valid at expression position.
     case WidgetNode():
     case BuiltinWidgetNode():
     case ListNode():
     case MapNode():
     case RecordNode():
-    case ConditionalNode():
     case ForNode():
     case SpreadNode():
     case EventNode():

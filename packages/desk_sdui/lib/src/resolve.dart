@@ -112,7 +112,9 @@ Widget resolveNode(
       final screenCtx = RuntimeContext(
         payloadFunctions: {for (final fn in functions) fn.name: fn},
       );
-      return resolveNode(context, screenBody, input, runtime, ctx: screenCtx);
+      final result = resolveNode(context, screenBody, input, runtime, ctx: screenCtx);
+      debugPrint('[sdui-debug] resolveNode ScreenWithFunctionsNode result: ${result.runtimeType}');
+      return result;
 
     case IrStatefulNode():
       // Stable key so Flutter element-reuse assigns the State<> by IR
@@ -239,7 +241,9 @@ Widget _resolveBlockAtWidgetPosition(
         );
       }
       // Render the returned widget IR using the current env's value map.
-      return resolveNode(context, value, _envToInput(env), runtime, ctx: ctx);
+      final result = resolveNode(context, value, _envToInput(env), runtime, ctx: ctx);
+      debugPrint('[sdui-debug] _resolveBlockAtWidgetPosition ReturnNode result: ${result.runtimeType}');
+      return result;
     }
     if (stmt is BreakNode) {
       throw StateError(
@@ -560,13 +564,11 @@ Object? _resolveArg(
       return _bindEvent(node, input, runtime, ctx: ctx);
 
     case ActionSequenceNode(:final steps):
-      final setStateHook = input[kStatefulSetStateKey];
       return () async {
         var localEnv = toEnv(input);
         for (final step in steps) {
           localEnv = await _runActionStep(step, localEnv, runtime, ctx: ctx);
         }
-        if (setStateHook is void Function()) setStateHook();
       };
 
     default:
@@ -700,6 +702,27 @@ Object? _bindEvent(
       return () => Function.apply(methodFn, positional);
     }
   }
+
+  // Two-segment target: resolve receiver from input, look up registered
+  // method via runtimeType (e.g., ['a', 'decrementCount'] resolves to
+  // CounterActions.decrementCount on input['a']).
+  if (node.target.length == 2) {
+    final receiver = input[node.target[0]];
+    if (receiver != null) {
+      final className = receiver.runtimeType.toString();
+      final handler = runtime.resolveMethodHandler('$className.${node.target[1]}');
+      if (handler != null) {
+        final args = <String, Object?>{};
+        for (var i = 0;; i++) {
+          final argKey = 'arg$i';
+          if (!node.args.containsKey(argKey)) break;
+          args[argKey] = evalExpression(node.args[argKey]!, input, runtime, ctx: ctx);
+        }
+        return () => handler(receiver, args);
+      }
+    }
+  }
+
   throw StateError(
     'EventNode target ${node.target.join('.')} not bound',
   );
@@ -796,13 +819,10 @@ void _installReactiveGetter(
   cursor['__getters__'] = getters;
 }
 
-/// Host widget for an [IrStatefulNode] — owns the field cells across builds
-/// and rebuilds whenever an event handler invokes `setState`. The cells are
-/// initialized once in [initState] using the field initializers; on every
-/// subsequent build, the cells (as `Map<String, Cell>`) are merged into the
-/// input env so the body sees their current values. Event handlers that
-/// mutate any of those cells then trigger a rebuild via the [kStatefulSetStateKey]
-/// callback installed in the input.
+/// Host widget for an [IrStatefulNode] — owns the field cells across builds.
+/// The cells are initialized once in [initState] using the field initializers;
+/// on every subsequent build, the cells (as `Map<String, Cell>`) are merged
+/// into the input env so the body sees their current values.
 class _StatefulIrHost extends StatefulWidget {
   const _StatefulIrHost({
     super.key,
@@ -846,15 +866,13 @@ class _StatefulIrHostState extends State<_StatefulIrHost> {
   @override
   Widget build(BuildContext context) {
     // Compose the per-build input: VM inputs + persistent state cells (under
-    // `kStateCellsKey` — toEnv splices them in) + the setState hook event
-    // handlers will invoke.
+    // `kStateCellsKey` — toEnv splices them in).
     final scopedInput = <String, Object?>{
       ...widget.input,
       // Expose each cell's current value at its name as well, so consumers
       // that only read the value map (without entering toEnv) still see it.
       for (final entry in _stateCells.entries) entry.key: entry.value.value,
       kStateCellsKey: _stateCells,
-      kStatefulSetStateKey: _scheduleRebuild,
     };
     return resolveNode(
       context,
@@ -863,12 +881,5 @@ class _StatefulIrHostState extends State<_StatefulIrHost> {
       widget.runtime,
       ctx: widget.ctx,
     );
-  }
-
-  /// Called by event handlers (wrapped at resolve time) after they've run.
-  /// Triggers a rebuild so the body re-resolves against the new cell values.
-  void _scheduleRebuild() {
-    if (!mounted) return;
-    setState(() {});
   }
 }

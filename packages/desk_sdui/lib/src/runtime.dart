@@ -126,11 +126,16 @@ Map<String, List<PayloadExtensionNode>> get payloadExtensions =>
 
 /// Registers a payload class and computes its method lookup order.
 ///
-/// Throws [StateError] if a class with the same name is already registered,
-/// or if its supertype or any mixin has not been registered yet.
+/// If a class with the same name is already registered, this call is a
+/// no-op (idempotent). This allows a screen's IR to be re-resolved on
+/// rebuild without crashing.
+///
+/// Throws [StateError] if its supertype or any mixin has not been registered yet.
 void registerPayloadClass(PayloadClass cls) {
   if (_payloadClasses.containsKey(cls.name)) {
-    throw StateError('PayloadClass "${cls.name}" already registered.');
+    // Already registered — skip. This happens when a screen is rebuilt
+    // (e.g., after setState) and its IR is re-resolved.
+    return;
   }
   _payloadClasses[cls.name] = cls;
   cls.methodLookupOrder = _computeMro(cls);
@@ -141,7 +146,8 @@ void registerPayloadClass(PayloadClass cls) {
 /// [methodLookupOrder] resolution succeeds.
 void registerPayloadMixin(String name, PayloadClass mixin) {
   if (_payloadClasses.containsKey(name)) {
-    throw StateError('PayloadMixin "$name" already registered.');
+    // Already registered — skip.
+    return;
   }
   _payloadClasses[name] = mixin;
   mixin.methodLookupOrder = [mixin];

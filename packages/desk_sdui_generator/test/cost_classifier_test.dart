@@ -266,7 +266,7 @@ void main() {
         const CallSiteRecord(
           calleeName: 'label',
           callerName: 'myScreen',
-          context: CallSiteContext.signal,
+          context: CallSiteContext.reactive,
         ),
         const CallSiteRecord(
           calleeName: 'label',
@@ -293,35 +293,37 @@ void main() {
       expect(diags, isEmpty);
     });
 
-    // recursiveSizeDecreasing in signal → info
-    test('recursiveSizeDecreasing in signal → info', () {
-      final sites = [
-        const CallSiteRecord(
-          calleeName: 'fact',
-          callerName: 'myScreen',
-          context: CallSiteContext.signal,
-        ),
-      ];
-      final classes = {'fact': CostClass.recursiveSizeDecreasing};
-      final diags = emitCostDiagnostics(sites, classes);
-      expect(diags.length, 1);
+    // recursiveSizeDecreasing in reactive → info
+    test('recursiveSizeDecreasing in reactive → info', () {
+      final diags = emitCostDiagnostics(
+        [
+          CallSiteRecord(
+            calleeName: 'rFn',
+            callerName: 'foo',
+            context: CallSiteContext.reactive,
+          )
+        ],
+        {'rFn': CostClass.recursiveSizeDecreasing},
+      );
+      expect(diags, hasLength(1));
       expect(diags.first.severity, Severity.info);
     });
 
-    // linearInArg in signal → info
-    test('linearInArg in signal → info', () {
-      final sites = [
-        const CallSiteRecord(
-          calleeName: 'buildList',
-          callerName: 'myScreen',
-          context: CallSiteContext.signal,
-        ),
-      ];
-      final classes = {'buildList': CostClass.linearInArg};
-      final diags = emitCostDiagnostics(sites, classes);
-      expect(diags.length, 1);
+    // linearInArg in reactive → info
+    test('linearInArg in reactive → info', () {
+      final diags = emitCostDiagnostics(
+        [
+          CallSiteRecord(
+            calleeName: 'linFn',
+            callerName: 'foo',
+            context: CallSiteContext.reactive,
+          )
+        ],
+        {'linFn': CostClass.linearInArg},
+      );
+      expect(diags, hasLength(1));
       expect(diags.first.severity, Severity.info);
-      expect(diags.first.code, 'sdui_potential_cost.linear_in_signal');
+      expect(diags.first.code, 'sdui_potential_cost.linear_in_reactive');
     });
   });
 

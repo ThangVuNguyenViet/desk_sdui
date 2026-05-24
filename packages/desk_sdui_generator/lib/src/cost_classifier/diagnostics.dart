@@ -9,8 +9,8 @@ enum CallSiteContext {
   /// Inside a @Screen body or a WidgetNode arg (sync, per-frame).
   build,
 
-  /// Inside a reactive binding / computed slot (sync, per-signal-tick).
-  signal,
+  /// Inside a reactive binding / computed slot (sync, per-reactive-tick).
+  reactive,
 
   /// Inside an ActionSequenceNode step or other event handler.
   action,
@@ -54,17 +54,17 @@ Severity? diagnosticFor(CostClass cls, CallSiteContext ctx) {
   return switch ((cls, ctx)) {
     (CostClass.pureBounded, _) => null,
     (CostClass.linearInArg, CallSiteContext.build) => Severity.info,
-    (CostClass.linearInArg, CallSiteContext.signal) => Severity.info,
+    (CostClass.linearInArg, CallSiteContext.reactive) => Severity.info,
     (CostClass.linearInArg, CallSiteContext.action) => null,
     (CostClass.unbounded, CallSiteContext.build) => Severity.warning,
-    (CostClass.unbounded, CallSiteContext.signal) => Severity.warning,
+    (CostClass.unbounded, CallSiteContext.reactive) => Severity.warning,
     (CostClass.unbounded, CallSiteContext.action) => Severity.info,
     (CostClass.recursiveSizeDecreasing, CallSiteContext.build) => Severity.info,
-    (CostClass.recursiveSizeDecreasing, CallSiteContext.signal) => Severity.info,
+    (CostClass.recursiveSizeDecreasing, CallSiteContext.reactive) => Severity.info,
     (CostClass.recursiveSizeDecreasing, CallSiteContext.action) => null,
     (CostClass.recursiveFree, _) => Severity.warning,
     (CostClass.allocatesPerCall, CallSiteContext.build) => Severity.info,
-    (CostClass.allocatesPerCall, CallSiteContext.signal) => Severity.info,
+    (CostClass.allocatesPerCall, CallSiteContext.reactive) => Severity.info,
     (CostClass.allocatesPerCall, CallSiteContext.action) => null,
   };
 }
@@ -80,14 +80,14 @@ String messageFor(CostClass cls, CallSiteContext ctx, String fnName) {
     (CostClass.linearInArg, CallSiteContext.build) =>
       '"$fnName" is O(N) in its arg. Called per frame in build. '
       'Consider collection-for or moving to an event handler.',
-    (CostClass.linearInArg, CallSiteContext.signal) =>
-      '"$fnName" is O(N) in its arg. Called per signal tick.',
+    (CostClass.linearInArg, CallSiteContext.reactive) =>
+      '"$fnName" is O(N) in its arg. Called per reactive tick.',
     (CostClass.unbounded, CallSiteContext.build) =>
       '"$fnName" has no statically-derivable upper bound. '
       'In a per-frame path; this may stall builds.',
-    (CostClass.unbounded, CallSiteContext.signal) =>
+    (CostClass.unbounded, CallSiteContext.reactive) =>
       '"$fnName" has no statically-derivable upper bound. '
-      'In a signal-tick path; this may stall reactive rebuilds.',
+      'In a reactive-tick path; this may stall reactive rebuilds.',
     (CostClass.unbounded, CallSiteContext.action) =>
       '"$fnName" has no statically-derivable upper bound. '
       'In an action handler — confirm termination.',
@@ -99,9 +99,9 @@ String messageFor(CostClass cls, CallSiteContext ctx, String fnName) {
     (CostClass.allocatesPerCall, CallSiteContext.build) =>
       '"$fnName" allocates a payload instance per call. '
       'In a build path; consider memoizing if called > ~100× per frame.',
-    (CostClass.allocatesPerCall, CallSiteContext.signal) =>
+    (CostClass.allocatesPerCall, CallSiteContext.reactive) =>
       '"$fnName" allocates a payload instance per call. '
-      'In a signal-tick path; consider memoizing.',
+      'In a reactive-tick path; consider memoizing.',
     _ => '',
   };
 }
@@ -116,12 +116,12 @@ String codeFor(CostClass cls, CallSiteContext ctx) {
   return switch ((cls, ctx)) {
     (CostClass.linearInArg, CallSiteContext.build) =>
       'sdui_potential_cost.linear_in_build',
-    (CostClass.linearInArg, CallSiteContext.signal) =>
-      'sdui_potential_cost.linear_in_signal',
+    (CostClass.linearInArg, CallSiteContext.reactive) =>
+      'sdui_potential_cost.linear_in_reactive',
     (CostClass.unbounded, CallSiteContext.build) =>
       'sdui_potential_cost.unbounded_in_build',
-    (CostClass.unbounded, CallSiteContext.signal) =>
-      'sdui_potential_cost.unbounded_in_signal',
+    (CostClass.unbounded, CallSiteContext.reactive) =>
+      'sdui_potential_cost.unbounded_in_reactive',
     (CostClass.unbounded, CallSiteContext.action) =>
       'sdui_potential_cost.unbounded_in_action',
     (CostClass.recursiveSizeDecreasing, _) =>
@@ -130,8 +130,8 @@ String codeFor(CostClass cls, CallSiteContext ctx) {
       'sdui_potential_cost.recursive_free',
     (CostClass.allocatesPerCall, CallSiteContext.build) =>
       'sdui_potential_cost.allocates_in_build',
-    (CostClass.allocatesPerCall, CallSiteContext.signal) =>
-      'sdui_potential_cost.allocates_in_signal',
+    (CostClass.allocatesPerCall, CallSiteContext.reactive) =>
+      'sdui_potential_cost.allocates_in_reactive',
     _ => 'sdui_potential_cost',
   };
 }

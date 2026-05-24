@@ -1,4 +1,5 @@
 import 'package:analyzer/dart/ast/ast.dart';
+import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/type.dart';
 import 'package:desk_sdui_annotation/desk_sdui_annotation.dart';
 import '../diagnostics.dart';
@@ -80,14 +81,33 @@ IrNode lowerExpression(Expression expr) {
       return LengthOfNode(lowerExpression(expr.prefix));
     }
     final target = lowerExpression(expr.prefix);
-    final bucket = coreTypeBucket(expr.prefix.staticType);
-    if (target is RefNode && bucket == null) {
+    final prefixType = expr.prefix.staticType;
+    final bucket = coreTypeBucket(prefixType);
+    final prefixTypeName = typeName(prefixType);
+    if (prefixTypeName != null && isPayloadClass(prefixTypeName)) {
+      return GetterNode(
+        receiver: target,
+        name: '$prefixTypeName.${expr.identifier.name}',
+      );
+    }
+    // Only chain RefNode for null/InvalidType/DynamicType (class-name refs
+    // like Icons.menu) or when bucket is a core traversable type.
+    if (target is RefNode && bucket == null &&
+        (prefixType is InvalidType || prefixType is DynamicType ||
+         prefixType == null)) {
       return RefNode([...target.path, expr.identifier.name]);
     }
     if (bucket != null) {
       return GetterNode(
         receiver: target,
         name: '$bucket.${expr.identifier.name}',
+      );
+    }
+    // For all other concrete types, use GetterNode with type name.
+    if (prefixTypeName != null) {
+      return GetterNode(
+        receiver: target,
+        name: '$prefixTypeName.${expr.identifier.name}',
       );
     }
     return MemberAccessNode(target: target, name: expr.identifier.name);
@@ -102,16 +122,20 @@ IrNode lowerExpression(Expression expr) {
       return RuntimeTypeRefNode(operand: lowerExpression(expr.target!));
     }
     final target = lowerExpression(expr.target!);
-    final targetTypeName = _typeName(expr.target!.staticType);
+    final targetType = expr.target!.staticType;
+    final targetTypeName = typeName(targetType);
     if (targetTypeName != null && isPayloadClass(targetTypeName)) {
-      return PayloadMethodCallNode(
+      return GetterNode(
         receiver: target,
-        methodName: propertyName,
-        args: {},
+        name: '$targetTypeName.$propertyName',
       );
     }
-    final bucket = coreTypeBucket(expr.target!.staticType);
-    if (target is RefNode && bucket == null) {
+    final bucket = coreTypeBucket(targetType);
+    // Only chain RefNode for null/InvalidType/DynamicType (class-name refs
+    // like Icons.menu) or when bucket is a core traversable type.
+    if (target is RefNode && bucket == null &&
+        (targetType is InvalidType || targetType is DynamicType ||
+         targetType == null)) {
       return RefNode([...target.path, propertyName]);
     }
     if (bucket != null) {
@@ -120,13 +144,20 @@ IrNode lowerExpression(Expression expr) {
         name: '$bucket.$propertyName',
       );
     }
+    // For all other concrete types, use GetterNode with type name.
+    if (targetTypeName != null) {
+      return GetterNode(
+        receiver: target,
+        name: '$targetTypeName.$propertyName',
+      );
+    }
     return MemberAccessNode(target: target, name: propertyName);
   }
 
   if (expr is IndexExpression) {
     final target = lowerExpression(expr.target!);
     final key = lowerExpression(expr.index);
-    final targetTypeName = _typeName(expr.target!.staticType);
+    final targetTypeName = typeName(expr.target!.staticType);
     if (targetTypeName != null && isPayloadClass(targetTypeName)) {
       return PayloadMethodCallNode(
         receiver: target,
@@ -140,7 +171,7 @@ IrNode lowerExpression(Expression expr) {
   if (expr is BinaryExpression) {
     final left = lowerExpression(expr.leftOperand);
     final right = lowerExpression(expr.rightOperand);
-    final leftTypeName = _typeName(expr.leftOperand.staticType);
+    final leftTypeName = typeName(expr.leftOperand.staticType);
     final opLexeme = expr.operator.lexeme;
 
     // Operator overloading: if LHS is a payload class, route to method call.
@@ -216,7 +247,7 @@ IrNode lowerExpression(Expression expr) {
 
   if (expr is PrefixExpression && expr.operator.lexeme == '-') {
     final operand = lowerExpression(expr.operand);
-    final operandTypeName = _typeName(expr.operand.staticType);
+    final operandTypeName = typeName(expr.operand.staticType);
     if (operandTypeName != null && isPayloadClass(operandTypeName)) {
       return PayloadMethodCallNode(
         receiver: operand,
@@ -246,6 +277,16 @@ IrNode lowerExpression(Expression expr) {
   }
 
   // Free function call with no target: check payload functions first, then
+  if (expr is MethodInvocation) {
+    if (expr.typeArguments != null && expr.typeArguments!.arguments.isNotEmpty) {
+      throw LoweringError(
+        'desk_sdui cannot serialize generic method invocations like `${expr.methodName.name}<T>()`.\n'
+        'Please use a concrete non-generic method instead (e.g., `MyViewModel.of(context)`).',
+        expr,
+      );
+    }
+  }
+
   // payload class methods, then registered globals (MethodCallNode).
   if (expr is MethodInvocation && expr.target == null) {
     final name = expr.methodName.name;
@@ -272,9 +313,17 @@ IrNode lowerExpression(Expression expr) {
         args: args,
       );
     }
-    // Not a payload fn. Free-function lowering for unknown lowercase names
-    // is intentionally not handled here — this lowerer is only reached for
-    // expressions in non-arg positions where free function dispatch isn't a
+    
+    return MethodCallNode(
+      receiver: null,
+      name: name,
+      args: expr.argumentList.arguments
+          .map((a) => lowerExpression(a.argumentExpression))
+          .toList(),
+    );
+    // Note: Free-function call sites that ARE allowed (e.g. widget invocations)
+    // are intercepted earlier. Unregistered/unsupported functions will fail
+    // at runtime rather than generation time, which is the intended design for globals.
     // supported shape. The fall-through to the LoweringError at the bottom
     // is the correct behavior. Free-function call sites that ARE allowed
     // (widget invocations like `Text(...)`, static methods like `Theme.of`)
@@ -282,7 +331,7 @@ IrNode lowerExpression(Expression expr) {
   }
 
   if (expr is MethodInvocation && expr.target != null) {
-    final targetTypeName = _typeName(expr.target!.staticType);
+    final targetTypeName = typeName(expr.target!.staticType);
     final methodName = expr.methodName.name;
     if (targetTypeName != null && isPayloadClass(targetTypeName)) {
       final args = <String, IrNode>{};
@@ -299,8 +348,23 @@ IrNode lowerExpression(Expression expr) {
         args: args,
       );
     }
-    final receiver = lowerExpression(expr.target!);
-    final bucket = coreTypeBucket(expr.target!.staticType);
+    // Static method call on a class: Theme.of(context) →
+    // MethodCallNode(receiver: null, name: 'Theme.of', args: [RefNode(['context'])])
+    final target = expr.target!;
+    if (target is SimpleIdentifier &&
+        target.element is ClassElement) {
+      final className = target.name;
+      final args = expr.argumentList.arguments
+          .map((a) => lowerExpression(a.argumentExpression))
+          .toList();
+      return MethodCallNode(
+        receiver: null,
+        name: '$className.$methodName',
+        args: args,
+      );
+    }
+    final receiver = lowerExpression(target);
+    final bucket = coreTypeBucket(target.staticType);
     final qualifiedName = bucket != null ? '$bucket.$methodName' : methodName;
     final args = expr.argumentList.arguments
         .map((a) => lowerExpression(a.argumentExpression))
@@ -715,8 +779,8 @@ IrNode _lowerAssignment(AssignmentExpression expr) {
     final rhs = lowerExpression(expr.rightHandSide);
 
     // Payload class field compound assignment.
-    final typeName = _typeName(receiverType);
-    if (typeName != null && isPayloadClass(typeName)) {
+    final receiverTypeName = typeName(receiverType);
+    if (receiverTypeName != null && isPayloadClass(receiverTypeName)) {
       final currentValue = PayloadFieldRefNode(
         receiver: RefNode(['__recv__']),
         fieldName: fieldName,
@@ -824,7 +888,7 @@ IrNode _lowerAssignment(AssignmentExpression expr) {
 
   // Index expression assignment: target[index] = value
   if (lhs is IndexExpression) {
-    final targetTypeName = _typeName(lhs.target!.staticType);
+    final targetTypeName = typeName(lhs.target!.staticType);
     if (targetTypeName != null && isPayloadClass(targetTypeName)) {
       return PayloadMethodCallNode(
         receiver: lowerExpression(lhs.target!),
@@ -864,8 +928,8 @@ IrNode _lowerSetterAssignment({
     );
   }
   // Check if receiver is a payload class instance.
-  final typeName = _typeName(receiverType);
-  if (typeName != null && isPayloadClass(typeName)) {
+  final receiverTypeName = typeName(receiverType);
+  if (receiverTypeName != null && isPayloadClass(receiverTypeName)) {
     return PayloadFieldAssignNode(
       receiver: lowerExpression(receiverExpr),
       fieldName: fieldName,
@@ -907,7 +971,7 @@ String? _classNameForType(DartType? type) {
 
 /// Extracts the simple type name from a [DartType], or null if not an
 /// interface type.
-String? _typeName(DartType? type) {
+String? typeName(DartType? type) {
   if (type == null || type is DynamicType || type is InvalidType) return null;
   final el = type.element;
   if (el == null) return null;

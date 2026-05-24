@@ -24,6 +24,7 @@ class CollectedTypes {
     List<String>? notes,
     Map<String, Set<String>>? genericCtorTypeArgs,
     Set<SetterElement>? cascadeSetters,
+    Map<String, Set<String>>? getterAccesses,
   })  : widgets = widgets ?? {},
         valueTypes = valueTypes ?? {},
         constants = constants ?? {},
@@ -33,7 +34,8 @@ class CollectedTypes {
         extraLibraryUris = extraLibraryUris ?? {},
         notes = notes ?? [],
         genericCtorTypeArgs = genericCtorTypeArgs ?? {},
-        cascadeSetters = cascadeSetters ?? {};
+        cascadeSetters = cascadeSetters ?? {},
+        getterAccesses = getterAccesses ?? {};
 
   /// Widget subclasses constructed in the screen body (e.g. `Column`, `Text`).
   final Set<ClassElement> widgets;
@@ -88,6 +90,12 @@ class CollectedTypes {
   /// Only public `SetterElement`s are included.
   final Set<SetterElement> cascadeSetters;
 
+  /// Instance property accesses discovered in the @Screen body, keyed by the
+  /// owning class's simple name. E.g. `theme.textTheme` → `{'ThemeData': {'textTheme'}}`.
+  /// Populated by the AST visitor (visitPropertyAccess / visitPrefixedIdentifier)
+  /// when the target's static type resolves to a concrete interface.
+  final Map<String, Set<String>> getterAccesses;
+
   /// Merges [other] into this (in-place union).
   void unionWith(CollectedTypes other) {
     widgets.addAll(other.widgets);
@@ -102,6 +110,9 @@ class CollectedTypes {
       genericCtorTypeArgs.putIfAbsent(entry.key, Set.new).addAll(entry.value);
     }
     cascadeSetters.addAll(other.cascadeSetters);
+    for (final entry in other.getterAccesses.entries) {
+      getterAccesses.putIfAbsent(entry.key, Set.new).addAll(entry.value);
+    }
   }
 }
 
@@ -258,6 +269,7 @@ class _TypeVisitor extends RecursiveAstVisitor<void> {
       final methodElement = node.methodName.element;
       if (methodElement is TopLevelFunctionElement) {
         collected.functions.add(methodElement);
+        _recordElementLibrary(methodElement);
       }
       super.visitMethodInvocation(node);
       return;
@@ -290,8 +302,7 @@ class _TypeVisitor extends RecursiveAstVisitor<void> {
   @override
   void visitPrefixedIdentifier(PrefixedIdentifier node) {
     final prefixElement = node.prefix.element;
-    // Interested when the prefix resolves to a class or enum (static access).
-    // Both ClassElement and EnumElement are subtypes of InterfaceElement.
+    // Static access: Icons.menu, Colors.white, etc.
     if (prefixElement is InterfaceElement) {
       final propElement = node.identifier.element;
       if (propElement != null) {
@@ -300,12 +311,23 @@ class _TypeVisitor extends RecursiveAstVisitor<void> {
         _recordElementLibrary(propElement);
       }
     }
+    // Instance access: vm.count, etc.
+    final prefixType = node.prefix.staticType;
+    if (prefixType is InterfaceType) {
+      final className = prefixType.element.name;
+      final propName = node.identifier.name;
+      if (className != null) {
+        collected.getterAccesses.putIfAbsent(className, Set<String>.new).add(propName);
+        _recordElementLibrary(prefixType.element);
+      }
+    }
     super.visitPrefixedIdentifier(node);
   }
 
   @override
   void visitPropertyAccess(PropertyAccess node) {
     final target = node.target;
+    // Static access: Icons.menu, Colors.white, Theme.of etc.
     if (target is SimpleIdentifier) {
       final targetElement = target.element;
       if (targetElement is InterfaceElement) {
@@ -315,6 +337,17 @@ class _TypeVisitor extends RecursiveAstVisitor<void> {
           _recordElementLibrary(targetElement);
           _recordElementLibrary(propElement);
         }
+      }
+    }
+    // Instance access: theme.textTheme, vm.count, etc.
+    // Skip when target type is unresolved (InvalidType / DynamicType).
+    final targetType = target?.staticType;
+    if (targetType is InterfaceType) {
+      final className = targetType.element.name;
+      final propName = node.propertyName.name;
+      if (className != null) {
+        collected.getterAccesses.putIfAbsent(className, Set<String>.new).add(propName);
+        _recordElementLibrary(targetType.element);
       }
     }
     super.visitPropertyAccess(node);

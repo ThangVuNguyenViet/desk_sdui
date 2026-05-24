@@ -212,7 +212,10 @@ Object? evalExpressionWithEnv(
         resolvedArgs['arg$i'] =
             evalExpressionWithEnv(args[i], env, runtime, ctx: ctx);
       }
-      final handler = runtime.resolveMethodHandler(name);
+      // Try qualified name first (e.g. "CounterActions.save"), then unqualified.
+      final qualifiedName = '${resolvedReceiver?.runtimeType}.$name';
+      final handler = runtime.resolveMethodHandler(qualifiedName)
+          ?? runtime.resolveMethodHandler(name);
       if (handler == null) {
         throw StateError('Method "$name" not registered in runtime.');
       }

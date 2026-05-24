@@ -6,7 +6,7 @@ import 'package:desk_sdui_annotation/desk_sdui_annotation.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 
-import 'loader/asset_bundle_ir_fetcher.dart';
+
 import 'payload_class.dart';
 
 /// Describes a single parameter of a @Screen function.
@@ -17,7 +17,7 @@ class InputBinding<T> {
 }
 
 /// A reactive source exposed to the IR (e.g. `vm.showPromoCode` of type
-/// `Signal<bool>`). The runtime subscribes via `ListenableBuilder`.
+/// `ValueNotifier<bool>`). The runtime subscribes via `ListenableBuilder`.
 class ReactiveBinding {
   const ReactiveBinding({required this.path, required this.read});
   final List<String> path;
@@ -103,9 +103,7 @@ typedef SduiValueBuilder = Object? Function(Map<String, Object?> args);
 /// `'arg1'`, etc.
 typedef SduiFunctionHandler = Object? Function(Map<String, Object?> args);
 
-abstract class IrFetcher {
-  Future<Uint8List> fetch(String name);
-}
+
 
 // ---------------------------------------------------------------------------
 // PayloadClass registry (Feature 15 — bucket 4 foundation)
@@ -197,17 +195,12 @@ List<PayloadClass> _computeMro(PayloadClass cls) {
   }
   return order;
 }
-
 class Runtime {
   Runtime({
-    this.fetcher,
-    this.assetBundle,
     this.errorBuilder,
     this.loadingBuilder,
   });
 
-  final IrFetcher? fetcher;
-  final AssetBundle? assetBundle;
   final Widget Function(BuildContext, Object error)? errorBuilder;
   final Widget Function(BuildContext)? loadingBuilder;
 
@@ -366,41 +359,20 @@ class Runtime {
 
   bool hasFunction(String name) => _functions.containsKey(name);
 
-  Future<IrTree> load(String name) async {
-    if (fetcher != null) {
-      try {
-        final bytes = await fetcher!.fetch(name);
-        return _decodeAndCache(name, bytes);
-      } on Exception {
-        // fall through
-      }
-    }
-    if (assetBundle != null) {
-      try {
-        final abFetcher = AssetBundleIrFetcher(bundle: assetBundle!);
-        final bytes = await abFetcher.fetch(name);
-        return _decodeAndCache(name, bytes);
-      } on Exception {
-        // fall through
-      }
-    }
-    final binding = screenFor(name);
-    if (binding != null) return binding.ir;
-    throw StateError('No source produced IR for "$name"');
+  IrTree parseIr(Uint8List bytes) {
+    return _parseIr(bytes);
   }
 
-  IrTree _decodeAndCache(String name, Uint8List bytes) {
+  // Parses bytes into IrTree (legacy synchronous path).
+  IrTree _parseIr(Uint8List bytes) {
     final hash = sha1.convert(bytes).toString();
-    final key = '$name:$hash';
-    final hit = _cache[key];
-    if (hit != null) return hit;
     final tree = const JsonIrCodec().decodeBytes(bytes);
     if (tree.version > currentIrVersion) {
       throw StateError(
         'IR v${tree.version} exceeds runtime ($currentIrVersion)',
       );
     }
-    _cache[key] = tree;
     return tree;
   }
+
 }

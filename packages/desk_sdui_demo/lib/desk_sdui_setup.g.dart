@@ -8,9 +8,11 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui';
 import 'package:cue/cue.dart';
-import 'package:desk_sdui_demo/screens/counter_demo.dart';
-import 'package:desk_sdui_demo/screens/counter_demo.dart' show counter_demoBinding;
-import 'package:desk_sdui_demo/screens/counter_demo.sdui_reg.g.dart' show registerCounter_demoDependencies;
+import 'package:desk_sdui_demo/screens/product_demo_v1.dart';
+import 'package:desk_sdui_demo/screens/product_demo_v1.dart' show product_demoBinding;
+import 'package:desk_sdui_demo/screens/product_demo_v2.dart' show product_demo_v2Binding;
+import 'package:desk_sdui_demo/screens/product_demo_v1.sdui_reg.g.dart' show registerProduct_demoDependencies;
+import 'package:desk_sdui_demo/screens/product_demo_v2.sdui_reg.g.dart' show registerProduct_demo_v2Dependencies;
 
 void registerSduiCatalog(Runtime rt) {
   rt.registerWidget('Align', (args) => Align(key: args['key'] as Key?, alignment: args['alignment'] as AlignmentGeometry? ?? Alignment.center, widthFactor: (args['widthFactor'] as num?)?.toDouble(), heightFactor: (args['heightFactor'] as num?)?.toDouble(), child: args['child'] as Widget?));
@@ -109,8 +111,8 @@ void registerSduiCatalog(Runtime rt) {
   rt.registerWidget('Cue.onScroll', (args) => Cue.onScroll(key: args['key'] as Key?, debugLabel: args['debugLabel'] as String?, acts: args['acts'] as List<Act>?, child: args['child'] as Widget));
   rt.registerWidget('Cue.onScrollVisible', (args) => Cue.onScrollVisible(key: args['key'] as Key?, debugLabel: args['debugLabel'] as String?, enabled: args['enabled'] as bool, acts: args['acts'] as List<Act>?, child: args['child'] as Widget));
   rt.registerWidget('Theme', (args) => Theme(key: args['key'] as Key?, data: args['data'] as ThemeData, child: args['child'] as Widget));
-  rt.registerValueBuilder('Counter', (args) => Counter());
-  rt.registerValueBuilder('CounterActions', (args) => CounterActions(args['arg0'] as ValueNotifier<Counter>));
+  rt.registerValueBuilder('Product', (args) => Product(id: args['id'] as String, title: args['title'] as String, price: args['price'] as double, description: args['description'] as String));
+  rt.registerValueBuilder('ProductViewModel', (args) => ProductViewModel(args['arg0'] as List<Product>));
   rt.registerValueBuilder('EdgeInsetsGeometry.all', (args) => EdgeInsetsGeometry.all(args['arg0'] as double));
   rt.registerValueBuilder('EdgeInsetsGeometry.only', (args) => EdgeInsetsGeometry.only(left: args['left'] as double, right: args['right'] as double, top: args['top'] as double, bottom: args['bottom'] as double));
   rt.registerValueBuilder('EdgeInsetsGeometry.directional', (args) => EdgeInsetsGeometry.directional(start: args['start'] as double, end: args['end'] as double, top: args['top'] as double, bottom: args['bottom'] as double));
@@ -330,28 +332,17 @@ void registerSduiCatalog(Runtime rt) {
   rt.registerConstant('EdgeInsetsGeometry.infinity', EdgeInsetsGeometry.infinity);
   rt.registerConstant('CueMotion.none', CueMotion.none);
   rt.registerConstant('CueMotion.defaultTime', CueMotion.defaultTime);
-  // Methods for Counter
+  // Methods for Product
   {
-  rt.registerGetter('Counter.count', (target) => (target as Counter).count);
-  rt.registerGetter('Counter.step', (target) => (target as Counter).step);
-  rt.registerGetter('Counter.history', (target) => (target as Counter).history);
-  rt.registerGetter('Counter.busy', (target) => (target as Counter).busy);
-  rt.registerGetter('Counter.mode', (target) => (target as Counter).mode);
-  rt.registerSetter('Counter.count', (target, value) => (target as Counter).count = value as int);
-  rt.registerSetter('Counter.step', (target, value) => (target as Counter).step = value as int);
-  rt.registerSetter('Counter.history', (target, value) => (target as Counter).history = value as List<int>);
-  rt.registerSetter('Counter.busy', (target, value) => (target as Counter).busy = value as bool);
-  rt.registerSetter('Counter.mode', (target, value) => (target as Counter).mode = value as String);
+  rt.registerGetter('Product.id', (target) => (target as Product).id);
+  rt.registerGetter('Product.title', (target) => (target as Product).title);
+  rt.registerGetter('Product.price', (target) => (target as Product).price);
+  rt.registerGetter('Product.description', (target) => (target as Product).description);
   }
-  // Methods for CounterActions
+  // Methods for ProductViewModel
   {
-  rt.registerMethod('CounterActions.save', (recv, args) => (recv as CounterActions).save(args['arg0'] as Counter));
-  rt.registerMethod('CounterActions.reset', (recv, args) => (recv as CounterActions).reset(args['arg0'] as Counter));
-  rt.registerMethod('CounterActions.incrementCount', (recv, args) => (recv as CounterActions).incrementCount(args['arg0'] as Counter));
-  rt.registerMethod('CounterActions.setMode', (recv, args) => (recv as CounterActions).setMode(args['arg0'] as Counter, args['arg1'] as String));
-  rt.registerMethod('CounterActions.setStep', (recv, args) => (recv as CounterActions).setStep(args['arg0'] as Counter, args['arg1'] as int));
-  rt.registerMethod('CounterActions.decrementCount', (recv, args) => (recv as CounterActions).decrementCount(args['arg0'] as Counter));
-  rt.registerMethod('CounterActions.handleSaveError', (recv, args) => (recv as CounterActions).handleSaveError(args['arg0'] as Counter));
+  rt.registerMethod('ProductViewModel.addToCart', (recv, args) => (recv as ProductViewModel).addToCart(args['arg0'] as BuildContext, args['arg1'] as Product));
+  rt.registerGetter('ProductViewModel.products', (target) => (target as ProductViewModel).products);
   }
   // Methods for EdgeInsetsGeometry
   {
@@ -387,7 +378,9 @@ void registerSduiCatalog(Runtime rt) {
 }
 void registerAllScreens(Runtime rt) {
   registerCoreAccessors(rt);
-  rt.registerScreen(counter_demoBinding);
-  registerCounter_demoDependencies(rt);
+  rt.registerScreen(product_demoBinding);
+  registerProduct_demoDependencies(rt);
+  rt.registerScreen(product_demo_v2Binding);
+  registerProduct_demo_v2Dependencies(rt);
   registerSduiCatalog(rt);
 }

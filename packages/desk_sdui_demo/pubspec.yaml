@@ -15,6 +15,7 @@ dependencies:
   desk_sdui_annotation:
     path: ../desk_sdui_annotation
   cue: ^0.2.1
+  flutter_code_editor: ^0.3.5
 
 dev_dependencies:
   flutter_test:
@@ -23,7 +24,13 @@ dev_dependencies:
     path: ../desk_sdui_generator
   build_runner: ^2.4.0
   very_good_analysis: ^7.0.0
+  fdb_helper: ^1.7.0
 
 dependency_overrides:
   # Temporary: analyzer ^13 needs meta ^1.18; stable Flutter pins 1.17. Drop when Flutter SDK catches up.
   meta: ^1.18.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - lib/screens/

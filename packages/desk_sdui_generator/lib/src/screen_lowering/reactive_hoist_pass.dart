@@ -373,7 +373,7 @@ IrNode reactiveHoist(IrNode node) {
       );
     case IrStatefulNode():
       // Field initializers run once in initState; no reactive hoisting needed
-      // (rebuild on signal change is driven by the body, not the fields).
+      // (rebuild on reactive state change is driven by the body, not the fields).
       final newFields = <IrStatefulFieldNode>[];
       for (final f in node.fields) {
         final (initRewritten, _) = _hoist(f.initializer);

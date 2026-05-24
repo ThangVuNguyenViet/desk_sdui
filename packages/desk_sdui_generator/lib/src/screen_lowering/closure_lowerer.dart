@@ -220,6 +220,18 @@ ActionStepNode _lowerStep(Statement stmt) {
 
 IrNode _lowerCallExpression(Expression expr, AstNode origin) {
   if (expr is MethodInvocation) {
+    if (expr.target == null) {
+      final args = <IrNode>[];
+      for (final arg in expr.argumentList.arguments) {
+        args.add(lowerExpression(arg.argumentExpression));
+      }
+      return MethodCallNode(
+        receiver: null,
+        name: expr.methodName.name,
+        args: args,
+      );
+    }
+    
     final target = _extractTarget(expr);
     if (target != null) {
       final args = <IrNode>[];

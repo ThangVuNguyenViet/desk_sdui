@@ -286,6 +286,22 @@ class RegistrationEmitter {
         "(recv, args) => (recv as $className).$fieldName = args['arg0'] as $paramType);";
   }
 
+  /// Emit a `rt.registerGetter(...)` call for a public instance field.
+  ///
+  /// The registration name is `'ClassName.fieldName'`. The closure reads the
+  /// field on the cast receiver. Used for payload-driven field access
+  /// (e.g. `vm.count` in a screen body).
+  String emitFieldGetter(FieldElement field) {
+    final enclosing = field.enclosingElement;
+    final className =
+        (enclosing is InterfaceElement ? enclosing.name : null) ?? '';
+    final fieldName = field.name;
+    final registrationName = '$className.$fieldName';
+    final fieldType = _typeDisplayName(field.type);
+    return "rt.registerGetter('$registrationName', (target) => "
+        "(target as $className).$fieldName);";
+  }
+
   /// Emit a `rt.registerSetter(...)` call for a non-final public instance field.
   ///
   /// The registration name is `'ClassName.fieldName'`. The closure mutates the
@@ -354,6 +370,13 @@ class RegistrationEmitter {
       );
     }
 
+    // Emit getters for all public instance fields.
+    for (final field in cls.fields) {
+      if (_isGetterEligible(field, cls)) {
+        lines.add(emitFieldGetter(field));
+      }
+    }
+
     // Emit setters for eligible fields.
     for (final field in cls.fields) {
       if (_isSetterEligible(field, cls)) {
@@ -363,6 +386,25 @@ class RegistrationEmitter {
 
     lines.add('}');
     return lines.join('\n');
+  }
+
+  /// Check if a field is eligible for getter registration.
+  ///
+  /// A field is eligible if:
+  /// - It is public
+  /// - It has an associated getter (i.e. it is readable).
+  /// - It is not static
+  /// - It is declared on this class (not inherited).
+  bool _isGetterEligible(FieldElement field, ClassElement owner) {
+    if (!field.isPublic) return false;
+    if (field.isStatic) return false;
+    // Reject synthetic fields with no getter.
+    if (field.getter == null) return false;
+    // Only emit getters for fields actually declared on `owner`.
+    final enclosing = field.enclosingElement;
+    if (enclosing is! InterfaceElement) return false;
+    if (enclosing.name != owner.name) return false;
+    return true;
   }
 
   /// Check if a field is eligible for setter registration.
@@ -481,6 +523,17 @@ class RegistrationEmitter {
       lines.add(emitCascadeSetter(setter));
     }
 
+    // Emit getters for instance property accesses discovered in the @Screen
+    // body (e.g. theme.textTheme → registerGetter('ThemeData.textTheme')).
+    for (final entry in collected.getterAccesses.entries) {
+      for (final propName in entry.value) {
+        lines.add(
+          "rt.registerGetter('${entry.key}.$propName', "
+          "(r) => (r as ${entry.key}).$propName);",
+        );
+      }
+    }
+
     return lines.join('\n');
   }
 
@@ -520,15 +573,25 @@ class RegistrationEmitter {
       if (p.isNamed) {
         final typeStr = _typeDisplayName(p.type);
         final defaultCode = p.defaultValueCode;
+        final isDouble = p.type.isDartCoreDouble;
 
         String valuePart;
         if (_isListOfWidget(p.type)) {
           valuePart =
               "(args['$paramName'] as List?)?.cast<Widget>() ?? const []";
         } else if (defaultCode != null) {
-          // Strip the ? suffix when using defaultValue fallback to keep cast clean
           final baseTypeStr = _typeDisplayNameNoNull(p.type);
-          valuePart = "args['$paramName'] as $baseTypeStr? ?? $defaultCode";
+          if (isDouble) {
+            valuePart = "(args['$paramName'] as num?)?.toDouble() ?? $defaultCode";
+          } else {
+            valuePart = "args['$paramName'] as $baseTypeStr? ?? $defaultCode";
+          }
+        } else if (isDouble) {
+          if (p.type.nullabilitySuffix == NullabilitySuffix.question) {
+            valuePart = "(args['$paramName'] as num?)?.toDouble()";
+          } else {
+            valuePart = "(args['$paramName'] as num).toDouble()";
+          }
         } else {
           valuePart = "args['$paramName'] as $typeStr";
         }
@@ -536,7 +599,15 @@ class RegistrationEmitter {
       } else {
         // Positional: no label prefix — read from map by declared param name.
         final typeStr = _typeDisplayName(p.type);
-        parts.add("args['$paramName'] as $typeStr");
+        if (p.type.isDartCoreDouble) {
+          if (p.type.nullabilitySuffix == NullabilitySuffix.question) {
+            parts.add("(args['$paramName'] as num?)?.toDouble()");
+          } else {
+            parts.add("(args['$paramName'] as num).toDouble()");
+          }
+        } else {
+          parts.add("args['$paramName'] as $typeStr");
+        }
       }
     }
     return parts.join(', ');

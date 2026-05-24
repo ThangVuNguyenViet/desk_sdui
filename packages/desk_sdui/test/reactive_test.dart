@@ -5,7 +5,7 @@ import 'package:desk_sdui/src/resolve.dart';
 
 void main() {
   testWidgets(
-    'WidgetNode.listenablePaths rebuilds only its subtree on signal change',
+    'WidgetNode.listenablePaths rebuilds only its subtree on state change',
     (tester) async {
       final rt = Runtime();
       var outerBuilds = 0;

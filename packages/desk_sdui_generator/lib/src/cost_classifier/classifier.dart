@@ -8,7 +8,7 @@ import 'package:desk_sdui_annotation/desk_sdui_annotation.dart';
 /// the codegen-time classifier.
 ///
 /// Used by [CostDiagnostics] to decide whether to emit a diagnostic at a
-/// call site, based on the call-site context (build / signal / action).
+/// call site, based on the call-site context (build / reactive / action).
 ///
 /// **Limitations (documented per plan):**
 /// - Inter-procedural transitivity is NOT computed. A [linearInArg] function

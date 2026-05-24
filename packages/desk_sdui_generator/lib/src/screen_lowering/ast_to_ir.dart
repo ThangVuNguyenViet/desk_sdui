@@ -177,9 +177,12 @@ ScreenLowerResult lowerScreenWithPayloadFunctions(
     }
 
     // Step 4: lower each payload class declaration.
+    // Only classes explicitly annotated with @Register are lowered;
+    // helper/action classes (e.g. CounterActions) are registered but
+    // not treated as payload-class AST nodes.
     final payloadClasses = <PayloadClassNode>[];
     for (final decl in unit.declarations) {
-      if (decl is ClassDeclaration) {
+      if (decl is ClassDeclaration && _hasRegisterAnnotation(decl)) {
         payloadClasses.add(_lowerPayloadClassDecl(decl));
       }
     }
@@ -1547,6 +1550,19 @@ void _collectRefs(
     case ThisRefNode():
       break;
   }
+}
+
+/// Returns true if [decl] has a `@Register` annotation.
+bool _hasRegisterAnnotation(ClassDeclaration decl) {
+  for (final ann in decl.metadata) {
+    final name = ann.name;
+    if (name is PrefixedIdentifier) {
+      if (name.identifier.name == 'Register') return true;
+    } else if (name is SimpleIdentifier) {
+      if (name.name == 'Register') return true;
+    }
+  }
+  return false;
 }
 
 /// Extracts the class name from a [ClassDeclaration].

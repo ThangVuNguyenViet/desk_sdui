@@ -7,13 +7,13 @@ import 'runtime.dart';
 class SduiScreen extends StatefulWidget {
   const SduiScreen({
     required this.runtime,
-    required this.name,
+    required this.ir,
     this.inputs = const {},
     super.key,
   });
 
   final Runtime runtime;
-  final String name;
+  final IrTree ir;
   final Map<String, Object?> inputs;
 
   @override
@@ -21,45 +21,21 @@ class SduiScreen extends StatefulWidget {
 }
 
 class _SduiScreenState extends State<SduiScreen> {
-  late Future<IrTree> _ir;
-
-  @override
-  void initState() {
-    super.initState();
-    _ir = widget.runtime.load(widget.name);
-  }
-
-  @override
-  void didUpdateWidget(SduiScreen oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.name != widget.name || oldWidget.runtime != widget.runtime) {
-      _ir = widget.runtime.load(widget.name);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<IrTree>(
-      future: _ir,
-      builder: (ctx, snap) {
-        if (snap.hasError) {
-          return widget.runtime.errorBuilder?.call(ctx, snap.error!) ??
-              ErrorWidget(snap.error!);
-        }
-        if (!snap.hasData) {
-          return widget.runtime.loadingBuilder?.call(ctx) ??
-              const SizedBox.shrink();
-        }
-        final binding = widget.runtime.screenFor(widget.name);
-        final input = _composeInput(binding, widget.inputs, context);
-        return resolveNode(
-          ctx,
-          snap.data!.root,
-          input,
-          widget.runtime,
-        );
-      },
-    );
+    try {
+      final binding = widget.runtime.screenFor(widget.ir.name);
+      final input = _composeInput(binding, widget.inputs, context);
+      return resolveNode(
+        context,
+        widget.ir.root,
+        input,
+        widget.runtime,
+      );
+    } catch (error) {
+      return widget.runtime.errorBuilder?.call(context, error) ??
+          ErrorWidget(error);
+    }
   }
 
   Map<String, Object?> _composeInput(
@@ -78,10 +54,26 @@ class _SduiScreenState extends State<SduiScreen> {
         if (value == null) continue;
         final typeName = value.runtimeType.toString();
         for (final methodName in binding.referencedMethodsFor(entry.key)) {
-          final fn = widget.runtime.callableFor('$typeName.$methodName');
-          if (fn == null) continue;
+          // Try _callables first (unified registry), then _methods registry.
+          final callable = widget.runtime.callableFor('$typeName.$methodName');
+          if (callable != null) {
+            methods['${entry.key}.$methodName'] =
+                () => callable({r'$this': value});
+            continue;
+          }
+          final handler =
+              widget.runtime.resolveMethodHandler('$typeName.$methodName');
+          if (handler == null) continue;
+          // _bindEvent calls the stored fn via Function.apply(fn, positionalArgs).
+          // Wrap handler so it accepts positional args and forwards them as
+          // arg0, arg1, ... to the SduiMethodHandler.
           methods['${entry.key}.$methodName'] =
-              () => fn({r'$this': value});
+              (Object? arg0, [Object? arg1, Object? arg2]) {
+            final args = <String, Object?>{'arg0': arg0};
+            if (arg1 != null) args['arg1'] = arg1;
+            if (arg2 != null) args['arg2'] = arg2;
+            return handler(value, args);
+          };
         }
       }
       input['__methods__'] = methods;

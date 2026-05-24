@@ -1,5 +1,6 @@
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/element/element.dart';
+import 'package:analyzer/dart/element/type.dart';
 import 'package:desk_sdui_annotation/desk_sdui_annotation.dart';
 import '../diagnostics.dart';
 import 'expression_lowerer.dart';
@@ -267,14 +268,27 @@ IrNode _lowerArg(Expression a, {Object? Function(InstanceCreationExpression)? co
   // that embedded MethodInvocations are handled correctly.
   if (a is PropertyAccess) {
     final target = _lowerArg(a.target!, constEvaluator: constEvaluator);
-    final bucket = coreTypeBucket(a.target!.staticType);
-    if (target is RefNode && bucket == null) {
+    final targetType = a.target!.staticType;
+    final bucket = coreTypeBucket(targetType);
+    // Only chain RefNode for null/InvalidType/DynamicType (class-name refs
+    // like Icons.menu, MainAxisAlignment.center) or when bucket is a core
+    // traversable type.
+    if (target is RefNode && bucket == null &&
+        (targetType is InvalidType || targetType is DynamicType ||
+         targetType == null)) {
       return RefNode([...target.path, a.propertyName.name]);
     }
     if (bucket != null) {
       return GetterNode(
         receiver: target,
         name: '$bucket.${a.propertyName.name}',
+      );
+    }
+      final targetTypeName = typeName(targetType);
+    if (targetTypeName != null) {
+      return GetterNode(
+        receiver: target,
+        name: '$targetTypeName.${a.propertyName.name}',
       );
     }
     return MemberAccessNode(target: target, name: a.propertyName.name);
@@ -284,14 +298,27 @@ IrNode _lowerArg(Expression a, {Object? Function(InstanceCreationExpression)? co
       return LengthOfNode(_lowerArg(a.prefix, constEvaluator: constEvaluator));
     }
     final target = _lowerArg(a.prefix, constEvaluator: constEvaluator);
-    final bucket = coreTypeBucket(a.prefix.staticType);
-    if (target is RefNode && bucket == null) {
+    final prefixType = a.prefix.staticType;
+    final bucket = coreTypeBucket(prefixType);
+    // Only chain RefNode for null/InvalidType/DynamicType (class-name refs
+    // like Icons.menu, MainAxisAlignment.center) or when bucket is a core
+    // traversable type.
+    if (target is RefNode && bucket == null &&
+        (prefixType is InvalidType || prefixType is DynamicType ||
+         prefixType == null)) {
       return RefNode([...target.path, a.identifier.name]);
     }
     if (bucket != null) {
       return GetterNode(
         receiver: target,
         name: '$bucket.${a.identifier.name}',
+      );
+    }
+      final prefixTypeName = typeName(prefixType);
+    if (prefixTypeName != null) {
+      return GetterNode(
+        receiver: target,
+        name: '$prefixTypeName.${a.identifier.name}',
       );
     }
     return MemberAccessNode(target: target, name: a.identifier.name);

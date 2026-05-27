@@ -14,6 +14,10 @@ Design spec: see `dart_desk/docs/superpowers/specs/2026-05-10-desk-sdui-design.m
 
 Currently highly capable of rendering full-fledged interactive UIs driven entirely by an Server-Driven JSON payload.
 
+## Demo
+
+![Demo Video](assets/demo.mp4)
+
 ## Language feature support
 
 `desk_sdui` parses your `@Screen` Dart code and converts it into a safe, executable JSON payload. The following Dart language features are natively supported inside the UI sandbox:
